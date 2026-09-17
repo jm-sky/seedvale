@@ -82,6 +82,11 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `npc-047-shepherd-livestock-threat-response.md`                             | 🔴 | M      | npc-046, fauna-037                                                                                                                                                                                                                                                                         | -                                       |
 | 💡 `npc-048-local-threat-assistance-and-guard-response.md`                     | 🔴 | M      | npc-046, npc-047                                                                                                                                                                                                                                                                           | -                                       |
 | 💡 `fauna-038-calm-settlement-wander-gait.md`                                  | 🟡 | S      | -                                                                                                                                                                                                                                                                                          | -                                       |
+| ◼️ `settlements-019-settlement-render-submission-budget.md`                    | 🔴 | M      | -                                                                                                                                                                                                                                                                                          | -                                       |
+| ◼️ `world-terrain-038-shadow-caster-content-budget-v2.md`                      | 🔴 | M      | -                                                                                                                                                                                                                                                                                          | -                                       |
+| ◼️ `world-terrain-039-n8ao-post-process-cost-budget.md`                        | 🔴 | M      | -                                                                                                                                                                                                                                                                                          | -                                       |
+| ◼️ `world-terrain-040-vegetation-render-budget-v2.md`                          | 🔴 | M      | -                                                                                                                                                                                                                                                                                          | -                                       |
+| ◼️ `world-terrain-041-agent-presentation-render-lod.md`                        | 🔴 | L      | -                                                                                                                                                                                                                                                                                          | -                                       |
 
 ---
 
@@ -195,12 +200,12 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - npc: `049`
 - persistence: `006`
 - quests-progression: `057`
-- settlements: `019`
+- settlements: `020`
 - settlements-npcs: `043`
 - tools: `017`
 - ui-input: `025`
 - world: `031`
-- world-terrain: `038`
+- world-terrain: `042`
 
 This ids section is maintained automatically from the plan files.
 
