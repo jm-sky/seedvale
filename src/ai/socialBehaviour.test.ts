@@ -1,11 +1,13 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { NpcRelationships } from '../settlement/npcRelationships'
+import type { NpcGender } from './characters'
 import {
   advanceSocialPairing,
   conversationAttemptCooldownSec,
   conversationDurationSec,
   conversationOutcome,
   findConversationPartner,
+  type ConversationVoiceCue,
   type SocialCandidateView,
   type SocialParticipant,
 } from './socialBehaviour'
@@ -107,18 +109,29 @@ function makeRelations(): NpcRelationships & { adjustCalls: [string, string, num
 }
 
 type MockParticipant = SocialParticipant & {
-  beginConversationCalls: { partnerId: string, durationSec: number, applyOutcomeOnce: () => void, onEarlyExit: () => void }[]
+  beginConversationCalls: {
+    partnerId: string
+    durationSec: number
+    applyOutcomeOnce: () => void
+    onEarlyExit: () => void
+    voiceCue?: ConversationVoiceCue
+  }[]
   releaseCalls: number
 }
 
-function makeParticipant(id: string, view: SocialCandidateView | null): MockParticipant {
+function makeParticipant(
+  id: string,
+  view: SocialCandidateView | null,
+  gender: NpcGender = 'male',
+): MockParticipant {
   const beginConversationCalls: MockParticipant['beginConversationCalls'] = []
   return {
     id,
+    gender,
     personality: NEUTRAL_PERSONALITY,
     socialCandidate: () => view,
-    beginConversation: (partnerId, durationSec, applyOutcomeOnce, onEarlyExit) => {
-      beginConversationCalls.push({ partnerId, durationSec, applyOutcomeOnce, onEarlyExit })
+    beginConversation: (partnerId, durationSec, applyOutcomeOnce, onEarlyExit, voiceCue) => {
+      beginConversationCalls.push({ partnerId, durationSec, applyOutcomeOnce, onEarlyExit, voiceCue })
     },
     releaseConversationPartner: vi.fn(),
     beginConversationCalls,
@@ -206,5 +219,43 @@ describe('advanceSocialPairing', () => {
     expect(b.releaseCalls).toBe(1)
     b.beginConversationCalls[0]!.onEarlyExit()
     expect(a.releaseCalls).toBe(1)
+  })
+
+  it('shares one campfire exchange: questioner delay 0, responder authored delay', () => {
+    const a = makeParticipant('a', { id: 'a', placeId: 'campfire:1' }, 'female')
+    const b = makeParticipant('b', { id: 'b', placeId: 'campfire:1' }, 'male')
+    const relations = makeRelations()
+
+    // duration + outcome each consume one rng(); talk selection uses the third.
+    let calls = 0
+    const rng = () => {
+      calls += 1
+      return calls === 3 ? 0 : 0.4
+    }
+    advanceSocialPairing([a, b], relations, 480, rng)
+
+    const qCue = a.beginConversationCalls[0]!.voiceCue
+    const aCue = b.beginConversationCalls[0]!.voiceCue
+    expect(qCue).toBeDefined()
+    expect(aCue).toBeDefined()
+    expect(qCue!.delaySec).toBe(0)
+    expect(aCue!.delaySec).toBeGreaterThan(0)
+    expect(qCue!.url).toContain('campfire_female_')
+    expect(qCue!.url).toContain('_question_')
+    expect(aCue!.url).toContain('campfire_male_')
+    expect(aCue!.url).toContain('_answer_')
+  })
+
+  it('begins simulation conversation with no structured cues for same-gender pairs', () => {
+    const a = makeParticipant('a', { id: 'a', placeId: 'campfire:1' }, 'male')
+    const b = makeParticipant('b', { id: 'b', placeId: 'campfire:1' }, 'male')
+    const relations = makeRelations()
+
+    advanceSocialPairing([a, b], relations, 480, () => 0.4)
+
+    expect(a.beginConversationCalls).toHaveLength(1)
+    expect(b.beginConversationCalls).toHaveLength(1)
+    expect(a.beginConversationCalls[0]!.voiceCue).toBeUndefined()
+    expect(b.beginConversationCalls[0]!.voiceCue).toBeUndefined()
   })
 })

@@ -1,7 +1,7 @@
 # Plan: Campfire spoken conversation pairs
 
 **Created:** 2026-09-17
-**Status:** `planned` 📋
+**Status:** `done` ✅
 **Type:** feature
 **Priority:** high · **Effort:** S
 **Depends on:** ~~npc-013~~, ~~npc-044~~

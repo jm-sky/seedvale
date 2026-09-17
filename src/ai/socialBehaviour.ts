@@ -1,6 +1,16 @@
 import type { NpcRelationships } from '../settlement/npcRelationships'
+import type { NpcGender } from './characters'
+import { resolveCampfireTalk } from './campfireTalk'
 import type { BigFivePersonality } from './dialogue'
 import { gameHoursToRealSeconds } from '../world/timeConversion'
+
+/** Per-participant presentation cue for a Social Place conversation
+ *  (plan npc-045). Selected once per pair in `advanceSocialPairing` —
+ *  questioner gets `delaySec: 0`, responder gets the authored answer delay. */
+export type ConversationVoiceCue = {
+  url: string
+  delaySec: number
+}
 
 /**
  * Social Place conversation behaviour (plan 151) — small, pure/testable
@@ -23,6 +33,7 @@ import { gameHoursToRealSeconds } from '../world/timeConversion'
  *  of constructing real agents. */
 export type SocialParticipant = {
   readonly id: string
+  readonly gender: NpcGender
   readonly personality: BigFivePersonality
   /** `null` unless this participant is currently settled at its own Social
    *  Place, unreserved, and its extraversion-scaled retry cooldown has
@@ -32,12 +43,15 @@ export type SocialParticipant = {
    *  notes §3/§9). */
   socialCandidate: () => SocialCandidateView | null
   /** Starts the shared `conversation` action on this participant alone —
-   *  `advanceSocialPairing` calls it once per side of a pair. */
+   *  `advanceSocialPairing` calls it once per side of a pair. Optional
+   *  `voiceCue` is presentation-only (campfire spoken exchange, plan
+   *  npc-045) — omitted when no compatible authored pair exists. */
   beginConversation: (
     partnerId: string,
     durationSec: number,
     applyOutcomeOnce: () => void,
     onEarlyExit: () => void,
+    voiceCue?: ConversationVoiceCue,
   ) => void
   /** Called on this participant when its *partner* leaves the conversation
    *  early (critical need, vigor collapse, death) — tears down this side
@@ -184,17 +198,34 @@ export function advanceSocialPairing(
       relations.adjust(entry.view.id, partnerEntry.view.id, outcome.delta)
     }
 
+    // One shared spoken exchange per pair (plan npc-045) — entry is the
+    // questioner, partnerEntry the responder. Same-gender / missing catalog
+    // yields no cues; simulation conversation still proceeds.
+    const talk = resolveCampfireTalk(
+      entry.participant.gender,
+      partnerEntry.participant.gender,
+      rng,
+    )
+    const questionCue: ConversationVoiceCue | undefined = talk
+      ? { url: talk.questionUrl, delaySec: 0 }
+      : undefined
+    const answerCue: ConversationVoiceCue | undefined = talk
+      ? { url: talk.answerUrl, delaySec: talk.answerDelaySec }
+      : undefined
+
     entry.participant.beginConversation(
       partnerEntry.view.id,
       durationSec,
       applyOutcomeOnce,
       () => partnerEntry.participant.releaseConversationPartner(),
+      questionCue,
     )
     partnerEntry.participant.beginConversation(
       entry.view.id,
       durationSec,
       applyOutcomeOnce,
       () => entry.participant.releaseConversationPartner(),
+      answerCue,
     )
   }
 }

@@ -442,7 +442,7 @@ import {
   type ScheduleActivity,
   type ScheduleTemplate,
 } from './schedule'
-import { conversationAttemptCooldownSec } from './socialBehaviour'
+import { conversationAttemptCooldownSec, type ConversationVoiceCue } from './socialBehaviour'
 import {
   DEFAULT_VOLUNTARY_JOIN_DANGER,
   evaluateVoluntaryJoin,
@@ -1262,6 +1262,9 @@ export class NpcAgent {
    *  its own half instead of waiting out a duration nobody is still sharing.
    *  `null` outside an active conversation. */
   private onConversationEarlyExit: (() => void) | null = null
+  /** Delayed campfire answer cue (plan npc-045) — presentation-only, keyed to
+   *  `simClock`. Cleared with conversation ownership; never persisted. */
+  private pendingConversationVoiceCue: { url: string, playAtSim: number } | null = null
   /** Earliest `simClock` at which `socialCandidate()` will return non-null
    *  again (plan 151) — reset on every call (success or failure) to
    *  `conversationAttemptCooldownSec(extraversion)`, so a settled NPC is
@@ -2796,6 +2799,7 @@ export class NpcAgent {
       this.resolveCorpseLifecycle()
       return
     }
+    this.tickPendingConversationVoiceCue()
     this.currentWeather = weather ?? null
     resolveInjuryRecovery(this.npcState, this.nowDays())
     const prevPhase = this.phase
@@ -3538,8 +3542,7 @@ export class NpcAgent {
     // A conversation reservation can't survive a time-skip catch-up (the
     // partner NPC is independently reset the same way) — clear it here too
     // so `socialCandidate()` isn't left permanently blocked (plan 151).
-    this.conversationPartnerId = null
-    this.onConversationEarlyExit = null
+    this.clearConversationPresentation()
     this.settledIdleActivity = null
     this.wait = 0
     this.pathWaypoints = []
@@ -3559,6 +3562,7 @@ export class NpcAgent {
   }
 
   dispose(): void {
+    this.clearConversationPresentation()
     this.leaveActiveQueue()
     this.labelController.dispose()
     this.anim.stopAll()
@@ -6337,23 +6341,34 @@ export class NpcAgent {
     durationSec: number,
     applyOutcomeOnce: () => void,
     onEarlyExit: () => void,
+    voiceCue?: ConversationVoiceCue,
   ): void {
     if (!this.socialPlace) return
     this.conversationPartnerId = partnerId
     this.onConversationEarlyExit = onEarlyExit
-    // Friendly-talk SFX (plan settlements-npcs-004 §3) — a consequence of
-    // this actually-starting conversation, never a random NPC-proximity
-    // sound. Silent no-op until the clips are added (see `npcVoiceLines.ts`).
-    const talkUrl = pickNpcFriendlyTalkSound(this.gender)
-    if (talkUrl) this.playAt(talkUrl, this.mesh.position, FRIENDLY_TALK_SOUND_VOLUME)
+    this.pendingConversationVoiceCue = null
+    // Structured campfire exchange (plan npc-045) takes priority over the
+    // legacy friendly-talk murmur fallback. Empty fallback pools → silence.
+    if (voiceCue) {
+      if (voiceCue.delaySec <= 0) {
+        this.playAt(voiceCue.url, this.mesh.position, FRIENDLY_TALK_SOUND_VOLUME)
+      } else {
+        this.pendingConversationVoiceCue = {
+          url: voiceCue.url,
+          playAtSim: this.simClock + voiceCue.delaySec,
+        }
+      }
+    } else {
+      const talkUrl = pickNpcFriendlyTalkSound(this.gender)
+      if (talkUrl) this.playAt(talkUrl, this.mesh.position, FRIENDLY_TALK_SOUND_VOLUME)
+    }
     this.startAction({
       kind: 'conversation',
       destination: copyVec3(this.socialPlace.position),
       durationSec,
       onComplete: () => {
         applyOutcomeOnce()
-        this.conversationPartnerId = null
-        this.onConversationEarlyExit = null
+        this.clearConversationPresentation()
         this.nextSocialAttemptSim = this.simClock + conversationAttemptCooldownSec(this.personality.extraversion)
       },
     })
@@ -6368,10 +6383,31 @@ export class NpcAgent {
    * `onConversationEarlyExit` is still set).
    */
   releaseConversationPartner(): void {
-    if (this.conversationPartnerId == null) return
+    if (this.conversationPartnerId == null && this.pendingConversationVoiceCue == null) return
+    this.clearConversationPresentation()
+    if (this.pendingAction?.kind === 'conversation') this.interruptCurrentAction()
+  }
+
+  /** Clears partner reservation, early-exit callback, and any pending
+   *  campfire voice cue together (plan npc-045). */
+  private clearConversationPresentation(): void {
     this.conversationPartnerId = null
     this.onConversationEarlyExit = null
-    if (this.pendingAction?.kind === 'conversation') this.interruptCurrentAction()
+    this.pendingConversationVoiceCue = null
+  }
+
+  /** Fire a delayed conversation voice cue once `simClock` reaches its
+   *  target, only while this NPC is still in the same conversation. */
+  private tickPendingConversationVoiceCue(): void {
+    const cue = this.pendingConversationVoiceCue
+    if (!cue) return
+    if (this.pendingAction?.kind !== 'conversation') {
+      this.pendingConversationVoiceCue = null
+      return
+    }
+    if (this.simClock < cue.playAtSim) return
+    this.pendingConversationVoiceCue = null
+    this.playAt(cue.url, this.mesh.position, FRIENDLY_TALK_SOUND_VOLUME)
   }
 
   /** Shared by `interruptCurrentAction`/`abandonStuckAction`/`die` — notifies
@@ -6381,8 +6417,7 @@ export class NpcAgent {
   private releaseConversationIfAny(): void {
     if (this.pendingAction?.kind !== 'conversation') return
     const onEarlyExit = this.onConversationEarlyExit
-    this.conversationPartnerId = null
-    this.onConversationEarlyExit = null
+    this.clearConversationPresentation()
     onEarlyExit?.()
   }
 
