@@ -2047,7 +2047,7 @@ Generated from exported TypeScript symbols.
 
 ## `world/transportTravelArrival.ts`
 
-- `resolveTransportTravelArrivals` — function — line 26
+- `resolveTransportTravelArrivals` — function — line 27
   - domain: settlements-npcs
 
 ## `world/trapProp.ts`

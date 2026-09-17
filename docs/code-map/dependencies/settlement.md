@@ -57,6 +57,8 @@ Generated from TypeScript imports.
 - `settlement/createSettlement.ts`
 - `settlement/household.ts`
 - `settlement/livestock.ts`
+- `settlement/merchantJourney.ts`
+- `settlement/npcIdentity.ts`
 - `settlement/npcRelationships.ts`
 - `settlement/npcState.ts`
 - `settlement/playerOwnedHorseDebug.ts`
@@ -222,6 +224,7 @@ Generated from TypeScript imports.
 - `settlement/household.ts`
 - `settlement/householdExchange.ts`
 - `settlement/livestock.ts`
+- `settlement/merchantJourney.ts`
 - `settlement/merchantTrade.ts`
 - `settlement/npcIdentity.ts`
 - `settlement/npcPhysicalProfile.ts`
@@ -656,6 +659,7 @@ Generated from TypeScript imports.
 - `settlement/householdResourceTransfer.test.ts`
 - `settlement/householdResourceTransfer.ts`
 - `settlement/livestock.ts`
+- `settlement/npcIdentity.ts`
 - `settlement/rats.ts`
 - `settlement/settlementAgriculture.test.ts`
 - `settlement/settlementAgriculture.ts`
@@ -1038,6 +1042,26 @@ Generated from TypeScript imports.
 - `settlement/lostTreasureChroniclesSpecialistResident.test.ts`
 - `settlement/settlementPlanCache.ts`
 
+## `settlement/merchantJourney.test.ts`
+
+**Imports**
+
+- `settlement/merchantJourney.ts`
+
+## `settlement/merchantJourney.ts`
+
+**Imports**
+
+- `ai/npcTravel.ts`
+
+**Imported by**
+
+- `settlement/SettlementsManager.ts`
+- `settlement/createSettlement.ts`
+- `settlement/merchantJourney.test.ts`
+- `settlement/npcState.ts`
+- `world/transportTravelArrival.ts`
+
 ## `settlement/merchantTrade.test.ts`
 
 **Imports**
@@ -1114,6 +1138,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `settlement/families.ts`
+- `settlement/household.ts`
 - `settlement/npcState.ts`
 - `settlement/settlementGenerator.ts`
 
@@ -1126,6 +1151,7 @@ Generated from TypeScript imports.
 - `quests/oldBonesAdventureCave.test.ts`
 - `quests/opportunities/settlementNpcMaterialization.ts`
 - `quests/opportunities/worldQuestMaterialization.ts`
+- `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
 - `settlement/lostTreasureChroniclesArchaeologistResident.test.ts`
 - `settlement/lostTreasureChroniclesArchaeologistResident.ts`
@@ -1235,6 +1261,7 @@ Generated from TypeScript imports.
 - `ai/npcTravel.ts`
 - `ai/npcVigor.ts`
 - `items/Inventory.ts`
+- `settlement/merchantJourney.ts`
 - `settlement/npcPostDeath.ts`
 - `shared/HealthState.ts`
 - `shared/StaminaState.ts`

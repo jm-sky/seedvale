@@ -51,7 +51,7 @@ import {
 } from '../world/transportOffscreen'
 import { resolveTransportTravelArrivals } from '../world/transportTravelArrival'
 import { createSettlement, type CreateSettlementDeps, type Settlement } from './createSettlement'
-import { createHouseholdRegistry, type Household, type HouseholdId, type HouseholdSnapshot } from './household'
+import { createHouseholdRegistry, type Household, type HouseholdId, householdIdFor, type HouseholdSnapshot } from './household'
 import {
   createLivestockRegistry,
   type LivestockSaveRecord,
@@ -64,6 +64,12 @@ import {
   tickSettlementLivestock,
   transferAnimalOwnership,
 } from './livestock'
+import { resolveMerchantReturnArrival, tryBeginMerchantReturn } from './merchantJourney'
+import {
+  resolveSettlementNpcHomeDescriptor,
+  settlementMemberPhysicalSeed,
+  type TravellingVisitorSpawn,
+} from './npcIdentity'
 import { createNpcRelationships, type NpcRelationshipEntry } from './npcRelationships'
 import { createNpcStateRegistry, type NpcAuthoritativeState, type NpcId, type NpcStateSnapshot } from './npcState'
 import {
@@ -83,6 +89,7 @@ import {
   type RoadNetworkContext,
 } from './roadNetwork'
 import {
+  cellSeed,
   cellsWithinRadius,
   SETTLEMENT_GRID_STEP,
   type SettlementCell,
@@ -649,6 +656,40 @@ export async function createSettlementsManager(
 
   const entries = new Map<string, Entry>()
 
+  /**
+   * Travelling-NPC visitors currently `visiting` this (foreign) settlement
+   * (plan settlements-npcs-038 §5) — home identity resolved from the cached
+   * home `SettlementDef` alone (`defFor`, via `knownSettlements`' remembered
+   * position), never by building/loading home. Bounded to the total number
+   * of currently-live authoritative NPCs, the same envelope as every other
+   * `npcStates.forEach` checkpoint already in this file.
+   *
+   * @domain settlements-npcs
+   */
+  function resolveTravellingVisitors(destinationSettlementId: string): readonly TravellingVisitorSpawn[] {
+    const result: TravellingVisitorSpawn[] = []
+    npcStates.forEach((state, npcId) => {
+      const journey = state.merchantJourney
+      if (!journey || journey.phase !== 'visiting') return
+      if (journey.destinationSettlementId !== destinationSettlementId) return
+      const home = knownSettlements.get(journey.homeSettlementId)
+      if (!home) return
+      const homeDef = defFor(worldToCell(home.x, home.z))
+      if (!homeDef || homeDef.id !== journey.homeSettlementId) return
+      const descriptor = resolveSettlementNpcHomeDescriptor(homeDef, npcId)
+      if (!descriptor) return
+      const homeSeed = cellSeed(seed, { gx: homeDef.gx, gz: homeDef.gz })
+      result.push({
+        npcId,
+        member: descriptor.member,
+        familyMembers: descriptor.familyMembers,
+        physicalSeed: settlementMemberPhysicalSeed(homeSeed, descriptor.memberIndex),
+        household: households.get(householdIdFor(homeDef.id, descriptor.familyIndex)),
+      })
+    })
+    return result
+  }
+
   const settlementDeps: CreateSettlementDeps = {
     scene,
     sampleHeight,
@@ -714,6 +755,7 @@ export async function createSettlementsManager(
         return known ? { x: known.x, z: known.z } : null
       },
     } satisfies InterSettlementTransportHooks,
+    resolveTravellingVisitors,
   }
 
   // Remembered so a settlement that streams in later (or finishes its async
@@ -983,6 +1025,44 @@ export async function createSettlementsManager(
     resolveTravelAndTransportCheckpoints(nowDays, dayLengthSec)
   }
 
+  /** Resolves a currently-loaded settlement's own storage-adjacent anchor,
+   *  falling back to its last-known world position — the same "loaded →
+   *  precise, else last-known" contract `interSettlement.resolveStorageTarget`
+   *  already provides, reused here (not a second position resolver). */
+  function settlementAnchorPoint(settlementId: string): { x: number, z: number } | null {
+    return settlementDeps.interSettlement?.resolveStorageTarget(settlementId) ?? null
+  }
+
+  /**
+   * Bounded merchant-journey checkpoint (plan settlements-npcs-038 §8/§12) —
+   * `visiting` → `returning` once the absolute visit window elapses,
+   * `returning` → journey cleared on genuine home arrival. Same
+   * `npcStates.forEach` envelope as `resolveTravelAndTransportCheckpoints`,
+   * never a world-global per-frame scan.
+   *
+   * @domain settlements-npcs
+   */
+  function resolveMerchantJourneyCheckpoints(nowDays: number, dayLengthSec: number): void {
+    npcStates.forEach((state, id) => {
+      const journey = state.merchantJourney
+      if (!journey) return
+      if (journey.phase === 'visiting') {
+        tryBeginMerchantReturn(state, nowDays, dayLengthSec, () => {
+          const homeTarget = settlementAnchorPoint(journey.homeSettlementId)
+          if (!homeTarget) return null
+          const liveNpc = entries.get(journey.destinationSettlementId)?.settlement?.npcs.find((npc) => npc.id === id)
+          const origin = liveNpc
+            ? { x: liveNpc.mesh.position.x, z: liveNpc.mesh.position.z }
+            : settlementAnchorPoint(journey.destinationSettlementId)
+          if (!origin) return null
+          return { origin, homeTarget, live: !!liveNpc }
+        })
+      } else if (journey.phase === 'returning') {
+        resolveMerchantReturnArrival(state)
+      }
+    })
+  }
+
   function resolveTravelAndTransportCheckpoints(nowDays: number, dayLengthSec: number): void {
     if (transportOrders) resolveOffscreenTransportArrivals(transportOrders, offscreenTransportLookup, nowDays)
     npcStates.forEach((state) => resolveNpcTravelCheckpoint(state, nowDays, dayLengthSec))
@@ -994,6 +1074,7 @@ export async function createSettlementsManager(
         (fn) => npcStates.forEach(fn),
       )
     }
+    resolveMerchantJourneyCheckpoints(nowDays, dayLengthSec)
   }
 
   return {
@@ -1022,6 +1103,7 @@ export async function createSettlementsManager(
           (fn) => npcStates.forEach(fn),
         )
       }
+      resolveMerchantJourneyCheckpoints(nowDays, dayLengthSec)
     },
     update(dt, playerPos, playerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec, nearbyAnimalThreats, dropLivestockProduct, nowDays, onAnimalVocalize, weather, nearbyPredators, playerObservation, nearbyWildCorpses, scareStimulus) {
       if (nowDays !== undefined) lastNowDays = nowDays

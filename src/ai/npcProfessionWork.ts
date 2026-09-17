@@ -196,6 +196,10 @@ export type NpcWorkContext = {
   bindTransportTravel?: (orderId: string, destination: { x: number, z: number }) => void
   /** Clear transport-purpose travel after a successful cargo handoff. */
   clearTransportTravel?: (orderId: string) => void
+  /** Start a Travelling Merchant journey (plan settlements-npcs-038) once a
+   *  new cross-settlement export order begins — idempotent (a no-op while a
+   *  journey is already active). Absent in isolated fallbacks. */
+  beginMerchantJourney?: (homeSettlementId: string, destinationSettlementId: string, orderId: string) => void
 }
 
 /**
@@ -832,6 +836,7 @@ function planTraderInterSettlementExport(
     carrierNpcId: ctx.npcId,
   })
   if (!order) return null
+  ctx.beginMerchantJourney?.(economy.settlementId, match.destinationSettlementId, order.id)
   return planTransportOrderExecution(ctx, economy, order)
 }
 

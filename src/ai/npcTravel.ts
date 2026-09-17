@@ -27,6 +27,11 @@ export type NpcTravelExecution = {
 export type NpcTravelPurpose =
   | { kind: 'expedition', assignmentId: string }
   | { kind: 'transport', orderId: string }
+  /** Travelling Merchant return leg (plan settlements-npcs-038) — the
+   *  merchant's own `MerchantJourneyState` (`settlement/merchantJourney.ts`)
+   *  owns phase/visit timing; this is only the stable home reference an
+   *  idempotent arrival observer needs. */
+  | { kind: 'merchant-return', homeSettlementId: string }
 
 export type NpcTravelContinuity = {
   destination: NpcTravelPoint
@@ -59,7 +64,8 @@ export function cloneNpcTravelPurpose(
 ): NpcTravelPurpose | undefined {
   if (!purpose) return undefined
   if (purpose.kind === 'expedition') return { kind: 'expedition', assignmentId: purpose.assignmentId }
-  return { kind: 'transport', orderId: purpose.orderId }
+  if (purpose.kind === 'transport') return { kind: 'transport', orderId: purpose.orderId }
+  return { kind: 'merchant-return', homeSettlementId: purpose.homeSettlementId }
 }
 
 export function cloneNpcTravel(

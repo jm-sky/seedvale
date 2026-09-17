@@ -422,6 +422,65 @@ describe('NpcAuthoritativeState accompanyCommitment / travel (plan npc-029)', ()
   })
 })
 
+describe('NpcAuthoritativeState merchantJourney (plan settlements-npcs-038)', () => {
+  it('defaults new NPCs to no active journey', () => {
+    const state = createNpcAuthoritativeState('npc:0', 0)
+    expect(state.merchantJourney).toBeNull()
+  })
+
+  it('round-trips an outbound journey', () => {
+    const before = createNpcStateRegistry()
+    const state = before.getOrCreate('0_0:npc:0', 0)
+    state.merchantJourney = {
+      homeSettlementId: '0_0',
+      destinationSettlementId: '1_0',
+      phase: 'outbound',
+      transportOrderId: 'transportOrder:1',
+    }
+    const hydrated = createNpcStateRegistry(before.serialize()).getOrCreate('0_0:npc:0', 0)
+    expect(hydrated.merchantJourney).toEqual(state.merchantJourney)
+    expect(hydrated.merchantJourney).not.toBe(state.merchantJourney)
+  })
+
+  it('round-trips a visiting journey with the absolute visit window', () => {
+    const before = createNpcStateRegistry()
+    const state = before.getOrCreate('0_0:npc:0', 0)
+    state.merchantJourney = {
+      homeSettlementId: '0_0',
+      destinationSettlementId: '1_0',
+      phase: 'visiting',
+      visitStartedAtDays: 10,
+      visitEndsAtDays: 12,
+    }
+    const hydrated = createNpcStateRegistry(before.serialize()).getOrCreate('0_0:npc:0', 0)
+    expect(hydrated.merchantJourney).toEqual(state.merchantJourney)
+  })
+
+  it('round-trips a returning journey', () => {
+    const before = createNpcStateRegistry()
+    const state = before.getOrCreate('0_0:npc:0', 0)
+    state.merchantJourney = {
+      homeSettlementId: '0_0',
+      destinationSettlementId: '1_0',
+      phase: 'returning',
+    }
+    const hydrated = createNpcStateRegistry(before.serialize()).getOrCreate('0_0:npc:0', 0)
+    expect(hydrated.merchantJourney).toEqual(state.merchantJourney)
+  })
+
+  it('legacy snapshot without merchantJourney restores as no journey', () => {
+    const registry = createNpcStateRegistry({
+      '0_0:npc:0': {
+        health: { current: 100, max: 100, dead: false },
+        stamina: { current: 100, max: 100 },
+        vigor: { current: 100, max: 100 },
+        needs: { thirst: 0, woodDuty: 0, waterDuty: 0, hunger: 0 },
+      },
+    })
+    expect(registry.getOrCreate('0_0:npc:0', 0).merchantJourney).toBeNull()
+  })
+})
+
 describe('NpcAuthoritativeState merchantStock (plan settlements-012)', () => {
   it('round-trips finite stock and the initialized latch, including sold-out', () => {
     const before = createNpcStateRegistry()

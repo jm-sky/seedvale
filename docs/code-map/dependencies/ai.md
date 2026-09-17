@@ -1253,6 +1253,7 @@ Generated from TypeScript imports.
 - `ai/npcOffscreenSurvival.test.ts`
 - `ai/npcTravel.test.ts`
 - `ai/npcTravelCheckpoint.ts`
+- `settlement/merchantJourney.ts`
 - `settlement/npcState.ts`
 - `world/transportTravelArrival.test.ts`
 - `world/transportTravelArrival.ts`

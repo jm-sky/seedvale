@@ -56,8 +56,8 @@
    🔴 `L` · ✅ ready · unlocks 1/1
 4. `quests-progression-049` — **Hunters Brotherhood — hunting-ground investigation**  
    🟡 `M` · ✅ ready · unlocks 1/2
-5. `settlements-npcs-038` — **Travelling Merchant inter-settlement role**  
-   🔴 `L` · ✅ ready · unlocks 0/0
+5. `settlements-npcs-043` — **Settlement Cultivation Hydration, Rain & Farmer Watering**  
+   🔴 `L` · ✅ ready · unlocks 1/1
 
 ---
 
@@ -115,111 +115,107 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `L` · **Score:**  66  
    → **unlocks:** 0/0
 
-11. `settlements-npcs-038` — **Travelling Merchant inter-settlement role**  
-  🔴 `L` · **Score:**  64  
-   → **unlocks:** 0/0
-
-12. `quests-progression-053` — **Hunters Brotherhood — competing hunting strategies**  
+11. `quests-progression-053` — **Hunters Brotherhood — competing hunting strategies**  
   🟡 `L` · **Score:**  56  
    → **unlocks:** 1/1
 
-13. `settlements-npcs-043` — **Settlement Cultivation Hydration, Rain & Farmer Watering**  
+12. `settlements-npcs-043` — **Settlement Cultivation Hydration, Rain & Farmer Watering**  
   🔴 `L` · **Score:**  56  
    → **unlocks:** 1/1
 
-14. `world-031` — **Authored Persistent World Consequences**  
+13. `world-031` — **Authored Persistent World Consequences**  
   🔴 `M` · **Score:**  55  
    → **unlocks:** 2/2
 
-15. `fauna-037` — **Domestic livestock safe flee**  
+14. `fauna-037` — **Domestic livestock safe flee**  
   🔴 `M` · **Score:**  51  
    → **unlocks:** 1/2
 
-16. `quests-progression-057` — **Injured cow Medicine alternative**  
+15. `quests-progression-057` — **Injured cow Medicine alternative**  
   🟡 `M` · **Score:**  49  
    → **unlocks:** 1/1
 
-17. `settlements-004` — **Gold Economic Realization & Source Entitlements**  
+16. `settlements-004` — **Gold Economic Realization & Source Entitlements**  
   🔴 `M` · **Score:**  49  
    → **unlocks:** 1/1
 
-18. `quests-progression-010` — **Abandoned gold mine → mining colony integration**  
+17. `quests-progression-010` — **Abandoned gold mine → mining colony integration**  
   🔴 `M` · **Score:**  61  
    → **unlocks:** 0/0
 
-19. `quests-progression-054` — **Hunters Brotherhood — exceptional animal finale**  
+18. `quests-progression-054` — **Hunters Brotherhood — exceptional animal finale**  
   🟡 `L` · **Score:**  44  
    → **unlocks:** 0/0
 
-20. `npc-047` — **Shepherd livestock threat response**  
+19. `npc-047` — **Shepherd livestock threat response**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 1/1
 
-21. `settlements-npcs-022` — **Household help and age-based work participation**  
+20. `settlements-npcs-022` — **Household help and age-based work participation**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 0/0
 
-22. `settlements-npcs-044` — **Authored Outpost Occupants & Construction Lifecycle**  
+21. `settlements-npcs-044` — **Authored Outpost Occupants & Construction Lifecycle**  
   🔴 `L` · **Score:**  40  
    → **unlocks:** 1/1
 
-23. `quests-progression-058` — **Injured dog discovery thread**  
+22. `quests-progression-058` — **Injured dog discovery thread**  
   🟡 `M` · **Score:**  37  
    → **unlocks:** 0/0
 
-24. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
+23. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
   🔴 `M` · **Score:**  35  
    → **unlocks:** 0/0
 
-25. `quests-progression-059` — **Settlement Known Deeds & Reputation Badges**  
+24. `quests-progression-059` — **Settlement Known Deeds & Reputation Badges**  
   🟡 `M` · **Score:**  35  
    → **unlocks:** 0/0
 
-26. `npc-048` — **Local threat assistance and guard response**  
+25. `npc-048` — **Local threat assistance and guard response**  
   🔴 `M` · **Score:**  31  
    → **unlocks:** 0/0
 
-27. `tools-015` — **Chatterbox local voice generation pipeline**  
+26. `tools-015` — **Chatterbox local voice generation pipeline**  
   🔴 `M` · **Score:**  31  
    → **unlocks:** 0/0
 
-28. `npc-049` — **NPC contextual life barks and local voice limiter**  
+27. `npc-049` — **NPC contextual life barks and local voice limiter**  
   🔴 `M` · **Score:**  29  
    → **unlocks:** 0/0
 
-29. `items-player-014` — **Rope-pullable resource transport**  
+28. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-30. `settlements-019` — **Settlement render submission budget**  
+29. `settlements-019` — **Settlement render submission budget**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-31. `tools-005` — **Seedvale Character Preparation Panel**  
+30. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-32. `world-terrain-038` — **Shadow caster/content budget v2**  
+31. `world-terrain-038` — **Shadow caster/content budget v2**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-33. `world-terrain-039` — **N8AO / post-process cost budget**  
+32. `world-terrain-039` — **N8AO / post-process cost budget**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-34. `world-terrain-040` — **Vegetation render budget v2**  
+33. `world-terrain-040` — **Vegetation render budget v2**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-35. `items-player-044` — **Shoulder and forearm equipment slots**  
+34. `items-player-044` — **Shoulder and forearm equipment slots**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-36. `world-terrain-041` — **Agent presentation render LOD**  
+35. `world-terrain-041` — **Agent presentation render LOD**  
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-37. `items-player-032` — **NPC player-storage resource and context rules**  
+36. `items-player-032` — **NPC player-storage resource and context rules**  
   🟡 `L` · **Score:**  20  
    → **unlocks:** 0/0
 

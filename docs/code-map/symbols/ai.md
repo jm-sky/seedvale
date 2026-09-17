@@ -501,8 +501,8 @@ Generated from exported TypeScript symbols.
 - `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 94
 - `findWeaponNeedingMaintenance` — function — line 110
 - `NpcWorkContext` — type — line 130
-- `planProfessionWork` — function — line 1122
-- `selectTraderCollectionGoods` — function — line 452
+- `planProfessionWork` — function — line 1127
+- `selectTraderCollectionGoods` — function — line 456
 
 ## `ai/npcStrategies.ts`
 
@@ -535,32 +535,32 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcTravel.ts`
 
-- `beginOffscreenNpcTravel` — function — line 146
+- `beginOffscreenNpcTravel` — function — line 152
   - domain: npc
-- `blockNpcTravel` — function — line 236
-- `cloneNpcTravel` — function — line 65
-- `cloneNpcTravelPurpose` — function — line 57
-- `hasCommittedNpcTravel` — function — line 130
-- `interpolateNpcTravelPosition` — function — line 110
-- `isNpcTravelArrived` — function — line 123
-- `keepsNpcTravelAfterReify` — function — line 134
-- `markNpcTravelReached` — function — line 224
-- `NpcTravelContinuity` — type — line 31
+- `blockNpcTravel` — function — line 242
+- `cloneNpcTravel` — function — line 71
+- `cloneNpcTravelPurpose` — function — line 62
+- `hasCommittedNpcTravel` — function — line 136
+- `interpolateNpcTravelPosition` — function — line 116
+- `isNpcTravelArrived` — function — line 129
+- `keepsNpcTravelAfterReify` — function — line 140
+- `markNpcTravelReached` — function — line 230
+- `NpcTravelContinuity` — type — line 36
 - `NpcTravelExecution` — type — line 20
-- `NpcTravelHost` — type — line 51
+- `NpcTravelHost` — type — line 56
 - `NpcTravelPoint` — type — line 18
   - domain: npc
 - `NpcTravelPurpose` — type — line 27
-- `NpcTravelResolveResult` — type — line 44
-- `observeNpcTravelArrival` — function — line 300
+- `NpcTravelResolveResult` — type — line 49
+- `observeNpcTravelArrival` — function — line 306
   - domain: npc
-- `reifyNpcTravel` — function — line 192
+- `reifyNpcTravel` — function — line 198
   - domain: npc
-- `resolveOffscreenNpcTravel` — function — line 261
+- `resolveOffscreenNpcTravel` — function — line 267
   - domain: npc
-- `stampNpcTravelCheckpoint` — function — line 210
+- `stampNpcTravelCheckpoint` — function — line 216
   - domain: npc
-- `travelProgress01` — function — line 102
+- `travelProgress01` — function — line 108
 
 ## `ai/npcTravelCheckpoint.ts`
 

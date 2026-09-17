@@ -24,6 +24,7 @@ import {
   type TemporaryConditionsState,
 } from '../shared/temporaryConditions'
 import { createVigorState, type VigorState } from '../shared/VigorState'
+import { cloneMerchantJourney, type MerchantJourneyState } from './merchantJourney'
 import {
   cloneNpcPostDeath,
   createLegacyTerminalNpcPostDeath,
@@ -165,6 +166,11 @@ export type NpcAuthoritativeState = {
    *  arrival context; optional `survivalResolvedAtDays` is the last settled
    *  off-screen survival checkpoint. */
   travel: NpcTravelContinuity | null
+  /** Travelling Merchant journey lifecycle (plan settlements-npcs-038) —
+   *  `null` while this NPC has no active journey (the common case, and every
+   *  non-Trader). Mutable in place like `activePlan`. Semantic phase/context
+   *  only — never a second cargo/travel clock, see `merchantJourney.ts`. */
+  merchantJourney: MerchantJourneyState | null
 }
 
 /** Plain-data snapshot — mirrors `SettlementEconomy.snapshot()` /
@@ -207,6 +213,9 @@ export type NpcStateSnapshot = {
   accompanyCommitment?: NpcAccompanyCommitment | null
   /** Optional generic travel checkpoint (plan npc-029). Absent means `null`. */
   travel?: NpcTravelContinuity | null
+  /** Optional merchant journey (plan settlements-npcs-038). Absent (including
+   *  every pre-038 save) means no active journey. */
+  merchantJourney?: MerchantJourneyState | null
 }
 
 function fromSnapshot(id: NpcId, snapshot: NpcStateSnapshot, maxima?: NpcPhysicalMaxima): NpcAuthoritativeState {
@@ -231,6 +240,7 @@ function fromSnapshot(id: NpcId, snapshot: NpcStateSnapshot, maxima?: NpcPhysica
     merchantStockInitialized: snapshot.merchantStockInitialized === true,
     accompanyCommitment: cloneNpcAccompanyCommitment(snapshot.accompanyCommitment),
     travel: cloneNpcTravel(snapshot.travel),
+    merchantJourney: cloneMerchantJourney(snapshot.merchantJourney),
     needsInitialPersonalLoadout: false,
   }
   if (maxima) applyDerivedStaminaMax(state.stamina, maxima.maxStamina)
@@ -278,6 +288,7 @@ export function createNpcAuthoritativeState(
     merchantStockInitialized: false,
     accompanyCommitment: null,
     travel: null,
+    merchantJourney: null,
     needsInitialPersonalLoadout: true,
   }
 }
@@ -345,6 +356,7 @@ export function createNpcStateRegistry(initial?: Record<NpcId, NpcStateSnapshot>
           merchantStockInitialized: state.merchantStockInitialized || undefined,
           accompanyCommitment: cloneNpcAccompanyCommitment(state.accompanyCommitment) ?? undefined,
           travel: cloneNpcTravel(state.travel) ?? undefined,
+          merchantJourney: cloneMerchantJourney(state.merchantJourney) ?? undefined,
         }
       }
       return out

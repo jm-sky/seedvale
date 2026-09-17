@@ -1979,6 +1979,22 @@ function isNpcStateSnapshot(value: unknown): value is NpcStateSnapshot {
   if (s.merchantStockInitialized !== undefined && typeof s.merchantStockInitialized !== 'boolean') return false
   if (s.accompanyCommitment !== undefined && s.accompanyCommitment !== null && !isNpcAccompanyCommitment(s.accompanyCommitment)) return false
   if (s.travel !== undefined && s.travel !== null && !isNpcTravelContinuity(s.travel)) return false
+  if (s.merchantJourney !== undefined && s.merchantJourney !== null && !isMerchantJourneyState(s.merchantJourney)) return false
+  return true
+}
+
+const MERCHANT_JOURNEY_PHASES: ReadonlySet<string> = new Set(['outbound', 'returning', 'visiting'])
+
+/** Validates a `MerchantJourneyState` (plan settlements-npcs-038) — plain
+ *  semantic data, no runtime refs, mirrors `settlement/merchantJourney.ts`. */
+function isMerchantJourneyState(value: unknown): boolean {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const j = value as Record<string, unknown>
+  if (typeof j.homeSettlementId !== 'string' || typeof j.destinationSettlementId !== 'string') return false
+  if (typeof j.phase !== 'string' || !MERCHANT_JOURNEY_PHASES.has(j.phase)) return false
+  if (j.transportOrderId !== undefined && typeof j.transportOrderId !== 'string') return false
+  if (j.visitStartedAtDays !== undefined && typeof j.visitStartedAtDays !== 'number') return false
+  if (j.visitEndsAtDays !== undefined && typeof j.visitEndsAtDays !== 'number') return false
   return true
 }
 
@@ -2029,6 +2045,8 @@ function isNpcTravelContinuity(value: unknown): boolean {
       if (typeof p.assignmentId !== 'string') return false
     } else if (p.kind === 'transport') {
       if (typeof p.orderId !== 'string') return false
+    } else if (p.kind === 'merchant-return') {
+      if (typeof p.homeSettlementId !== 'string') return false
     } else {
       return false
     }

@@ -3,6 +3,7 @@ import type { TransportOrders } from './createTransportOrders'
 import { observeNpcTravelArrival } from '../ai/npcTravel'
 import { tryAdvanceDevelopment } from '../economy/npcWork'
 import { creditDeliveredOreToStock } from '../economy/oreTransportDemand'
+import { advanceMerchantJourneyToVisiting } from '../settlement/merchantJourney'
 import {
   type OffscreenTransportLookup,
   resolveTransportEndpointInventory,
@@ -61,5 +62,6 @@ export function resolveTransportTravelArrivals(
       }
     }
     observeNpcTravelArrival(state)
+    advanceMerchantJourneyToVisiting(state, order.id, nowDays)
   })
 }
