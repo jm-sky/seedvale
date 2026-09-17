@@ -1,6 +1,6 @@
-# Implementation notes: fauna-035 — Interruptible carcass feeding
+# Implementation notes: fauna-036 — Interruptible carcass feeding
 
-**Plan:** [fauna-035](../fauna-035-interruptible-carcass-feeding.md)
+**Plan:** [fauna-036](../fauna-036-interruptible-carcass-feeding.md)
 
 ## Verified current-code facts
 

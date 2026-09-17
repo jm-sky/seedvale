@@ -661,7 +661,7 @@ Generated from exported TypeScript symbols.
 
 - `BlacksmithWorkplace` — type — line 342
 - `buildSettlementProps` — function — line 752
-- `disposeSettlementGroup` — function — line 2122
+- `disposeSettlementGroup` — function — line 2135
 - `SettlementHouseBed` — type — line 162
 - `SettlementHouseLandmark` — type — line 128
 - `SettlementLandmarks` — type — line 178
@@ -958,6 +958,8 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/settlementPalisade.ts`
 
+- `fencePlacementColliders` — function — line 380
+  - domain: settlements
 - `PALISADE_GATE_HALF_ANGLE` — const — line 20
 - `PALISADE_WALL_HALF_DEPTH` — const — line 27
   - domain: settlements
@@ -969,7 +971,7 @@ Generated from exported TypeScript symbols.
   - domain: settlements
 - `SettlementEntranceTorchPlacement` — type — line 62
   - domain: settlements
-- `settlementPalisadeColliders` — function — line 381
+- `settlementPalisadeColliders` — function — line 399
   - domain: settlements
 - `SettlementPalisadePlacement` — type — line 54
   - domain: settlements
@@ -1232,26 +1234,26 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/villagePaddock.ts`
 
-- `appendPaddockPath` — function — line 381
-- `horseVendorSetupChance` — function — line 66
-- `paddockFencePlacements` — function — line 419
-- `PaddockPlanArgs` — type — line 93
-- `paddockRadiusFor` — function — line 80
-- `paddockSlotCountForRadius` — function — line 85
-- `planSettlementPaddock` — function — line 306
+- `appendPaddockPath` — function — line 391
+- `horseVendorSetupChance` — function — line 68
+- `paddockFencePlacements` — function — line 429
+- `PaddockPlanArgs` — type — line 95
+- `paddockRadiusFor` — function — line 82
+- `paddockSlotCountForRadius` — function — line 87
+- `planSettlementPaddock` — function — line 312
   - domain: settlements
-- `settlementRollsHorseVendor` — function — line 74
-- `vendorHorseAnimalId` — function — line 89
+- `settlementRollsHorseVendor` — function — line 76
+- `vendorHorseAnimalId` — function — line 91
 
 ## `settlement/villagePasture.ts`
 
-- `appendPasturePath` — function — line 421
-- `fenceSegmentPlacements` — function — line 468
-- `pastureFencePlacements` — function — line 497
-- `PasturePlanArgs` — type — line 72
-- `pastureRadiusFor` — function — line 65
-- `planSettlementPasture` — function — line 334
-- `settlementWantsPasture` — function — line 56
+- `appendPasturePath` — function — line 438
+- `fenceSegmentPlacements` — function — line 485
+- `pastureFencePlacements` — function — line 514
+- `PasturePlanArgs` — type — line 79
+- `pastureRadiusFor` — function — line 72
+- `planSettlementPasture` — function — line 347
+- `settlementWantsPasture` — function — line 63
 
 ## `settlement/villagePlan.ts`
 
@@ -1308,13 +1310,13 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/villagePlanner.ts`
 
-- `buildingsAndLandmarksFromPlots` — function — line 1369
+- `buildingsAndLandmarksFromPlots` — function — line 1380
 - `chooseLayoutPattern` — function — line 160
 - `HOUSE_PLOT_RADIUS` — const — line 76
 - `householdWellLocalBand` — function — line 88
   - domain: settlements-npcs
-- `pathPlansToCorridorData` — function — line 1744
-- `planLocalPathsAndEntrances` — function — line 1625
+- `pathPlansToCorridorData` — function — line 1755
+- `planLocalPathsAndEntrances` — function — line 1636
 - `planVillageLayout` — function — line 924
 - `PLOT_SCORE_WEIGHTS` — const — line 50
 - `VillageLayoutDraft` — type — line 123

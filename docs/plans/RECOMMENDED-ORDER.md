@@ -34,10 +34,14 @@
 
 ### Bug Fixes
 
-1. `settlements-018` — **Pasture and paddock fence road clearance and collision**  
-   🔴 `S` · ✅ ready · unlocks 0/0 · type: fix
+1. `quests-progression-056` — **Dungeon bandit story-item integrity and recovery**  
+   🔴 `M` · ✅ ready · unlocks 0/0 · type: bug
 2. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
    🔴 `M` · ✅ ready · unlocks 0/0 · type: fix
+3. `fauna-036` — **Interruptible Carcass Feeding**  
+   🔴 `S` · ✅ ready · unlocks 0/0 · type: fix
+4. `fauna-035` — **Dismount Follow/Stay anchor semantics**  
+   🔴 `S` · ✅ ready · unlocks 0/0 · type: bug
 
 ---
 
@@ -121,13 +125,13 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `L` · **Score:**  64  
    → **unlocks:** 0/0
 
-12. `settlements-018` — **Pasture and paddock fence road clearance and collision**  
-  🔴 `S` · **Score:**  61  
-   → **unlocks:** 0/0
-
-13. `quests-progression-053` — **Hunters Brotherhood — competing hunting strategies**  
+12. `quests-progression-053` — **Hunters Brotherhood — competing hunting strategies**  
   🟡 `L` · **Score:**  56  
    → **unlocks:** 1/1
+
+13. `quests-progression-056` — **Dungeon bandit story-item integrity and recovery**  
+  🔴 `M` · **Score:**  49  
+   → **unlocks:** 0/0
 
 14. `settlements-004` — **Gold Economic Realization & Source Entitlements**  
   🔴 `M` · **Score:**  49  
@@ -149,31 +153,47 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `M` · **Score:**  35  
    → **unlocks:** 0/0
 
-19. `tools-015` — **Chatterbox local voice generation pipeline**  
+19. `fauna-036` — **Interruptible Carcass Feeding**  
+  🔴 `S` · **Score:**  31  
+   → **unlocks:** 0/0
+
+20. `tools-015` — **Chatterbox local voice generation pipeline**  
   🔴 `M` · **Score:**  31  
    → **unlocks:** 0/0
 
-20. `items-player-014` — **Rope-pullable resource transport**  
+21. `tools-016` — **Heavy settlement performance benchmark**  
+  🔴 `S` · **Score:**  31  
+   → **unlocks:** 0/0
+
+22. `fauna-035` — **Dismount Follow/Stay anchor semantics**  
+  🔴 `S` · **Score:**  29  
+   → **unlocks:** 0/0
+
+23. `items-player-045` — **Medicine targeted treatment for player, NPCs and livestock**  
+  🟡 `L` · **Score:**  28  
+   → **unlocks:** 0/0
+
+24. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-21. `tools-005` — **Seedvale Character Preparation Panel**  
+25. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-22. `items-player-044` — **Shoulder and forearm equipment slots**  
+26. `items-player-044` — **Shoulder and forearm equipment slots**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-23. `npc-046` — **Settlement threat response and livestock safety**  
+27. `npc-046` — **Settlement threat response and livestock safety**  
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-24. `items-player-032` — **NPC player-storage resource and context rules**  
+28. `items-player-032` — **NPC player-storage resource and context rules**  
   🟡 `L` · **Score:**  20  
    → **unlocks:** 0/0
 
-25. `fauna-034` — **Wildlife Day/Night Rest and Den Defense**  
+29. `fauna-034` — **Wildlife Day/Night Rest and Den Defense**  
   🟡 `M` · **Score:**  19  
    → **unlocks:** 0/0
 
@@ -291,6 +311,8 @@ graph TD
   fauna_032["fauna-032 — Exceptional animal appearance morphs"]
   fauna_033["fauna-033 — Animal movement hot-path performance"]
   fauna_034["fauna-034 — Wildlife Day/Night Rest and Den Defense"]
+  fauna_035["fauna-035 — Dismount Follow/Stay anchor semantics"]
+  fauna_036["fauna-036 — Interruptible Carcass Feeding"]
   items_player_001["items-player-001 — Containers, Waterskins & Copper Items"]
   items_player_002["items-player-002 — Food provenance, freshness and storage"]
   items_player_003["items-player-003 — Player Physical Effort — Stamina & Vigor"]
@@ -330,6 +352,7 @@ graph TD
   items_player_042["items-player-042 — Foreign property interaction warning and consequences"]
   items_player_043["items-player-043 — Renewable medicinal herbs and skill-aware foraging"]
   items_player_044["items-player-044 — Shoulder and forearm equipment slots"]
+  items_player_045["items-player-045 — Medicine targeted treatment for player, NPCs and livestock"]
   npc_001["npc-001 — NPC Physical Stats — Sex & Age"]
   npc_002["npc-002 — NPC Healing"]
   npc_004["npc-004 — Drzewo genealogiczne NPC"]
@@ -434,6 +457,7 @@ graph TD
   quests_progression_053["quests-progression-053 — Hunters Brotherhood — competing hunting strategies"]
   quests_progression_054["quests-progression-054 — Hunters Brotherhood — exceptional animal finale"]
   quests_progression_055["quests-progression-055 — Quest marker lifecycle and actionability fixes"]
+  quests_progression_056["quests-progression-056 — Dungeon bandit story-item integrity and recovery"]
   settlements_001["settlements-001 — House Collision Geometry"]
   settlements_002["settlements-002 — House Browser"]
   settlements_003["settlements-003 — Colony settlement bootstrap"]
@@ -509,6 +533,7 @@ graph TD
   tools_013["tools-013 — NPC decision verification and scenario tooling"]
   tools_014["tools-014 — Player-owned horse debug controls"]
   tools_015["tools-015 — Chatterbox local voice generation pipeline"]
+  tools_016["tools-016 — Heavy settlement performance benchmark"]
   ui_input_001["ui-input-001 — Developer Debug API"]
   ui_input_002["ui-input-002 — UI/UX Interaction and Action System Polish"]
   ui_input_003["ui-input-003 — Merchant Trade UI/UX Redesign"]
@@ -653,6 +678,7 @@ graph TD
   fauna_003 --> fauna_008
   fauna_003 --> fauna_020
   fauna_004 --> settlements_npcs_006
+  fauna_005 --> fauna_036
   fauna_006 --> fauna_007
   fauna_010 --> fauna_011
   fauna_010 --> fauna_012
@@ -677,6 +703,7 @@ graph TD
   fauna_016 --> quests_progression_009
   fauna_017 --> fauna_013
   fauna_017 --> fauna_018
+  fauna_017 --> fauna_036
   fauna_018 --> fauna_032
   fauna_018 --> quests_progression_008
   fauna_018 --> quests_progression_023
@@ -717,6 +744,7 @@ graph TD
   items_player_018 --> world_020
   items_player_021 --> items_player_019
   items_player_021 --> items_player_043
+  items_player_021 --> items_player_045
   items_player_021 --> ui_input_013
   items_player_022 --> items_player_024
   items_player_022 --> items_player_025
@@ -748,6 +776,7 @@ graph TD
   items_player_039 --> items_player_041
   items_player_039 --> items_player_044
   items_player_040 --> settlements_npcs_042
+  items_player_043 --> items_player_045
   npc_001 --> npc_019
   npc_002 --> npc_025
   npc_006 --> fauna_004
@@ -778,6 +807,7 @@ graph TD
   npc_024 --> npc_025
   npc_024 --> ui_input_013
   npc_025 --> items_player_043
+  npc_025 --> items_player_045
   npc_025 --> npc_032
   npc_025 --> npc_033
   npc_025 --> ui_input_013
@@ -846,6 +876,7 @@ graph TD
   quests_progression_020 --> quests_progression_048
   quests_progression_026 --> quests_progression_041
   quests_progression_026 --> quests_progression_042
+  quests_progression_026 --> quests_progression_056
   quests_progression_027 --> quests_progression_041
   quests_progression_027 --> quests_progression_042
   quests_progression_027 --> quests_progression_044
@@ -865,6 +896,7 @@ graph TD
   quests_progression_034 --> quests_progression_048
   quests_progression_034 --> quests_progression_055
   quests_progression_035 --> quests_progression_051
+  quests_progression_035 --> quests_progression_056
   quests_progression_036 --> quests_progression_040
   quests_progression_037 --> quests_progression_038
   quests_progression_037 --> quests_progression_039
@@ -977,6 +1009,7 @@ graph TD
   settlements_npcs_036 --> settlements_npcs_042
   settlements_npcs_037 --> settlements_npcs_038
   settlements_npcs_040 --> settlements_npcs_042
+  tools_001 --> tools_016
   tools_010 --> tools_011
   tools_011 --> tools_012
   ui_input_001 --> ui_input_008

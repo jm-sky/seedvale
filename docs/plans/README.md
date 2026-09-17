@@ -78,6 +78,10 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `items-player-044-shoulder-and-forearm-equipment-slots.md`                  | 🟡 | M      | ~~items-player-039~~                                                                                                                                                                                                                                                                       | -                                       |
 | 💡 `npc-046-settlement-threat-response-and-livestock-safety.md`                | 🔴 | L      | -                                                                                                                                                                                                                                                                                          | -                                       |
 | 💡 `tools-016-heavy-settlement-performance-benchmark.md`                       | 🔴 | S      | ~~tools-001~~                                                                                                                                                                                                                                                                              | -                                       |
+| 💡 `fauna-035-dismount-follow-stay-anchor-semantics.md`                        | 🔴 | S      | -                                                                                                                                                                                                                                                                                          | horse-and-riding                        |
+| 💡 `fauna-036-interruptible-carcass-feeding.md`                                | 🔴 | S      | ~~fauna-005~~, ~~fauna-017~~                                                                                                                                                                                                                                                               | -                                       |
+| ◼️ `items-player-045-medicine-targeted-treatment-for-player-npcs-and-livestock.md` | 🟡 | L      | ~~items-player-021~~, ~~npc-025~~, ~~items-player-043~~                                                                                                                                                                                                                                    | physical-attributes-health-and-medicine |
+| 💡 `quests-progression-056-dungeon-bandit-story-item-integrity-and-recovery.md` | 🔴 | M      | ~~quests-progression-026~~, ~~quests-progression-035~~                                                                                                                                                                                                                                     | -                                       |
 
 ---
 
@@ -238,11 +242,11 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 ## Next plan IDs
 
 - ai: `005`
-- fauna: `035`
-- items-player: `045`
+- fauna: `037`
+- items-player: `046`
 - npc: `047`
 - persistence: `006`
-- quests-progression: `056`
+- quests-progression: `057`
 - settlements: `019`
 - settlements-npcs: `043`
 - tools: `017`

@@ -2014,6 +2014,8 @@ Generated from TypeScript imports.
 - `settlement/createSettlement.ts`
 - `settlement/props.ts`
 - `settlement/settlementPalisade.test.ts`
+- `settlement/villagePaddock.test.ts`
+- `settlement/villagePasture.test.ts`
 
 ## `settlement/settlementPlanCache.ts`
 
@@ -2403,7 +2405,9 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `math/segment.ts`
 - `settlement/families.ts`
+- `settlement/settlementPalisade.ts`
 - `settlement/villagePaddock.ts`
 - `settlement/villagePlan.ts`
 - `settlement/villagePlanner.ts`
@@ -2439,6 +2443,7 @@ Generated from TypeScript imports.
 
 - `math/segment.ts`
 - `settlement/families.ts`
+- `settlement/settlementPalisade.ts`
 - `settlement/villagePasture.ts`
 - `settlement/villagePlan.ts`
 - `settlement/villagePlanner.ts`
