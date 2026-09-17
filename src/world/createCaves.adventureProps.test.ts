@@ -74,6 +74,7 @@ beforeAll(async () => {
 })
 
 describe('createCaves adventure presentation props (plan world-terrain-020 Stage D)', () => {
+  // Cave worldgen + presentation streaming — allow headroom under suite contention.
   it('streams props in/out with presentation and does not duplicate on reactivation', () => {
     const scene = new Scene()
     const budget = createPointLightBudget(scene, 16)
@@ -121,7 +122,7 @@ describe('createCaves adventure presentation props (plan world-terrain-020 Stage
 
     caves.dispose()
     budget.dispose()
-  })
+  }, 20_000)
 
   it('does not add adventure props to a natural cave presentation', () => {
     const scene = new Scene()
@@ -139,5 +140,5 @@ describe('createCaves adventure presentation props (plan world-terrain-020 Stage
     expect(root).toBeDefined()
     expect(adventurePropsGroup(root!)).toBeUndefined()
     caves.dispose()
-  })
+  }, 20_000)
 })

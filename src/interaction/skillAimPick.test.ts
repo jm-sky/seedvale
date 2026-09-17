@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { SKILL_AIM_SCREEN_RADIUS, pickInteractableNearScreen } from './skillAimPick'
+import { pickInteractableNearScreen, SKILL_AIM_SCREEN_RADIUS } from './skillAimPick'
 import type { PerspectiveCamera } from 'three'
 
 describe('pickInteractableNearScreen', () => {

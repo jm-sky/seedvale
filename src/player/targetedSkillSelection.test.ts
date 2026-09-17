@@ -24,9 +24,10 @@ describe('createTargetedSkillSelection (plan items-player-021)', () => {
     expect(selection.toggle('traps')).toBeNull()
   })
 
-  it('does not select a targeted skill that has no implemented consumer', () => {
+  it('selects medicine once its targeted consumer is implemented', () => {
     const selection = createTargetedSkillSelection()
-    expect(selection.select('medicine')).toBe(false)
+    expect(selection.select('medicine')).toBe(true)
+    expect(selection.get()).toBe('medicine')
     expect(selection.toggle('medicine')).toBeNull()
     expect(selection.get()).toBeNull()
   })

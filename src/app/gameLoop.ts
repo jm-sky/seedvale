@@ -88,7 +88,6 @@ import { countNearbyHumans } from '../fauna/predatorHumanDecision'
 import { isTouchDevice } from '../input/isTouchDevice'
 import { type createMouseLook, exitGamePointerLock } from '../input/MouseLook'
 import { pickInGaze, rankInGaze } from '../interaction/findInteractionTarget'
-import { pickInteractableNearScreen } from '../interaction/skillAimPick'
 import {
   buildInteractionGazePrompt,
   interactableStableKey,
@@ -98,6 +97,7 @@ import {
   isInteractableActionable,
 } from '../interaction/interactionView'
 import { formatSettlementStorageLines, resolveInteraction } from '../interaction/resolveInteraction'
+import { pickInteractableNearScreen } from '../interaction/skillAimPick'
 import { executeTargetedSkillAction, queryTargetedSkillAction, targetedSkillPrompt, type TargetedSkillQueryContext } from '../interaction/targetedSkillAction'
 import { treeInspectionCanYieldBranch } from '../interaction/treeInspection'
 import { resolveEquipmentModifiers } from '../items/equipment'

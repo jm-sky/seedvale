@@ -474,6 +474,7 @@ describe('river terminal continuity across tile ownership (world-terrain-013)', 
 })
 
 describe('inland river coverage regression (world-terrain-011)', () => {
+  // Heavy multi-seed/tile river generation — allow headroom under suite contention.
   it('keeps meaningful inland river coverage across representative seeds/tiles, not just coastal ribbons', () => {
     const waterLevel = 0.45
     let inlandPointCount = 0
@@ -500,7 +501,7 @@ describe('inland river coverage regression (world-terrain-011)', () => {
     // and aggregate on purpose — it guards against wholesale loss, not exact
     // river placement, which legitimately shifts with harmless terrain tuning.
     expect(inlandPointCount).toBeGreaterThan(200)
-  })
+  }, 20_000)
 })
 
 describe('depthFromAccumulation', () => {

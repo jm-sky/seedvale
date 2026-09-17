@@ -52,7 +52,10 @@ function setup(instances?: LiquidContainerItemInstance[]) {
       unsafeFoodEventCount: 0,
       skills: createPlayerSkills(),
       syncDerivedPhysicalCapabilities: vi.fn(),
+      registerPhysicalDamage: vi.fn(),
+      clampPhysicalInjuryToMissingHp: vi.fn(),
     },
+
     inventory,
     heldTool: {},
     hud: { setInventoryWeight: vi.fn() },
