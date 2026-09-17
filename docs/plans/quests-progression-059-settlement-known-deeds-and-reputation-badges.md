@@ -9,6 +9,7 @@
 **Subdomains:** `progression` `relationships` `rewards`
 **Tags:** `badges` `reputation` `renown` `known-deeds` `settlements`
 **Roadmap:** `quests-and-reputation.md`
+**Model:** Sonnet, Composer
 
 ## Cel
 
