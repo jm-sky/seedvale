@@ -147,12 +147,12 @@ describe('resolveNpcVoiceLine production manifest', () => {
       npc({ gender: 'female', role: 'trader', age: 35, voiceActor: 'karen' }),
       'greeting',
     )
-    expect(url).toMatch(/^\/sounds\/voices\/merchant_female_greeting_0[1-3]\.wav$/)
+    expect(url).toMatch(/^\/sounds\/voices\/merchant_female_greeting_0[1-3]\.mp3$/)
   })
 
   it('falls a male farmer without profession audio back to general male greeting', () => {
     expect(resolveNpcVoiceLine(npc({ role: 'farmer', age: 40 }), 'greeting')).toBe(
-      '/sounds/voices/general_male_greeting_01.wav',
+      '/sounds/voices/general_male_greeting_01.mp3',
     )
   })
 
@@ -171,6 +171,6 @@ describe('resolveNpcVoiceLine production manifest', () => {
         npc({ gender: 'female', role: 'trader', age: 35, voiceActor: 'karen' }),
         'confirmation',
       ),
-    ).toBe('/sounds/voices/merchant_female_agree_01.wav')
+    ).toBe('/sounds/voices/merchant_female_agree_01.mp3')
   })
 })

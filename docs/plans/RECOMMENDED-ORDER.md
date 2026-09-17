@@ -34,7 +34,9 @@
 
 ### Bug Fixes
 
-1. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
+1. `settlements-018` — **Pasture and paddock fence road clearance and collision**  
+   🔴 `S` · ✅ ready · unlocks 0/0 · type: fix
+2. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
    🔴 `M` · ✅ ready · unlocks 0/0 · type: fix
 
 ---
@@ -43,6 +45,8 @@
 
 1. `quests-progression-046` — **Lost Treasure Chronicles — integration, legacy catch-up and superseded quest cleanup**  
    🔴 `L` · 🔒 blocked · unlocks 0/0
+2. `ui-input-024` — **NPC dialogue grouping and quest priority**  
+   🔴 `M` · ✅ ready · unlocks 0/0
 
 ---
 
@@ -123,59 +127,71 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `L` · **Score:**  64  
    → **unlocks:** 0/0
 
-13. `npc-042` — **NPC voice and dialogue catalog infrastructure**  
+13. `settlements-018` — **Pasture and paddock fence road clearance and collision**  
+  🔴 `S` · **Score:**  61  
+   → **unlocks:** 0/0
+
+14. `npc-042` — **NPC voice and dialogue catalog infrastructure**  
   🔴 `M` · **Score:**  57  
    → **unlocks:** 2/2
 
-14. `quests-progression-053` — **Hunters Brotherhood — competing hunting strategies**  
+15. `quests-progression-053` — **Hunters Brotherhood — competing hunting strategies**  
   🟡 `L` · **Score:**  56  
    → **unlocks:** 1/1
 
-15. `settlements-004` — **Gold Economic Realization & Source Entitlements**  
+16. `settlements-004` — **Gold Economic Realization & Source Entitlements**  
   🔴 `M` · **Score:**  49  
    → **unlocks:** 1/1
 
-16. `quests-progression-010` — **Abandoned gold mine → mining colony integration**  
+17. `quests-progression-010` — **Abandoned gold mine → mining colony integration**  
   🔴 `M` · **Score:**  61  
    → **unlocks:** 0/0
 
-17. `quests-progression-054` — **Hunters Brotherhood — exceptional animal finale**  
+18. `quests-progression-054` — **Hunters Brotherhood — exceptional animal finale**  
   🟡 `L` · **Score:**  44  
    → **unlocks:** 0/0
 
-18. `settlements-npcs-022` — **Household help and age-based work participation**  
+19. `settlements-npcs-022` — **Household help and age-based work participation**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 0/0
 
-19. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
+20. `npc-045` — **Campfire spoken conversation pairs**  
+  🔴 `S` · **Score:**  37  
+   → **unlocks:** 0/0
+
+21. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
   🔴 `M` · **Score:**  35  
    → **unlocks:** 0/0
 
-20. `tools-015` — **Chatterbox local voice generation pipeline**  
+22. `tools-015` — **Chatterbox local voice generation pipeline**  
   🔴 `M` · **Score:**  31  
    → **unlocks:** 0/0
 
-21. `npc-043` — **Dialogue language migration to English**  
+23. `npc-043` — **Dialogue language migration to English**  
   🔴 `L` · **Score:**  28  
    → **unlocks:** 0/0
 
-22. `items-player-014` — **Rope-pullable resource transport**  
+24. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-23. `tools-005` — **Seedvale Character Preparation Panel**  
+25. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-24. `items-player-044` — **Shoulder and forearm equipment slots**  
+26. `ui-input-024` — **NPC dialogue grouping and quest priority**  
+  🔴 `M` · **Score:**  27  
+   → **unlocks:** 0/0
+
+27. `items-player-044` — **Shoulder and forearm equipment slots**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-25. `items-player-032` — **NPC player-storage resource and context rules**  
+28. `items-player-032` — **NPC player-storage resource and context rules**  
   🟡 `L` · **Score:**  20  
    → **unlocks:** 0/0
 
-26. `fauna-034` — **Wildlife Day/Night Rest and Den Defense**  
+29. `fauna-034` — **Wildlife Day/Night Rest and Den Defense**  
   🟡 `M` · **Score:**  19  
    → **unlocks:** 0/0
 
@@ -385,6 +401,7 @@ graph TD
   npc_042["npc-042 — NPC voice and dialogue catalog infrastructure"]
   npc_043["npc-043 — Dialogue language migration to English"]
   npc_044["npc-044 — NPC hierarchical voice resolver"]
+  npc_045["npc-045 — Campfire spoken conversation pairs"]
   persistence_001["persistence-001 — Full Simulation Persistence"]
   persistence_002["persistence-002 — save integrity guard"]
   persistence_003["persistence-003 — save schema versioning and future migrations"]
@@ -462,6 +479,7 @@ graph TD
   settlements_015["settlements-015 — Settlement palisade collision"]
   settlements_016["settlements-016 — Legacy ruby trade valuation"]
   settlements_017["settlements-017 — Deterministically unique settlement names"]
+  settlements_018["settlements-018 — Pasture and paddock fence road clearance and collision"]
   settlements_npcs_001["settlements-npcs-001 — Cultivation Hydration & Watering"]
   settlements_npcs_002["settlements-npcs-002 — NPC professions — complete profession work integration"]
   settlements_npcs_003["settlements-npcs-003 — Hunter Arrow Production"]
@@ -542,6 +560,7 @@ graph TD
   ui_input_021["ui-input-021 — Quest log details i usłyszane notatki"]
   ui_input_022["ui-input-022 — Lightweight Startup Loading Stages"]
   ui_input_023["ui-input-023 — Character reputation level labels"]
+  ui_input_024["ui-input-024 — NPC dialogue grouping and quest priority"]
   world_001["world-001 — Playtest Gameplay Fixes — Stamina, Fire Time-Skip and Bear Behaviour"]
   world_003["world-003 — Faster Application Startup"]
   world_004["world-004 — Well Depth, Groundwater & Well Protection"]
@@ -766,6 +785,7 @@ graph TD
   npc_007 --> npc_027
   npc_010 --> npc_036
   npc_011 --> npc_026
+  npc_013 --> npc_045
   npc_014 --> npc_015
   npc_015 --> npc_016
   npc_015 --> npc_017
@@ -808,6 +828,7 @@ graph TD
   npc_041 --> tools_015
   npc_042 --> npc_043
   npc_042 --> tools_015
+  npc_044 --> npc_045
   persistence_002 --> persistence_003
   persistence_002 --> persistence_004
   persistence_003 --> persistence_004
@@ -911,6 +932,7 @@ graph TD
   settlements_007 --> settlements_npcs_034
   settlements_009 --> settlements_013
   settlements_009 --> settlements_014
+  settlements_009 --> settlements_018
   settlements_011 --> settlements_014
   settlements_012 --> items_player_040
   settlements_012 --> settlements_013
@@ -918,6 +940,8 @@ graph TD
   settlements_012 --> settlements_npcs_040
   settlements_012 --> settlements_npcs_042
   settlements_013 --> settlements_014
+  settlements_013 --> settlements_018
+  settlements_015 --> settlements_018
   settlements_npcs_002 --> settlements_npcs_005
   settlements_npcs_002 --> settlements_npcs_022
   settlements_npcs_002 --> settlements_npcs_024

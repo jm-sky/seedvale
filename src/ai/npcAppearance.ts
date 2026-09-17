@@ -49,15 +49,15 @@ export const NPC_MODEL_URLS: Record<NpcGender, readonly string[]> = {
 export type NpcOutfitId = 'modular' | 'peasant' | 'wizard' | 'ranger' | 'knight'
 export type NpcUbcOutfitId = Exclude<NpcOutfitId, 'modular'>
 export type NpcHairKind = 'simple' | 'long' | 'buzzed' | 'buns'
-export type NpcClothingHueId = 'identity' | 'warm' | 'cool' | 'darker'
+export type NpcClothingHueId = 'identity' | 'warm' | 'cool' | 'muted'
 export type NpcHairColorId = 'black' | 'brown' | 'redhead' | 'blond' | 'grey'
 
 /** Multiply on cloned `MI_Peasant` / `MI_Wizard` / `MI_Ranger` / `MI_Knight` after the role sidecar. */
 export const NPC_CLOTHING_HUE: Record<NpcClothingHueId, number> = {
   identity: 0xffffff,
-  warm: 0xf2e6d8,
-  cool: 0xdde4f0,
-  darker: 0xc8c0b4,
+  warm: 0xfff4e8,
+  cool: 0xf2f6ff,
+  muted: 0xe5ddd2,
 }
 
 /** Multiply on cloned `MI_Hair_*` (grey albedo). Not `#000000` — that kills shading. */
@@ -75,7 +75,7 @@ const MALE_HAIR_KINDS: readonly NpcHairKind[] = ['simple', 'long', 'buzzed']
 const FEMALE_HAIR_KINDS: readonly NpcHairKind[] = ['long', 'buns']
 /** Ranger hood clips Hair_Buns; huntresses only roll Long. */
 const FEMALE_RANGER_HAIR_KINDS: readonly NpcHairKind[] = ['long']
-const CLOTHING_HUE_IDS: readonly NpcClothingHueId[] = ['identity', 'warm', 'cool', 'darker']
+const CLOTHING_HUE_IDS: readonly NpcClothingHueId[] = ['identity', 'warm', 'cool', 'muted']
 const NON_GREY_HAIR_COLOR_IDS: readonly NpcHairColorId[] = ['black', 'brown', 'redhead', 'blond']
 const BEARD_CHANCE = 0.35
 /** Below this age grey hair never rolls. */
