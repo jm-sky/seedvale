@@ -1,7 +1,12 @@
 import type { HeightSampler } from '../player/PlayerController'
 import type { RiverChannelSegment } from '../terrain/chunkHeightmap'
 import type { FamilyDef, VillageSize } from './families'
-import { pointHitsCorridor, yawToward } from '../math/segment'
+import {
+  pointHitsCorridor,
+  segmentHitsCorridor,
+  yawToward,
+  type CorridorSegment2D,
+} from '../math/segment'
 import { type PropPlacement } from '../render/instancedProps'
 import { footprintOverlapsRiver } from '../terrain/riverNetwork'
 import { createSeededRandom } from '../world/parseSeed'
@@ -37,6 +42,8 @@ const PASTURE_BOUNDARY_GAP = 2.5
 const WELL_RADIUS = 2.4
 const TROUGH_RADIUS = 1.2
 const FENCE_CLEARANCE = 0.9
+/** Matches `PALISADE_WALL_HALF_DEPTH` — physical fence footprint vs corridors. */
+const FENCE_CORRIDOR_CLEARANCE = 0.3
 const MAX_SLOPE = 3.2
 const MAX_SPREAD = 4.5
 const ANGLE_CANDIDATES = 16
@@ -80,6 +87,9 @@ export type PasturePlanArgs = {
   sampleHeight: HeightSampler
   waterLevel: number
   riverSegments: readonly RiverChannelSegment[]
+  /** Final local path/road corridors (`pathPlansToCorridorData`). When set,
+   *  fence segments must clear these in addition to entrance spokes. */
+  pathCorridors?: readonly CorridorSegment2D[]
 }
 
 function localSlope(x: number, z: number, y: number, sampleHeight: HeightSampler): number {
@@ -161,10 +171,12 @@ function segmentClear(
   trough: { x: number, z: number },
   connection: { x: number, z: number },
   plots: readonly VillagePlot[],
+  corridors: readonly CorridorSegment2D[],
   sampleHeight: HeightSampler,
   waterLevel: number,
   riverSegments: readonly RiverChannelSegment[],
 ): boolean {
+  if (segmentHitsCorridor(ax, az, bx, bz, corridors, FENCE_CORRIDOR_CLEARANCE)) return false
   const samples = 5
   for (let i = 0; i <= samples; i++) {
     const t = i / samples
@@ -185,7 +197,7 @@ function layoutOnCandidate(
   radius: number,
   center: VillageCenter,
   plots: readonly VillagePlot[],
-  corridors: readonly { ax: number, az: number, bx: number, bz: number, halfWidth: number }[],
+  corridors: readonly CorridorSegment2D[],
   sampleHeight: HeightSampler,
   waterLevel: number,
   riverSegments: readonly RiverChannelSegment[],
@@ -284,6 +296,7 @@ function layoutOnCandidate(
         troughPos,
         connection,
         plots,
+        corridors,
         sampleHeight,
         waterLevel,
         riverSegments,
@@ -344,8 +357,12 @@ export function planSettlementPasture(args: PasturePlanArgs): VillagePasturePlan
     sampleHeight,
     waterLevel,
     riverSegments,
+    pathCorridors,
   } = args
-  const corridors = entranceCorridors(center, entrances)
+  const corridors: CorridorSegment2D[] = [
+    ...entranceCorridors(center, entrances),
+    ...(pathCorridors ?? []),
+  ]
   const minDist = boundary.radius + radius + PASTURE_BOUNDARY_GAP
   const preferredDist = minDist + 4
   const random = createSeededRandom(seedForCell ^ PASTURE_SEED_SALT)

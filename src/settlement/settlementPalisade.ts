@@ -368,25 +368,36 @@ export async function plantEntrancePalisade(
 }
 
 /**
- * Pure placement → collision projection for the settlement entrance
- * palisade. Every finished visible segment gets exactly one `obb` collider;
- * a segment `resolveEntrancePalisadePlacements` skipped (gate gap, corridor,
- * coastal rejection) has no counterpart here — never fabricate a continuous
- * ring collider. `rotationY` is used as-is from the placement so the
- * collider orientation always matches the rendered segment's tangent facing
- * (the wall's long/local axis, `WALL_HALF_LENGTH`, is the one
- * `instanceWorldMatrix` rotates by this same `rotationY`).
+ * Shared placement → OBB projection for settlement fence / palisade wall
+ * segments. Every finished visible placement gets exactly one `obb`
+ * collider; omitted gaps (gate, entrance, corridor rejection) have no
+ * counterpart — never fabricate a continuous ring. `rotationY`, `x`, and
+ * `z` are copied from the canonical placement so collision matches the
+ * rendered wall contract (`WALL_HALF_LENGTH` × `PALISADE_WALL_HALF_DEPTH`).
+ * Ignores `placement.scale` (same as entrance palisade).
  * @domain settlements
  */
-export function settlementPalisadeColliders(
-  placements: readonly SettlementPalisadePlacement[],
+export function fencePlacementColliders(
+  placements: readonly PropPlacement[],
 ): Collider[] {
   return placements.map((placement) => ({
-    type: 'obb',
+    type: 'obb' as const,
     x: placement.x,
     z: placement.z,
     halfWidth: WALL_HALF_LENGTH,
     halfDepth: PALISADE_WALL_HALF_DEPTH,
     rotationY: placement.rotationY,
   }))
+}
+
+/**
+ * Pure placement → collision projection for the settlement entrance
+ * palisade. Thin wrapper over `fencePlacementColliders` so call sites /
+ * tests keep the entrance-palisade semantic name.
+ * @domain settlements
+ */
+export function settlementPalisadeColliders(
+  placements: readonly SettlementPalisadePlacement[],
+): Collider[] {
+  return fencePlacementColliders(placements)
 }

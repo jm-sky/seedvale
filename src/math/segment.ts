@@ -76,3 +76,113 @@ export function pointHitsCorridor(
   }
   return false
 }
+
+/**
+ * True when finite segments `(ax,az)-(bx,bz)` and `(cx,cz)-(dx,dz)`
+ * properly intersect (including endpoint touches).
+ */
+function segmentsIntersect2D(
+  ax: number,
+  az: number,
+  bx: number,
+  bz: number,
+  cx: number,
+  cz: number,
+  dx: number,
+  dz: number,
+): boolean {
+  const abx = bx - ax
+  const abz = bz - az
+  const cross = (px: number, pz: number, qx: number, qz: number): number =>
+    px * qz - pz * qx
+  const d1 = cross(abx, abz, cx - ax, cz - az)
+  const d2 = cross(abx, abz, dx - ax, dz - az)
+  const cdx = dx - cx
+  const cdz = dz - cz
+  const d3 = cross(cdx, cdz, ax - cx, az - cz)
+  const d4 = cross(cdx, cdz, bx - cx, bz - cz)
+  // Proper crossing: endpoints on opposite sides of each segment.
+  if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0))
+    && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) {
+    return true
+  }
+  // Endpoint-on-segment touches (collinear or T-junction).
+  const onSeg = (
+    px: number, pz: number,
+    sx: number, sz: number, ex: number, ez: number,
+    orient: number,
+  ): boolean => {
+    if (Math.abs(orient) > 1e-9) return false
+    return px >= Math.min(sx, ex) - 1e-9
+      && px <= Math.max(sx, ex) + 1e-9
+      && pz >= Math.min(sz, ez) - 1e-9
+      && pz <= Math.max(sz, ez) + 1e-9
+  }
+  return onSeg(cx, cz, ax, az, bx, bz, d1)
+    || onSeg(dx, dz, ax, az, bx, bz, d2)
+    || onSeg(ax, az, cx, cz, dx, dz, d3)
+    || onSeg(bx, bz, cx, cz, dx, dz, d4)
+}
+
+/**
+ * Minimum distance between two finite 2D segments `(ax,az)-(bx,bz)` and
+ * `(cx,cz)-(dx,dz)`. Handles intersecting, parallel, and endpoint-nearest
+ * cases without sampling.
+ */
+export function distanceBetweenSegments2D(
+  ax: number,
+  az: number,
+  bx: number,
+  bz: number,
+  cx: number,
+  cz: number,
+  dx: number,
+  dz: number,
+): number {
+  const abLenSq = (bx - ax) ** 2 + (bz - az) ** 2
+  const cdLenSq = (dx - cx) ** 2 + (dz - cz) ** 2
+
+  // Degenerate cases collapse to point→segment.
+  if (abLenSq < 1e-12 && cdLenSq < 1e-12) {
+    return Math.hypot(ax - cx, az - cz)
+  }
+  if (abLenSq < 1e-12) return distanceToSegment(ax, az, cx, cz, dx, dz)
+  if (cdLenSq < 1e-12) return distanceToSegment(cx, cz, ax, az, bx, bz)
+
+  // In 2D the closest points are either an intersection (dist 0) or at least
+  // one endpoint projected onto the other finite segment.
+  if (segmentsIntersect2D(ax, az, bx, bz, cx, cz, dx, dz)) return 0
+
+  return Math.min(
+    distanceToSegment(ax, az, cx, cz, dx, dz),
+    distanceToSegment(bx, bz, cx, cz, dx, dz),
+    distanceToSegment(cx, cz, ax, az, bx, bz),
+    distanceToSegment(dx, dz, ax, az, bx, bz),
+  )
+}
+
+/**
+ * True when fence segment `(ax,az)-(bx,bz)` comes within
+ * `corridor.halfWidth + extraClearance` of any corridor centerline.
+ * `extraClearance` should be the physical fence footprint (e.g. wall
+ * half-depth), not a pasture/paddock radius.
+ * @domain settlements
+ */
+export function segmentHitsCorridor(
+  ax: number,
+  az: number,
+  bx: number,
+  bz: number,
+  corridors: readonly CorridorSegment2D[],
+  extraClearance: number,
+): boolean {
+  for (const seg of corridors) {
+    const need = seg.halfWidth + extraClearance
+    const dist = distanceBetweenSegments2D(
+      ax, az, bx, bz,
+      seg.ax, seg.az, seg.bx, seg.bz,
+    )
+    if (dist <= need) return true
+  }
+  return false
+}

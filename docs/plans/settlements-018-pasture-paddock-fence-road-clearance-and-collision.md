@@ -1,7 +1,7 @@
 # Plan: Pasture and paddock fence road clearance and collision
 
 **Created:** 2026-09-17
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** high · **Effort:** S
 **Depends on:** ~~settlements-009~~, ~~settlements-013~~, ~~settlements-015~~
 **Domain:** `settlements`

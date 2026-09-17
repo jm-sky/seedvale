@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest'
 import type { RiverChannelSegment } from '../terrain/chunkHeightmap'
 import type { FamilyDef } from './families'
 import type { VillageIdentity } from './villagePlan'
+import { segmentHitsCorridor } from '../math/segment'
 import { generateFamilies } from './families'
+import { fencePlacementColliders } from './settlementPalisade'
 import {
   horseVendorSetupChance,
+  paddockFencePlacements,
   paddockRadiusFor,
   paddockSlotCountForRadius,
   planSettlementPaddock,
@@ -12,7 +15,7 @@ import {
   vendorHorseAnimalId,
 } from './villagePaddock'
 import { PADDOCK_ID, paddockPathId } from './villagePlan'
-import { planVillageLayout } from './villagePlanner'
+import { pathPlansToCorridorData, planVillageLayout } from './villagePlanner'
 
 const flatHeight = (): number => 12
 const WATER = 0
@@ -108,5 +111,96 @@ describe('horse vendor paddock (plan settlements-013)', () => {
   it('derives vendor horse ids from settlement + slot', () => {
     expect(vendorHorseAnimalId('home', 0)).toBe('vendor-horse-home-0')
     expect(vendorHorseAnimalId('v2', 3)).toBe('vendor-horse-v2-3')
+  })
+})
+
+describe('paddock fence road clearance (plan settlements-018)', () => {
+  function findPaddockLayout(): { layout: ReturnType<typeof layoutFor>, seed: number } {
+    for (let seed = 0; seed < 80; seed++) {
+      const layout = layoutFor('XL', seed)
+      if (layout.paddock) return { layout, seed }
+    }
+    throw new Error('expected an XL paddock within 80 seeds')
+  }
+
+  it('keeps every ring fence segment clear of final local path corridors', () => {
+    const { layout } = findPaddockLayout()
+    const paddock = layout.paddock!
+    const corridors = pathPlansToCorridorData(layout.paths, flatHeight).map((seg) => ({
+      ax: seg.ax,
+      az: seg.az,
+      bx: seg.bx,
+      bz: seg.bz,
+      halfWidth: seg.halfWidth,
+    }))
+    for (const seg of paddock.fenceSegments) {
+      expect(
+        segmentHitsCorridor(seg.ax, seg.az, seg.bx, seg.bz, corridors, 0.3),
+        seg.id,
+      ).toBe(false)
+    }
+  })
+
+  it('omits fence segments across the entrance gap', () => {
+    const { layout } = findPaddockLayout()
+    const paddock = layout.paddock!
+    const gapHalf = Math.min(0.42, Math.max(0.28, 2.6 / paddock.radius))
+    const inward = Math.atan2(layout.center.z - paddock.z, layout.center.x - paddock.x)
+    for (const seg of paddock.fenceSegments) {
+      const midX = (seg.ax + seg.bx) * 0.5
+      const midZ = (seg.az + seg.bz) * 0.5
+      const midAngle = Math.atan2(midZ - paddock.z, midX - paddock.x)
+      let d = Math.abs(midAngle - inward) % (Math.PI * 2)
+      if (d > Math.PI) d = Math.PI * 2 - d
+      expect(d).toBeGreaterThanOrEqual(gapHalf - 1e-6)
+    }
+  })
+
+  it('projects colliders only for actual fence placements, not the entrance gap', () => {
+    const { layout } = findPaddockLayout()
+    const paddock = layout.paddock!
+    const placements = paddockFencePlacements(paddock, flatHeight)
+    const colliders = fencePlacementColliders(placements)
+    expect(colliders).toHaveLength(placements.length)
+    expect(placements.length).toBeGreaterThan(0)
+    // A continuous 12-step ring would be denser; gap omission must leave holes.
+    expect(paddock.fenceSegments.length).toBeLessThan(12)
+  })
+
+  it('rejects a ring whose segment would cross an injected path corridor', () => {
+    const { layout, seed } = findPaddockLayout()
+    const paddock = layout.paddock!
+    const seg = paddock.fenceSegments[0]!
+    const midX = (seg.ax + seg.bx) * 0.5
+    const midZ = (seg.az + seg.bz) * 0.5
+    const dx = seg.bx - seg.ax
+    const dz = seg.bz - seg.az
+    const len = Math.hypot(dx, dz) || 1
+    const nx = -dz / len
+    const nz = dx / len
+    const crossing = [{
+      ax: midX - nx * 8,
+      az: midZ - nz * 8,
+      bx: midX + nx * 8,
+      bz: midZ + nz * 8,
+      halfWidth: 2,
+    }]
+    const forced = planSettlementPaddock({
+      identity: identity({ id: `XL_${seed}`, size: 'XL' }),
+      center: layout.center,
+      boundary: layout.boundary,
+      plots: layout.plots,
+      entrances: layout.entrances,
+      seedForCell: seed,
+      sampleHeight: flatHeight,
+      waterLevel: WATER,
+      riverSegments: [],
+      pasture: layout.pasture,
+      pathCorridors: crossing,
+    })
+    if (!forced) return
+    for (const fence of forced.fenceSegments) {
+      expect(segmentHitsCorridor(fence.ax, fence.az, fence.bx, fence.bz, crossing, 0.3)).toBe(false)
+    }
   })
 })

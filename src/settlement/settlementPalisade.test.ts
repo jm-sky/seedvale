@@ -6,6 +6,7 @@ import { colliderContainsPoint } from '../world/collision'
 import {
   PALISADE_GATE_HALF_ANGLE,
   PALISADE_WALL_HALF_DEPTH,
+  fencePlacementColliders,
   resolveEntrancePalisadePlacements,
   resolveEntranceTorchPlacements,
   settlementPalisadeColliders,
@@ -115,6 +116,34 @@ describe('settlementPalisadeColliders', () => {
   it('is a pure function of its input (same input, same output)', () => {
     const placements = [placement({ x: 3, z: 4, rotationY: 0.7 })]
     expect(settlementPalisadeColliders(placements)).toEqual(settlementPalisadeColliders(placements))
+  })
+})
+
+describe('fencePlacementColliders (plan settlements-018)', () => {
+  it('matches settlementPalisadeColliders one-to-one', () => {
+    const placements = [
+      placement({ x: 1, z: 2, rotationY: 0.5 }),
+      placement({ x: -3, z: 4, rotationY: -1.1 }),
+    ]
+    expect(fencePlacementColliders(placements)).toEqual(settlementPalisadeColliders(placements))
+  })
+
+  it('returns nothing for an empty placement list', () => {
+    expect(fencePlacementColliders([])).toEqual([])
+  })
+
+  it('copies x/z/rotationY and shared wall dimensions from each placement', () => {
+    const [collider] = fencePlacementColliders([
+      placement({ x: 8, z: -2, rotationY: 0.25, scale: 0.62 }),
+    ])
+    expect(collider).toEqual({
+      type: 'obb',
+      x: 8,
+      z: -2,
+      halfWidth: WALL_HALF_LENGTH,
+      halfDepth: PALISADE_WALL_HALF_DEPTH,
+      rotationY: 0.25,
+    })
   })
 })
 

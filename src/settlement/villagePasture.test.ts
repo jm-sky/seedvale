@@ -2,16 +2,18 @@ import { describe, expect, it } from 'vitest'
 import type { RiverChannelSegment } from '../terrain/chunkHeightmap'
 import type { FamilyDef } from './families'
 import type { VillageIdentity, VillagePasturePlan } from './villagePlan'
-import { directionFromYaw, pointHitsCorridor, yawToward } from '../math/segment'
+import { directionFromYaw, pointHitsCorridor, segmentHitsCorridor, yawToward } from '../math/segment'
 import { footprintOverlapsRiver } from '../terrain/riverNetwork'
 import { generateFamilies } from './families'
 import {
   pastureFencePlacements,
   pastureRadiusFor,
+  planSettlementPasture,
   settlementWantsPasture,
 } from './villagePasture'
 import { PASTURE_ID, pasturePathId } from './villagePlan'
-import { planVillageLayout } from './villagePlanner'
+import { pathPlansToCorridorData, planVillageLayout } from './villagePlanner'
+import { fencePlacementColliders } from './settlementPalisade'
 
 const flatHeight = (): number => 12
 const WATER = 0
@@ -176,6 +178,77 @@ describe('settlement pasture (plan settlements-009)', () => {
     expect(footprintOverlapsRiver([river], pasture.x, pasture.z, pasture.radius + 1)).toBe(false)
     expect(footprintOverlapsRiver([river], pasture.well.x, pasture.well.z, 2.4)).toBe(false)
     expect(footprintOverlapsRiver([river], pasture.trough.x, pasture.trough.z, 1.2)).toBe(false)
+  })
+})
+
+describe('pasture fence road clearance (plan settlements-018)', () => {
+  it('keeps every fence segment clear of final local path corridors', () => {
+    for (const seed of [3, 8, 15, 21, 27, 36, 42, 55]) {
+      const layout = layoutFor('LG', seed)
+      const pasture = layout.pasture
+      if (!pasture) continue
+      const corridors = pathPlansToCorridorData(layout.paths, flatHeight).map((seg) => ({
+        ax: seg.ax,
+        az: seg.az,
+        bx: seg.bx,
+        bz: seg.bz,
+        halfWidth: seg.halfWidth,
+      }))
+      for (const seg of pasture.fenceSegments) {
+        expect(
+          segmentHitsCorridor(seg.ax, seg.az, seg.bx, seg.bz, corridors, 0.3),
+          `seed ${seed} ${seg.id}`,
+        ).toBe(false)
+      }
+    }
+  })
+
+  it('rejects a candidate whose fence would cross an injected path corridor', () => {
+    const baseline = layoutFor('LG', 15)
+    expect(baseline.pasture).toBeDefined()
+    const pasture = baseline.pasture!
+    const seg = pasture.fenceSegments[0]!
+    const midX = (seg.ax + seg.bx) * 0.5
+    const midZ = (seg.az + seg.bz) * 0.5
+    const dx = seg.bx - seg.ax
+    const dz = seg.bz - seg.az
+    const len = Math.hypot(dx, dz) || 1
+    // Perpendicular corridor through the fence midpoint — forces segmentHits.
+    const nx = -dz / len
+    const nz = dx / len
+    const crossing = [{
+      ax: midX - nx * 8,
+      az: midZ - nz * 8,
+      bx: midX + nx * 8,
+      bz: midZ + nz * 8,
+      halfWidth: 2,
+    }]
+    const families = generateFamilies(15, 'LG', false, 'polish')
+    const forced = planSettlementPasture({
+      identity: identity({ id: 'LG_15', size: 'LG' }),
+      center: baseline.center,
+      boundary: baseline.boundary,
+      plots: baseline.plots,
+      families,
+      entrances: baseline.entrances,
+      seedForCell: 15,
+      sampleHeight: flatHeight,
+      waterLevel: WATER,
+      riverSegments: [],
+      pathCorridors: crossing,
+    })
+    if (!forced) return
+    for (const fence of forced.fenceSegments) {
+      expect(segmentHitsCorridor(fence.ax, fence.az, fence.bx, fence.bz, crossing, 0.3)).toBe(false)
+    }
+  })
+
+  it('projects one collider per pasture fence placement', () => {
+    const pasture = pastureWithSegment(0, 0, 10, 0)
+    const placements = pastureFencePlacements(pasture, () => 12)
+    const colliders = fencePlacementColliders(placements)
+    expect(colliders).toHaveLength(placements.length)
+    expect(colliders.length).toBeGreaterThan(0)
   })
 })
 

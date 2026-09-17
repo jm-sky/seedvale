@@ -1,7 +1,7 @@
 import type { HeightSampler } from '../player/PlayerController'
 import type { RiverChannelSegment } from '../terrain/chunkHeightmap'
 import type { VillageSize } from './families'
-import { pointHitsCorridor } from '../math/segment'
+import { pointHitsCorridor, segmentHitsCorridor, type CorridorSegment2D } from '../math/segment'
 import { type PropPlacement } from '../render/instancedProps'
 import { footprintOverlapsRiver } from '../terrain/riverNetwork'
 import { createSeededRandom } from '../world/parseSeed'
@@ -38,6 +38,8 @@ const BOUNDARY_GAP = 2.2
 const TROUGH_RADIUS = 1.2
 const HAY_RADIUS = 1.4
 const FENCE_CLEARANCE = 0.9
+/** Matches `PALISADE_WALL_HALF_DEPTH` — physical fence footprint vs corridors. */
+const FENCE_CORRIDOR_CLEARANCE = 0.3
 const MAX_SLOPE = 3.2
 const MAX_SPREAD = 4.2
 const ANGLE_CANDIDATES = 16
@@ -101,6 +103,9 @@ export type PaddockPlanArgs = {
   waterLevel: number
   riverSegments: readonly RiverChannelSegment[]
   pasture?: VillagePasturePlan
+  /** Final local path/road corridors (`pathPlansToCorridorData`). When set,
+   *  fence ring segments must clear these in addition to entrance spokes. */
+  pathCorridors?: readonly CorridorSegment2D[]
 }
 
 function localSlope(x: number, z: number, y: number, sampleHeight: HeightSampler): number {
@@ -208,7 +213,7 @@ function layoutOnCandidate(
   radius: number,
   center: VillageCenter,
   plots: readonly VillagePlot[],
-  corridors: readonly { ax: number, az: number, bx: number, bz: number, halfWidth: number }[],
+  corridors: readonly CorridorSegment2D[],
   sampleHeight: HeightSampler,
   waterLevel: number,
   riverSegments: readonly RiverChannelSegment[],
@@ -260,6 +265,7 @@ function layoutOnCandidate(
       return null
     }
     if (overlapsPlots((ax + bx) / 2, (az + bz) / 2, FENCE_CLEARANCE, plots)) return null
+    if (segmentHitsCorridor(ax, az, bx, bz, corridors, FENCE_CORRIDOR_CLEARANCE)) return null
     fenceSegments.push({
       id: `paddock-fence-${fenceSegments.length}`,
       ax,
@@ -318,8 +324,12 @@ export function planSettlementPaddock(args: PaddockPlanArgs): VillagePaddockPlan
     waterLevel,
     riverSegments,
     pasture,
+    pathCorridors,
   } = args
-  const corridors = entranceCorridors(center, entrances)
+  const corridors: CorridorSegment2D[] = [
+    ...entranceCorridors(center, entrances),
+    ...(pathCorridors ?? []),
+  ]
   const minDist = boundary.radius + radius + BOUNDARY_GAP
   const preferredDist = minDist + 3
   const random = createSeededRandom(seedForCell ^ PADDOCK_PLACE_SALT)

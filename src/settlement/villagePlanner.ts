@@ -1317,31 +1317,6 @@ export function planVillageLayout(
     plots.push({ ...plot, price: salePrice })
   }
 
-  const pasture = planSettlementPasture({
-    identity,
-    center,
-    boundary,
-    plots,
-    families,
-    entrances: predictedEntrances,
-    seedForCell,
-    sampleHeight,
-    waterLevel,
-    riverSegments,
-  })
-  const paddock = planSettlementPaddock({
-    identity,
-    center,
-    boundary,
-    plots,
-    entrances: predictedEntrances,
-    seedForCell,
-    sampleHeight,
-    waterLevel,
-    riverSegments,
-    pasture,
-  })
-
   const { buildings, landmarks } = buildingsAndLandmarksFromPlots(plots, identity)
   const { paths, entrances } = planLocalPathsAndEntrances({
     identity,
@@ -1354,6 +1329,42 @@ export function planVillageLayout(
     seedForCell,
     sampleHeight,
     waterLevel,
+  })
+  // Canonical local path corridors for satellite fence clearance (plan
+  // settlements-018). Satellite spur paths are appended after fence layout
+  // so they are not treated as obstacles against their own fence gaps.
+  const pathCorridors = pathPlansToCorridorData(paths, sampleHeight).map((seg) => ({
+    ax: seg.ax,
+    az: seg.az,
+    bx: seg.bx,
+    bz: seg.bz,
+    halfWidth: seg.halfWidth,
+  }))
+  const pasture = planSettlementPasture({
+    identity,
+    center,
+    boundary,
+    plots,
+    families,
+    entrances,
+    seedForCell,
+    sampleHeight,
+    waterLevel,
+    riverSegments,
+    pathCorridors,
+  })
+  const paddock = planSettlementPaddock({
+    identity,
+    center,
+    boundary,
+    plots,
+    entrances,
+    seedForCell,
+    sampleHeight,
+    waterLevel,
+    riverSegments,
+    pasture,
+    pathCorridors,
   })
   if (pasture) appendPasturePath(paths, pasture, sampleHeight, waterLevel)
   if (paddock) appendPaddockPath(paths, paddock, sampleHeight, waterLevel)

@@ -807,6 +807,11 @@ export async function buildSettlementProps(
    *  so it can project the identical geometry to collision without
    *  recomputing gate/coastal/corridor rejection. */
   palisadePlacements: SettlementPalisadePlacement[]
+  /** Pasture fence placements (plan settlements-018) — same arrays rendered
+   *  via `plantEntrancePalisade`, for settlement collider registration. */
+  pastureFencePlacements: SettlementPalisadePlacement[]
+  /** Paddock fence placements (plan settlements-018). */
+  paddockFencePlacements: SettlementPalisadePlacement[]
 }> {
   const group = new THREE.Group()
   group.name = 'settlement'
@@ -1716,17 +1721,23 @@ export async function buildSettlementProps(
     site, size, sampleHeight, waterLevel, plan, coast, pathCorridors,
   )
   await plantEntrancePalisade(group, palisadePlacements)
-  if (pasturePlan) {
+  const pastureFencePlacementsResolved: SettlementPalisadePlacement[] = pasturePlan
+    ? pastureFencePlacements(pasturePlan, sampleHeight)
+    : []
+  if (pastureFencePlacementsResolved.length > 0) {
     await plantEntrancePalisade(
       group,
-      pastureFencePlacements(pasturePlan, sampleHeight),
+      pastureFencePlacementsResolved,
       'settlement-pasture-fence',
     )
   }
-  if (paddockPlan) {
+  const paddockFencePlacementsResolved: SettlementPalisadePlacement[] = paddockPlan
+    ? paddockFencePlacements(paddockPlan, sampleHeight)
+    : []
+  if (paddockFencePlacementsResolved.length > 0) {
     await plantEntrancePalisade(
       group,
-      paddockFencePlacements(paddockPlan, sampleHeight),
+      paddockFencePlacementsResolved,
       'settlement-paddock-fence',
     )
   }
@@ -2116,6 +2127,8 @@ export async function buildSettlementProps(
       householdFood: householdFoodVisuals,
     },
     palisadePlacements,
+    pastureFencePlacements: pastureFencePlacementsResolved,
+    paddockFencePlacements: paddockFencePlacementsResolved,
   }
 }
 

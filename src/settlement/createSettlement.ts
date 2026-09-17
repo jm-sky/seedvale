@@ -105,7 +105,7 @@ import {
   createSettlementNightCycle,
   type SettlementNightAutoLightPolicy,
 } from './settlementNightCycle'
-import { settlementPalisadeColliders } from './settlementPalisade'
+import { fencePlacementColliders, settlementPalisadeColliders } from './settlementPalisade'
 import { settlementPropColliders } from './settlementPropColliders'
 import { createSettlementSignposts } from './settlementSignposts'
 import { type SettlementVillageTorch } from './settlementVillageTorch'
@@ -574,7 +574,17 @@ export async function createSettlement(
   } finally {
     bootMarkEnd('buildSettlementProps')
   }
-  const { group, landmarks, houseLights, villageTorches, houseAssemblies, storageVisual, palisadePlacements } = propsResult
+  const {
+    group,
+    landmarks,
+    houseLights,
+    villageTorches,
+    houseAssemblies,
+    storageVisual,
+    palisadePlacements,
+    pastureFencePlacements,
+    paddockFencePlacements,
+  } = propsResult
   scene.add(group)
   // Plan 157 — one bounded walk of this settlement's own root, not the whole
   // scene: captures every house lamp, village torch, and the settlement's
@@ -596,6 +606,8 @@ export async function createSettlement(
       ...settlementHouseColliders(landmarks.houses, houseAssemblies),
       ...settlementPropColliders(landmarks),
       ...settlementPalisadeColliders(palisadePlacements),
+      ...fencePlacementColliders(pastureFencePlacements),
+      ...fencePlacementColliders(paddockFencePlacements),
     ])
   }
   registerSettlementColliders()
