@@ -161,6 +161,57 @@ describe('AnimalAgent', () => {
     expect(free.life.hunger).toBeLessThan(dayRateAgent.life.hunger)
   })
 
+  describe('routine rest (plan fauna-034)', () => {
+    const FAR_OBSERVER = new THREE.Vector3(1000, 0, 1000)
+
+    it('a nocturnal predator far from home returns toward home instead of wandering away, at full day', () => {
+      const wolf = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.wolf, animalId: 'wolf-rest-home', x: 0, z: 0 }))
+      wolf.mesh.position.set(30, wolf.mesh.position.y, 30)
+      const distBefore = Math.hypot(wolf.mesh.position.x, wolf.mesh.position.z)
+      wolf.update({
+        dt: 1,
+        others: [wolf],
+        observerPos: FAR_OBSERVER,
+        dayFactor: 1, // full day — a nocturnal wolf's rest pressure is high
+        forestFactor: 0,
+        litFires: [],
+      })
+      expect(wolf.getDebugInfo().routineResting).toBe(true)
+      const distAfter = Math.hypot(wolf.mesh.position.x, wolf.mesh.position.z)
+      expect(distAfter).toBeLessThan(distBefore)
+    })
+
+    it('once near home, a resting predator idles instead of picking a new wander target', () => {
+      const wolf = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.wolf, animalId: 'wolf-rest-idle', x: 0, z: 0 }))
+      const before = { x: wolf.mesh.position.x, z: wolf.mesh.position.z }
+      wolf.update({
+        dt: 1,
+        others: [wolf],
+        observerPos: FAR_OBSERVER,
+        dayFactor: 1,
+        forestFactor: 0,
+        litFires: [],
+      })
+      expect(wolf.getDebugInfo().routineResting).toBe(true)
+      expect(wolf.getDebugInfo().moving).toBe(false)
+      expect(wolf.mesh.position.x).toBeCloseTo(before.x, 5)
+      expect(wolf.mesh.position.z).toBeCloseTo(before.z, 5)
+    })
+
+    it('a species without def.activity never sets routineResting', () => {
+      const rabbit = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.rabbit, animalId: 'rabbit-no-activity', x: 0, z: 0 }))
+      rabbit.update({
+        dt: 1,
+        others: [rabbit],
+        observerPos: FAR_OBSERVER,
+        dayFactor: 0, // night — would maximize rest pressure for a configured species
+        forestFactor: 0,
+        litFires: [],
+      })
+      expect(rabbit.getDebugInfo().routineResting).toBe(false)
+    })
+  })
+
   // R1 (plan fauna-017 step 4b): adopting the shared AgentAnimationSet must
   // not silently drop cow/sheep-style "Armature|Walk" clip names — step 4a's
   // suffix-match fallback is what makes this resolve.

@@ -1394,6 +1394,13 @@ export async function createFauna(
           agentCpu.addFaunaForestSamplingMs(performance.now() - forestSampleT0)
           agentCpu.recordForestSample()
         }
+        // Den-defense habitat context (plan fauna-034 §6/§8) — the O(1)
+        // `spawnerById` lookup existing spawner lifecycle already uses,
+        // adapted to plain data; gated on `def.territorial` so a non-
+        // territorial agent (the vast majority) never even does the lookup.
+        const territorialHabitat = a.def.territorial && a.spawnPointId
+          ? spawnerById.get(a.spawnPointId)
+          : undefined
         a.update({
           dt,
           others: agents,
@@ -1409,6 +1416,15 @@ export async function createFauna(
           nearbyNpcs,
           onNpcHit,
           onAggro: onAnimalAggro,
+          habitat: territorialHabitat
+            ? {
+              id: territorialHabitat.id,
+              type: territorialHabitat.type,
+              x: territorialHabitat.x,
+              z: territorialHabitat.z,
+              state: territorialHabitat.state,
+            }
+            : undefined,
           // Wild fauna's only spontaneous-vocalization kind is `wolf` (howl,
           // plan fauna-009) — cow/sheep/chicken/rooster never spawn here,
           // only via `settlement/livestock.ts` (`createSettlement.ts`).

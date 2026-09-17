@@ -40,6 +40,18 @@ export type PredatorHumanDecisionInput = {
   /** When true (wolf den with active problem), humans are less feared and
    *  more attractive as prey — plan quests-progression-007. */
   humanTaste?: boolean
+  /**
+   * 0..1 den-defense strength (plan fauna-034 §5/§7/§8) — 0 (or absent)
+   * reproduces the exact pre-plan score/result for every existing case.
+   * Computed by the caller from `AnimalDef.territorial` + the animal's own
+   * resolved habitat (`animalTerritory.ts`'s `territorialDefenseStrength`),
+   * never derived in this file — this scorer stays the only attack/flee/
+   * ignore authority, territoriality is just another composed pressure
+   * alongside hunger/fire/crowd/`humanTaste`, deliberately independent of
+   * all of them (a quest-only `humanTaste` wolf den and a territorial-config
+   * `wolfDen` are separate causes that both happen to reach `wolfDen`).
+   */
+  territorialDefense?: number
 }
 
 /** Hunger only starts pushing toward attack above this level. */
@@ -48,6 +60,14 @@ const HUNGER_ATTACK_FLOOR = 0.55
 const FLEE_BASELINE = 0.28
 const FIRE_FEAR = 0.55
 const CROWD_FEAR_PER_EXTRA = 0.22
+/** Weight applied to `territorialDefense` (plan fauna-034 §5/§8) — fixed
+ *  here rather than per-species: only `wolf` carries a `territorial`
+ *  config in V1, and species-level tuning already happens through that
+ *  config's `radius`/`defendedSpawnerTypes` (whether/how far defense
+ *  applies at all), mirroring how `ATTACK_BIAS`/`FLEE_BIAS` below already
+ *  live in this scorer rather than in `AnimalDef`. */
+const TERRITORIAL_ATTACK_WEIGHT = 0.5
+const TERRITORIAL_FLEE_WEIGHT = 0.35
 
 /** Species bias added to attack score (negative = more cautious). Bear is
  *  deliberately more cautious than wolf here (playtest fixes plan §3) —
@@ -135,11 +155,14 @@ export function scorePredatorHumanIntents(
   const fleeBias = FLEE_BIAS[input.kind] ?? 0
 
   const humanTaste = input.humanTaste === true
+  const territorial = clamp01(input.territorialDefense ?? 0)
   const proximityFear = humanTaste ? proximity * 0.45 : proximity * 0.72
   const fleeScore = FLEE_BASELINE + proximityFear + fire + crowd + fleeBias
+    - territorial * TERRITORIAL_FLEE_WEIGHT
   const attackScore = hunger * 0.95 + bias + (humanTaste ? 0.18 : 0)
     - (humanTaste ? proximity * 0.1 : proximity * 0.2)
     - fire * 0.5 - crowd
+    + territorial * TERRITORIAL_ATTACK_WEIGHT
 
   return [
     { kind: 'flee', score: fleeScore },

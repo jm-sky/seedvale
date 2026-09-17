@@ -55,6 +55,7 @@ import { recordBloodHit } from '../world/bloodTraces'
 import { colliderActiveAtY, colliderContainsPoint } from '../world/collision'
 import { createSeededRandom } from '../world/parseSeed'
 import { AGENT_RENDER_LAYER, assignRenderLayer } from '../world/waterMirror'
+import { shouldRoutineRest } from './animalActivity'
 import {
   clampIntoFencedArea,
   type FencedAreaBound,
@@ -194,6 +195,7 @@ import {
   straySurvivalFleeSpeedMultiplier,
   tickStrayClassificationGrace,
 } from './animalStray'
+import { type AnimalHabitatContext, territorialDefenseStrength } from './animalTerritory'
 import {
   animalBehaviourIntervalSec,
   animalCadencePhase01,
@@ -596,6 +598,11 @@ export type AnimalAgentDebugInfo = {
    *  every section ran at full rate this tick. Diagnostic only. */
   updateImportance: AnimalUpdateImportance
   aiBranch: FaunaAiBranch
+  /** True while this tick's routine time-of-day/stamina rest desire won out
+   *  over ordinary wander (plan fauna-034 §2/§6) — only ever set for a
+   *  species with `def.activity`; diagnostic only, `aiBranch` itself stays
+   *  `predator-normal`/`prey-normal` either way. */
+  routineResting: boolean
   /** `scoreFaunaBehaviours()` over this tick's decision input (npc-008 step
    *  4) — shows why `aiBranch` won, ranked highest first. `null` while a
    *  gate (`rabid`/`mounted`/`dead`) bypassed the ranked decision this tick,
@@ -1113,6 +1120,14 @@ export type AnimalUpdateContext = {
    *  Defaults to none so existing wild-fauna/test callers keep prior
    *  wild-prey-only behaviour. */
   huntableLivestock?: readonly AnimalAgent[]
+  /** Narrow view of the managed spawner `spawnPointId` currently resolves
+   *  to (plan fauna-034 §6/§8) — `createFauna.ts`'s own O(1)
+   *  `spawnerById.get(agent.spawnPointId)`, adapted to plain data. Only
+   *  ever populated for a species with `def.territorial` (caller-side
+   *  guard, no per-animal spawner scan); `undefined` for every other
+   *  agent, or one without a resolvable spawn point, which yields zero
+   *  den-defense strength (`animalTerritory.ts`'s own eligibility check). */
+  habitat?: AnimalHabitatContext
 }
 
 /**
@@ -1336,6 +1351,12 @@ export class AnimalAgent {
   private scareOriginZ = 0
   private scareEvaluatedEventId: string | null = null
   private isNight = false
+  /** This tick's routine time-of-day/stamina rest desire (plan fauna-034
+   *  §2/§6) — recomputed every `update()` call at full rate (never gated by
+   *  cadence), always `false` for a species without `def.activity`. Never
+   *  persisted; derived again from world time/stamina every tick, same
+   *  "transient, not a schedule" contract as `isNight`. */
+  private routineResting = false
   private highlighted = false
   /** True while `showDebug()`'s world-space overlay is active for this
    *  agent (fauna debug tooling) — at most one agent at a time in practice
@@ -2584,6 +2605,7 @@ export class AnimalAgent {
       lastStepDistance: this.debugLastStepDist,
       updateImportance: this.lastUpdateImportance,
       aiBranch: this.debugBranch,
+      routineResting: this.routineResting,
       behaviourCandidates: this.lastFaunaDecisionInput ? scoreFaunaBehaviours(this.lastFaunaDecisionInput) : null,
       intent: this.pendingAction?.kind ?? null,
       threateningHuman: this.threateningHuman,
@@ -3112,6 +3134,7 @@ export class AnimalAgent {
       playerControlPos,
       scareStimulus = null,
       huntableLivestock = [],
+      habitat,
     } = ctx
     this._tickPlayerControlPos = playerControlPos ?? null
     this.attractionConsumeFood = consumeAttractedFood
@@ -3189,6 +3212,21 @@ export class AnimalAgent {
       this.vocalizeAlertContext = 'ambient'
     }
     this.isNight = dayFactor <= 0
+    // Full-rate routine-rest desire (plan fauna-034 §10) — evaluated every
+    // tick regardless of movement cadence, same reasoning as `isNight`
+    // above: a throttled animal's metabolism (`tickLife()` below) must not
+    // depend on how often its movement section actually runs.
+    this.routineResting = this.def.activity
+      ? shouldRoutineRest({
+        profile: this.def.activity.profile,
+        restBias: this.def.activity.restBias,
+        timeOfDay,
+        dayFactor,
+        staminaRatio: getStaminaRatio(this.life.stamina),
+        staminaThreshold: this.def.activity.staminaThreshold,
+        animalId: this.animalId,
+      })
+      : false
     // `moving`/`sprinting` are deliberately *not* reset here (plan fauna-028):
     // on a tick whose behaviour section is skipped they must keep the last
     // resolved locomotion state, or a throttled animal would flicker to the
@@ -3251,13 +3289,13 @@ export class AnimalAgent {
       // before selection under exactly the old branch #2 guard so the
       // 0.2s cache window's timing is unchanged.
       const decisionT0 = diagOn ? performance.now() : 0
-      const playerIntent = this.refreshThrottledHumanIntent(sense, observerPos, nearbyHumanCount, dt)
+      const playerIntent = this.refreshThrottledHumanIntent(sense, observerPos, nearbyHumanCount, dt, habitat)
       // Live since npc-008 step 6: `npcThreat` can now be set for a
       // non-frenzied predator, so `npc-attack`/`npc-ignore`/`npc-flee`
       // (scored via `npcIntent`) are reachable. For a frenzied predator
       // `npcIntent` stays `null` (guard below), so `npc-attack-frenzied`
       // still wins first and skips scoring entirely.
-      const npcIntent = this.refreshThrottledNpcIntent(npcThreat, nearbyNpcs, sense, dt)
+      const npcIntent = this.refreshThrottledNpcIntent(npcThreat, nearbyNpcs, sense, dt, habitat)
       const decisionInput: FaunaDecisionInput = {
         role: this.def.role,
         frenzied: this.frenzied,
@@ -3501,7 +3539,13 @@ export class AnimalAgent {
     // across this change.
     const lifePresentationT0 = diagOn ? performance.now() : 0
     if (runBehaviour) this.tickMovementTail()
-    this.tickLife(dt, this.isNight && !this.sprinting ? SLEEP_HUNGER_THIRST_RATE : 1, nowDays)
+    // Plan fauna-034 §3 (implementation notes point 3): an activity-configured
+    // species tracks its own actual rest state instead of the legacy blanket
+    // night slowdown, or a nocturnal animal would get "sleep" metabolism
+    // during its intended active night. Every unconfigured species (livestock,
+    // rats, mounted — `def.activity` absent) keeps the exact legacy rule.
+    const sleepMetabolism = this.def.activity ? this.routineResting : this.isNight
+    this.tickLife(dt, sleepMetabolism && !this.sprinting ? SLEEP_HUNGER_THIRST_RATE : 1, nowDays)
     const presentationInterval = animalPresentationIntervalSec(importance, sense.playerDistance, this.cadencePhase)
     if (isCadenceDue(this.presentationAccumSec, presentationInterval)) {
       const presentationDt = this.presentationAccumSec
@@ -3585,6 +3629,7 @@ export class AnimalAgent {
     observerPos: THREE.Vector3,
     nearbyHumanCount: number,
     dt: number,
+    habitat: AnimalHabitatContext | undefined,
   ): PredatorHumanIntent | null {
     if (!(sense.playerActive && this.def.role === 'predator')) {
       clearPredatorIntentCommitment(this.humanIntentCommitment)
@@ -3596,7 +3641,7 @@ export class AnimalAgent {
       ? Math.random()
       : this.humanIntentCommitment.aggressionRoll
     const intent = resolveCommittedPredatorIntent(this.humanIntentCommitment, {
-      input: this.buildHumanDecisionInput(sense, observerPos, nearbyHumanCount),
+      input: this.buildHumanDecisionInput(sense, observerPos, nearbyHumanCount, habitat),
       dt,
       targetKey: PLAYER_INTENT_TARGET_KEY,
       nextRoll,
@@ -3610,6 +3655,7 @@ export class AnimalAgent {
     sense: EnvironmentSense,
     observerPos: THREE.Vector3,
     nearbyHumanCount: number,
+    habitat: AnimalHabitatContext | undefined,
   ): PredatorHumanDecisionInput {
     const ctx = this.buildDecisionContext(sense, nearbyHumanCount)
     const hpRatio = this.health.maxHp > 0 ? this.health.currentHp / this.health.maxHp : 0
@@ -3634,6 +3680,9 @@ export class AnimalAgent {
       provoked: this.provokedTimer > 0 || this.frenzied,
       aggressionRoll: this.humanIntentCommitment.aggressionRoll,
       humanTaste: this.humanTaste,
+      // Plan fauna-034 §7/§8 — player's own position against this agent's
+      // resolved habitat; zero for any non-territorial species/context.
+      territorialDefense: territorialDefenseStrength(this.def.territorial, habitat, observerPos.x, observerPos.z),
     }
   }
 
@@ -3706,6 +3755,7 @@ export class AnimalAgent {
     target: NearbyNpcCandidate,
     nearbyNpcs: readonly NearbyNpcCandidate[],
     sense: EnvironmentSense,
+    habitat: AnimalHabitatContext | undefined,
   ): PredatorHumanDecisionInput {
     const hpRatio = this.health.maxHp > 0 ? this.health.currentHp / this.health.maxHp : 0
     let crowd = 1
@@ -3725,6 +3775,10 @@ export class AnimalAgent {
       provoked: this.provokedTimer > 0 || this.frenzied,
       aggressionRoll: this.npcIntentCommitment.aggressionRoll,
       humanTaste: this.humanTaste,
+      // Plan fauna-034 §7/§8 — the targeted NPC's own position against this
+      // agent's resolved habitat, not the player's (each human target uses
+      // its own distance to the den).
+      territorialDefense: territorialDefenseStrength(this.def.territorial, habitat, target.x, target.z),
     }
   }
 
@@ -3758,6 +3812,7 @@ export class AnimalAgent {
     nearbyNpcs: readonly NearbyNpcCandidate[],
     sense: EnvironmentSense,
     dt: number,
+    habitat: AnimalHabitatContext | undefined,
   ): PredatorHumanIntent | null {
     if (!(npcThreat && !this.frenzied)) {
       clearPredatorIntentCommitment(this.npcIntentCommitment)
@@ -3770,7 +3825,7 @@ export class AnimalAgent {
       ? Math.random()
       : this.npcIntentCommitment.aggressionRoll
     const intent = resolveCommittedPredatorIntent(this.npcIntentCommitment, {
-      input: this.buildNpcDecisionInput(npcThreat, nearbyNpcs, sense),
+      input: this.buildNpcDecisionInput(npcThreat, nearbyNpcs, sense, habitat),
       dt,
       targetKey,
       nextRoll,
@@ -4164,6 +4219,7 @@ export class AnimalAgent {
     }
     if (this.pursueNeeds(dt, others)) return
     if (this.pursueAttraction(dt, sources)) return
+    if (this.pursueRoutineRest(dt)) return
     this.setIntent('wander')
     this.wander(dt)
   }
@@ -4223,6 +4279,7 @@ export class AnimalAgent {
     if (this.pursueAttraction(dt, sources)) return
     if (this.def.kind === 'dog' && this.pursuePest(dt, nearbyRats)) return
     if (this.pursueOwnedControl(dt)) return
+    if (this.pursueRoutineRest(dt)) return
     this.setIntent('wander')
     this.wander(dt)
   }
@@ -4896,6 +4953,37 @@ export class AnimalAgent {
 
   private withinRange(x: number, z: number, radius: number): boolean {
     return Math.hypot(x - this.mesh.position.x, z - this.mesh.position.z) < radius
+  }
+
+  /**
+   * Routine time-of-day/stamina rest (plan fauna-034 §3/§4, implementation
+   * notes point 4) — only ever reached for a `def.activity`-configured
+   * species, and only once every urgent branch above it (threat/flee/needs/
+   * attraction/lead/pest/owned-control) has already found nothing this
+   * tick. An already-committed trip keeps its existing precedence: it is
+   * left for `wander()`'s own `tickTrip()` to continue exactly as before.
+   * Reuses the existing home-anchored movement (`currentRoamHome()`) rather
+   * than the habitat/spawner position — `spawnPointId` is identity/context
+   * for den-defense, never a second movement authority (implementation
+   * notes point 5). Returns `true` once rest consumed this tick's movement
+   * (walking home, or idling in place once arrived), `false` when routine
+   * rest isn't desired right now, so the caller falls through to ordinary
+   * `wander()`.
+   */
+  private pursueRoutineRest(dt: number): boolean {
+    if (!this.def.activity || !this.routineResting || this.trip) return false
+    const roam = this.currentRoamHome()
+    this.sourceDest.set(roam.x, 0, roam.z)
+    if (!this.arrived(this.sourceDest, TRIP_ARRIVAL_RADIUS)) {
+      this.setIntent('wander', { x: roam.x, z: roam.z })
+      this.stepNavRescue(this.moveNav, this.sourceDest, this.calmWalkSpeedNow(), dt, 'preferDry')
+      return true
+    }
+    // Near home already — settle in place. No destination, so `moving`
+    // stays `false` and presentation reads as idle (plan fauna-034 §2: no
+    // dedicated sleep clip in V1, behaviour correctness comes first).
+    this.setIntent('wander')
+    return true
   }
 
   private wander(dt: number): void {

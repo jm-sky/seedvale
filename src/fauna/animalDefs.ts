@@ -1,4 +1,6 @@
 import type { ItemKind } from '../items/items'
+import type { AnimalActivityProfile } from './animalActivity'
+import type { TerritorialConfig } from './animalTerritory'
 import type { AnimalWaterCapability } from './waterTraversal'
 import { type AnimalMetabolismConfig, DEFAULT_ANIMAL_METABOLISM } from './AnimalLife'
 
@@ -167,6 +169,34 @@ export type AnimalDef = {
   /** Species 0..1 fear of sudden world stimuli such as thunder (plan
    *  world-026). Absent uses `DEFAULT_FEAR_BASELINE` in `animalScare.ts`. */
   fearBaseline?: number
+  /** Presence of this field IS the day/night routine-rest capability (plan
+   *  fauna-034 §1) — same "no separate boolean, no per-species branch"
+   *  shape as `mount`/`production`/`diet` above. Absent means legacy
+   *  behaviour: no routine rest, and (`AnimalAgent`) the old blanket
+   *  night-only hunger/thirst slowdown keeps applying regardless of actual
+   *  rest. Livestock and rats stay absent in this plan. */
+  activity?: AnimalActivityConfig
+  /** Presence of this field IS the den-defense capability (plan fauna-034
+   *  §4/§5) — same "no separate boolean" shape as `activity` above. `wolf`
+   *  is the initial (and currently only) territorial species; absence
+   *  means this species never defends a den regardless of `spawnPointId`/
+   *  `role`. */
+  territorial?: TerritorialConfig
+}
+
+/** Per-species day/night activity bias (plan fauna-034 §1) — the input
+ *  `animalActivity.ts`'s pure `shouldRoutineRest`/`activityRestPressure`
+ *  consume. A bias, not a fixed schedule: hunger/thirst/threat/flee/trip
+ *  branches always take precedence over routine rest regardless of these
+ *  values (`AnimalAgent.updatePredator`/`updatePrey`). */
+export type AnimalActivityConfig = {
+  profile: AnimalActivityProfile
+  /** 0..1 strength of the time-of-day rest bias — 0 behaves as if no
+   *  time-of-day preference existed (stamina can still drive rest). */
+  restBias: number
+  /** Overrides the shared `STAMINA_REST_THRESHOLD` default
+   *  (`AnimalLife.ts`) only where this species needs to differ. */
+  staminaThreshold?: number
 }
 
 /** Per-species human-affinity tuning (plan fauna-013) — gain applies only
@@ -375,6 +405,11 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     diet: MEAT_DIET,
     // Plan fauna-016 §3: a pack ranges further than the default band.
     roaming: LARGE_ROAMING_RANGE,
+    // Plan fauna-034 §1: hunts mostly at night, rests more by day.
+    activity: { profile: 'nocturnal', restBias: 0.6 },
+    // Plan fauna-034 §4: the initial required territorial species —
+    // defends its own `wolfDen` (never a generic `rockDen`/`thicket`).
+    territorial: { defendedSpawnerTypes: ['wolfDen'], radius: 16 },
   },
   fox: {
     kind: 'fox',
@@ -393,6 +428,8 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     // Same as `wolf` above — inert for hunger, only read by
     // `dietAcceptsItem()` for trap-bait attraction (plan fauna-014 §2).
     diet: MEAT_DIET,
+    // Plan fauna-034 §1: active at dawn/dusk, rests more at midday/midnight.
+    activity: { profile: 'crepuscular', restBias: 0.45 },
   },
   deer: {
     kind: 'deer',
@@ -413,6 +450,8 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     // periodically makes a deliberate trip out to water.
     roaming: LARGE_ROAMING_RANGE,
     trips: { water: DEER_WATER_TRIP },
+    // Plan fauna-034 §1: grazes by day, rests more at night.
+    activity: { profile: 'diurnal', restBias: 0.5 },
   },
   stag: {
     kind: 'stag',
@@ -431,6 +470,8 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     diet: DEER_STAG_DIET,
     roaming: LARGE_ROAMING_RANGE,
     trips: { water: DEER_WATER_TRIP },
+    // Plan fauna-034 §1: same daytime activity bias as `deer`.
+    activity: { profile: 'diurnal', restBias: 0.5 },
   },
   rabbit: {
     kind: 'rabbit',

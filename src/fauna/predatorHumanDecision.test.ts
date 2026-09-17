@@ -303,6 +303,84 @@ describe('humanTaste (plan quests-progression-007)', () => {
   })
 })
 
+describe('territorialDefense (plan fauna-034 §5/§8)', () => {
+  it('0 (or absent) reproduces the exact pre-plan score for representative wolf/fox/bear cases', () => {
+    const wolfNoField = scorePredatorHumanIntents({ ...base, hunger: 0.7, kind: 'wolf' })
+    const wolfZero = scorePredatorHumanIntents({ ...base, hunger: 0.7, kind: 'wolf', territorialDefense: 0 })
+    expect(wolfZero).toEqual(wolfNoField)
+
+    const foxNoField = scorePredatorHumanIntents({ ...base, hunger: 0.3, kind: 'fox' })
+    const foxZero = scorePredatorHumanIntents({ ...base, hunger: 0.3, kind: 'fox', territorialDefense: 0 })
+    expect(foxZero).toEqual(foxNoField)
+
+    const bearNoField = scorePredatorHumanIntents({ ...base, hunger: 0.5, kind: 'bear' })
+    const bearZero = scorePredatorHumanIntents({ ...base, hunger: 0.5, kind: 'bear', territorialDefense: 0 })
+    expect(bearZero).toEqual(bearNoField)
+  })
+
+  it('raises attack score and lowers flee score as strength rises', () => {
+    const none = scorePredatorHumanIntents({ ...base, hunger: 0.3, territorialDefense: 0 })
+    const partial = scorePredatorHumanIntents({ ...base, hunger: 0.3, territorialDefense: 0.5 })
+    const full = scorePredatorHumanIntents({ ...base, hunger: 0.3, territorialDefense: 1 })
+    const attack = (scored: typeof none) => scored.find((c) => c.kind === 'attack')!.score
+    const flee = (scored: typeof none) => scored.find((c) => c.kind === 'flee')!.score
+    expect(attack(partial)).toBeGreaterThan(attack(none))
+    expect(attack(full)).toBeGreaterThan(attack(partial))
+    expect(flee(partial)).toBeLessThan(flee(none))
+    expect(flee(full)).toBeLessThan(flee(partial))
+  })
+
+  it('a defended wolf near its den can flip a low-hunger flee into attack', () => {
+    // Low hunger alone flees (see `decidePredatorHumanIntent`'s own test
+    // above); a strong den-defense signal can outweigh that baseline fear.
+    expect(decidePredatorHumanIntent({ ...base, hunger: 0.2, humanDistance: 8 })).toBe('flee')
+    expect(
+      decidePredatorHumanIntent({ ...base, hunger: 0.2, humanDistance: 8, territorialDefense: 1 }),
+    ).toBe('attack')
+  })
+
+  it('fire and crowd suppression still apply on top of a defended den', () => {
+    const defended = decidePredatorHumanIntent({
+      ...base,
+      hunger: 0.2,
+      humanDistance: 8,
+      territorialDefense: 1,
+      fireNearby: true,
+    })
+    expect(defended).toBe('flee')
+  })
+
+  it('provoked low-HP flee remains a hard override even with full territorial strength', () => {
+    expect(
+      decidePredatorHumanIntent({
+        ...base,
+        hunger: 0.9,
+        provoked: true,
+        selfHpRatio: PROVOKED_FLEE_HP_RATIO - 0.05,
+        territorialDefense: 1,
+      }),
+    ).toBe('flee')
+  })
+
+  it('humanTaste and territorialDefense compose independently', () => {
+    const neither = scorePredatorHumanIntents({ ...base, hunger: 0.7, humanDistance: 8 })
+    const tasteOnly = scorePredatorHumanIntents({ ...base, hunger: 0.7, humanDistance: 8, humanTaste: true })
+    const territorialOnly = scorePredatorHumanIntents({
+      ...base, hunger: 0.7, humanDistance: 8, territorialDefense: 0.6,
+    })
+    const both = scorePredatorHumanIntents({
+      ...base, hunger: 0.7, humanDistance: 8, humanTaste: true, territorialDefense: 0.6,
+    })
+    const attack = (scored: typeof neither) => scored.find((c) => c.kind === 'attack')!.score
+    // Both individually raise attack score above baseline, and combining
+    // them raises it further than either alone.
+    expect(attack(tasteOnly)).toBeGreaterThan(attack(neither))
+    expect(attack(territorialOnly)).toBeGreaterThan(attack(neither))
+    expect(attack(both)).toBeGreaterThan(attack(tasteOnly))
+    expect(attack(both)).toBeGreaterThan(attack(territorialOnly))
+  })
+})
+
 describe('countNearbyHumans', () => {
   it('always counts the player as 1 with no NPCs', () => {
     expect(countNearbyHumans(0, 0, [])).toBe(1)

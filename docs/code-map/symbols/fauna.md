@@ -2,33 +2,45 @@
 
 Generated from exported TypeScript symbols.
 
+## `fauna/animalActivity.ts`
+
+- `ActivityRestInput` — type — line 17
+- `activityRestPressure` — function — line 120
+- `AnimalActivityProfile` — type — line 15
+  - domain: fauna
+  - role: Pure day/night activity-cycle bias for routine wild-fauna rest (plan fauna-034 §1/§2) — answers "how strongly does this species want to rest right now", never who/where it rests (that stays `AnimalAgent`'s own home-return/idle execution in `pursueRoutineRest()`) and never a schedule/FSM: identical inputs always produce the identical answer. Hunger/thirst/threat/flee/trip branches all run before this is ever consulted (`AnimalAgent.updatePredator`/`updatePrey`), so this only ever expresses a *bias*, never a fixed clock-driven behaviour.
+- `restPhaseOffset` — function — line 104
+- `RoutineRestInput` — type — line 108
+- `shouldRoutineRest` — function — line 136
+- `timeOfDayRestPressure` — function — line 57
+
 ## `fauna/AnimalAgent.ts`
 
-- `AnimalAgent` — class — line 1126
+- `AnimalAgent` — class — line 1141
   - domain: fauna
   - system: animal-agent
   - role: Central per-animal behaviour integration point: predator/prey AI, needs, health, production (livestock) and riding (mounts).
   - uses: HealthState, StaminaState
   - simulation: tick
-- `AnimalAgentDebugInfo` — type — line 580
-- `AnimalAgentDeps` — type — line 930
-- `AnimalSaveState` — type — line 708
-- `AnimalUpdateContext` — type — line 994
-- `BURY_DURATION_SEC` — const — line 393
-- `canPredatorPursueIntoVillage` — function — line 788
-- `FAUNA_SHADOW_DISTANCE` — const — line 362
-- `FaunaAiBranch` — type — line 517
-- `FaunaNavRescueDebugInfo` — type — line 564
-- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 452
-- `FrenzyWolfCandidate` — type — line 865
-- `HARVEST_MEAT_DURATION_SEC` — const — line 396
-- `isWithinVillageRadius` — function — line 769
-- `NearbyNpcCandidate` — type — line 860
-- `pickNearestEligibleWolf` — function — line 874
-- `pickRabidTarget` — function — line 899
-- `RABIES_BITE_INFECTION_CHANCE` — const — line 380
-- `villageFleeBiasFalloff` — function — line 796
-- `VillageInfo` — type — line 763
+- `AnimalAgentDebugInfo` — type — line 582
+- `AnimalAgentDeps` — type — line 937
+- `AnimalSaveState` — type — line 715
+- `AnimalUpdateContext` — type — line 1001
+- `BURY_DURATION_SEC` — const — line 395
+- `canPredatorPursueIntoVillage` — function — line 795
+- `FAUNA_SHADOW_DISTANCE` — const — line 364
+- `FaunaAiBranch` — type — line 519
+- `FaunaNavRescueDebugInfo` — type — line 566
+- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 454
+- `FrenzyWolfCandidate` — type — line 872
+- `HARVEST_MEAT_DURATION_SEC` — const — line 398
+- `isWithinVillageRadius` — function — line 776
+- `NearbyNpcCandidate` — type — line 867
+- `pickNearestEligibleWolf` — function — line 881
+- `pickRabidTarget` — function — line 906
+- `RABIES_BITE_INFECTION_CHANCE` — const — line 382
+- `villageFleeBiasFalloff` — function — line 803
+- `VillageInfo` — type — line 770
 
 ## `fauna/animalAreaBound.ts`
 
@@ -132,25 +144,26 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/animalDefs.ts`
 
-- `ANIMAL_DEFS` — const — line 352
-- `ANIMAL_LABELS` — const — line 49
-- `AnimalAffinityConfig` — type — line 175
-- `AnimalDef` — type — line 68
-- `AnimalDietConfig` — type — line 205
-- `AnimalKind` — type — line 27
-- `AnimalLifeStage` — type — line 22
-- `AnimalRole` — type — line 14
+- `ANIMAL_DEFS` — const — line 382
+- `ANIMAL_LABELS` — const — line 51
+- `AnimalActivityConfig` — type — line 192
+- `AnimalAffinityConfig` — type — line 205
+- `AnimalDef` — type — line 70
+- `AnimalDietConfig` — type — line 235
+- `AnimalKind` — type — line 29
+- `AnimalLifeStage` — type — line 24
+- `AnimalRole` — type — line 16
   - domain: fauna
   - role: Species taxonomy and per-kind tuning data for `AnimalAgent` — no runtime/agent state, no Three.js. Moved out of `AnimalAgent.ts` (plan fauna-017 step 1): 31% of that file was this module's data sitting above the class. Re-exported wholesale from `AnimalAgent.ts` via `export *`, so every existing importer of species types/`ANIMAL_DEFS` is unaffected.
-- `AnimalSociability` — type — line 18
-- `dietAcceptsItem` — function — line 330
-- `DraftConfig` — type — line 236
-- `LeadConfig` — type — line 230
-- `LivestockProductionConfig` — type — line 265
-- `LivestockProductKind` — type — line 252
-- `MountPointConfig` — type — line 243
-- `ScavengingConfig` — type — line 216
-- `WaterTripConfig` — type — line 184
+- `AnimalSociability` — type — line 20
+- `dietAcceptsItem` — function — line 360
+- `DraftConfig` — type — line 266
+- `LeadConfig` — type — line 260
+- `LivestockProductionConfig` — type — line 295
+- `LivestockProductKind` — type — line 282
+- `MountPointConfig` — type — line 273
+- `ScavengingConfig` — type — line 246
+- `WaterTripConfig` — type — line 214
 
 ## `fauna/animalDialogue.ts`
 
@@ -394,6 +407,14 @@ Generated from exported TypeScript symbols.
 - `tickStrayClassificationGrace` — function — line 366
   - domain: fauna
   - role: Natural-stray grace accumulator (plan fauna-025) — resets the instant the animal is back inside `minDistance` of its own home/wander anchor, so a short flee that ends back near home never latches, while a sustained displacement accumulates toward `shouldBeginNaturalStray`.
+
+## `fauna/animalTerritory.ts`
+
+- `AnimalHabitatContext` — type — line 31
+- `TerritorialConfig` — type — line 20
+  - domain: fauna
+  - role: Pure territorial/den-defense eligibility + distance falloff (plan fauna-034 §4/§7) — answers "how strongly should this predator defend its existing habitat against this human", never *who* to attack/flee (that stays `predatorHumanDecision.ts`'s job, composed via `PredatorHumanDecisionInput.territorialDefense`) and never *where* the den is (that stays `AnimalSpawner`/`createFauna.ts`'s existing spawner identity — this module never mutates or looks up a spawner itself).
+- `territorialDefenseStrength` — function — line 57
 
 ## `fauna/animalTrophyLoot.ts`
 
@@ -677,20 +698,20 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/predatorHumanDecision.ts`
 
-- `CLOSE_ATTACK_CHANCE` — const — line 88
-- `countNearbyHumans` — function — line 200
-- `CROWD_ATTACK_BLOCK_COUNT` — const — line 94
-- `decidePredatorHumanIntent` — function — line 155
-- `humanProximityFear` — function — line 103
-- `hungerAttackPressure` — function — line 114
-- `isAttackRollSuppressed` — function — line 119
-- `NEARBY_HUMAN_RADIUS` — const — line 194
+- `CLOSE_ATTACK_CHANCE` — const — line 108
+- `countNearbyHumans` — function — line 223
+- `CROWD_ATTACK_BLOCK_COUNT` — const — line 114
+- `decidePredatorHumanIntent` — function — line 178
+- `humanProximityFear` — function — line 123
+- `hungerAttackPressure` — function — line 134
+- `isAttackRollSuppressed` — function — line 139
+- `NEARBY_HUMAN_RADIUS` — const — line 217
 - `PredatorHumanDecisionInput` — type — line 17
 - `PredatorHumanIntent` — type — line 15
-- `PROVOCATION_SECONDS` — const — line 96
-- `PROVOKED_FLEE_HP_RATIO` — const — line 92
-- `RETALIATION_ATTACK_CHANCE` — const — line 90
-- `scorePredatorHumanIntents` — function — line 123
+- `PROVOCATION_SECONDS` — const — line 116
+- `PROVOKED_FLEE_HP_RATIO` — const — line 112
+- `RETALIATION_ATTACK_CHANCE` — const — line 110
+- `scorePredatorHumanIntents` — function — line 143
 
 ## `fauna/predatorIntentCommitment.ts`
 

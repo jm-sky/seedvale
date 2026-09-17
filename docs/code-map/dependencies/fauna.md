@@ -28,6 +28,7 @@ Generated from TypeScript imports.
 - `debug/debugMode.ts`
 - `debug/faunaInspector.ts`
 - `fauna/AnimalLife.ts`
+- `fauna/animalActivity.ts`
 - `fauna/animalAreaBound.ts`
 - `fauna/animalAttraction.ts`
 - `fauna/animalCaveHabitat.ts`
@@ -43,6 +44,7 @@ Generated from TypeScript imports.
 - `fauna/animalRoaming.ts`
 - `fauna/animalScare.ts`
 - `fauna/animalStray.ts`
+- `fauna/animalTerritory.ts`
 - `fauna/animalUpdateCadence.ts`
 - `fauna/animalVariants.ts`
 - `fauna/animalWalkSpeed.ts`
@@ -174,6 +176,7 @@ Generated from TypeScript imports.
 - `fauna/AnimalAgent.test.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/AnimalLife.test.ts`
+- `fauna/animalActivity.ts`
 - `fauna/animalDefs.ts`
 - `fauna/animalForaging.test.ts`
 - `fauna/animalForaging.ts`
@@ -206,6 +209,7 @@ Generated from TypeScript imports.
 - `debug/npcDebugApi.test.ts`
 - `debug/npcDebugApi.ts`
 - `fauna/AnimalSpawner.test.ts`
+- `fauna/animalTerritory.ts`
 - `fauna/closedPredatorPressure.ts`
 - `fauna/createFauna.ts`
 - `fauna/habitatPressure.test.ts`
@@ -224,6 +228,24 @@ Generated from TypeScript imports.
 - `quests/opportunities/settlementQuestOpportunities.ts`
 - `quests/opportunities/worldQuestMaterialization.ts`
 - `quests/quests.ts`
+
+## `fauna/animalActivity.test.ts`
+
+**Imports**
+
+- `fauna/animalActivity.ts`
+
+## `fauna/animalActivity.ts`
+
+**Imports**
+
+- `fauna/AnimalLife.ts`
+
+**Imported by**
+
+- `fauna/AnimalAgent.ts`
+- `fauna/animalActivity.test.ts`
+- `fauna/animalDefs.ts`
 
 ## `fauna/animalAreaBound.test.ts`
 
@@ -336,6 +358,8 @@ Generated from TypeScript imports.
 **Imports**
 
 - `fauna/AnimalLife.ts`
+- `fauna/animalActivity.ts`
+- `fauna/animalTerritory.ts`
 - `fauna/waterTraversal.ts`
 - `items/items.ts`
 
@@ -634,6 +658,24 @@ Generated from TypeScript imports.
 - `quests/opportunities/worldQuestMaterialization.ts`
 - `quests/opportunities/worldQuestOpportunityTypes.ts`
 - `settlement/livestock.ts`
+
+## `fauna/animalTerritory.test.ts`
+
+**Imports**
+
+- `fauna/animalTerritory.ts`
+
+## `fauna/animalTerritory.ts`
+
+**Imports**
+
+- `fauna/AnimalSpawner.ts`
+
+**Imported by**
+
+- `fauna/AnimalAgent.ts`
+- `fauna/animalDefs.ts`
+- `fauna/animalTerritory.test.ts`
 
 ## `fauna/animalTrophyLoot.ts`
 

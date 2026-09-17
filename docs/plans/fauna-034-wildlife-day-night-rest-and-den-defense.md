@@ -1,7 +1,7 @@
 # Plan: Wildlife Day/Night Rest and Den Defense
 
 **Created:** 2026-09-16
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~fauna-028~~
