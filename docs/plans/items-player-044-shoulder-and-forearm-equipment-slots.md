@@ -173,7 +173,36 @@ Wymagania identyczne jak dla naramienników z `items-player-039`:
 - finalny GLB nie zawiera niepotrzebnych animacji,
 - reuse istniejącego asset preparation pipeline zamiast ręcznie duplikować glTF processing.
 
-Oba assety dodać jawnie do Asset Browser jako skinned UBC accessories.
+### Znany blocker źródłowych GLB (2026-09-17)
+
+Próby eksportu z Blender 5.2 dla:
+
+```text
+male_leather_bracers.glb
+male_steel_bracers.glb
+```
+
+są obecnie **niepoprawne dla runtime bindingu**. `gltf-transform inspect` nie pokazuje `JOINTS_0` ani `WEIGHTS_0`, mimo że obiekty w Blenderze mają `Armature` modifier. W tej postaci `bindAccessoryToPlayerSkeleton` nie ma danych skinningowych i pominie accessory.
+
+Dodatkowo pliki źródłowe były bardzo duże:
+
+```text
+male_leather_bracers.glb ≈ 28 MB
+male_steel_bracers.glb   ≈ 60 MB
+```
+
+Powodem rozmiaru są głównie osadzone atlasowe tekstury PNG 4K (Ranger/Noble: BaseColor + Normal + ORM); sam mesh ma rozmiar rzędu dziesiątek KB. Nie commitować/przywracać tych eksportów jako runtime assets.
+
+Przed implementacją visuali tego planu trzeba:
+
+1. poprawić eksport z Blendera tak, aby wynik zawierał skin + `JOINTS_0` + `WEIGHTS_0` zgodne z UBC skeletonem;
+2. zweryfikować `gltf-transform inspect` przed wpięciem do runtime;
+3. przepuścić poprawne źródło przez istniejący `compose_ubc_player.py` / `prepare-ubc-player-alpha.sh` (resize/WebP/prune/gltfpack), zamiast przechowywać surowe 4K embedded GLB;
+4. zachować `-kn` / nazwy kości wymagane przez obecny binding.
+
+Szczegółowy zapis diagnostyczny: `docs/blender/TROUBLESHOOTING.md`. Powiązany loose end: `docs/plans/LOOSE-ENDS.md`.
+
+Oba assety dodać jawnie do Asset Browser jako skinned UBC accessories dopiero po przejściu powyższego gate.
 
 Jeśli potrzebny jest alignment, przechowywać go w istniejącym `PlayerEquipmentVisual.alignment`, nie w `PlayerController`.
 
@@ -308,7 +337,8 @@ Plan jest zakończony, gdy:
 - legacy save `arms` migruje do `shoulders`,
 - `leather_bracers` i `steel_bracers` są pełnoprawnymi armor items w `forearms`,
 - gracz może jednocześnie nosić pauldron i bracers,
-- oba nowe GLB są przygotowane i podpinane przez istniejący UBC accessory runtime,
+- oba nowe GLB mają zweryfikowany skinning (`JOINTS_0` / `WEIGHTS_0`) i są przygotowane przez istniejący UBC asset pipeline,
+- oba nowe GLB są podpinane przez istniejący UBC accessory runtime,
 - UI pokazuje oba sloty,
 - testy jednostkowe/typecheck/build przechodzą,
 - manual browser verification pozostaje do wykonania przez Usera.
