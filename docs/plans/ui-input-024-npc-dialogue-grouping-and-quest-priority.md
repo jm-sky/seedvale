@@ -6,6 +6,7 @@
 **Priority:** high · **Effort:** M
 **Depends on:** none
 **Domain:** `ui-input`
+**Model:** Composer, Sonnet
 **Subdomains:** `menus` `interaction` `feedback`
 **Tags:** `npc-dialogue` `quests` `grouping`
 **Roadmap:** -
