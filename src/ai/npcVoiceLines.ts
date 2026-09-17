@@ -157,7 +157,15 @@ export type NpcVoiceSemanticIntent =
   | 'greeting'
   | 'farewell'
   | 'confirmation'
+  | 'thanks'
+  | 'refusal'
+  | 'attention'
+  | 'warning'
+  | 'well_wish'
+  | 'quest_offer'
+  | 'quest_accepted'
   | 'quest_declined'
+  | 'quest_complete'
 
 /**
  * Presentation-only age band for generated voice filenames (`young` / `old`).
@@ -203,26 +211,102 @@ export function voiceScopeForRole(role: Role): string {
  * runtime probing.
  */
 const GENERATED_VOICE_MANIFEST: Readonly<Record<string, readonly string[]>> = {
-  'general:male:greeting': ['/sounds/voices/general_male_greeting_01.wav'],
-  'general:male:farewell': ['/sounds/voices/general_male_farewell_01.wav'],
+  'general:female:greeting': [
+    '/sounds/voices/general_female_greeting_01.mp3',
+  ],
+  'general:female:farewell': [
+    '/sounds/voices/general_female_farewell_01.mp3',
+  ],
+
+  'general:male:greeting': [
+    '/sounds/voices/general_male_greeting_01.mp3',
+  ],
+  'general:male:farewell': [
+    '/sounds/voices/general_male_farewell_01.mp3',
+  ],
 
   'merchant:female:greeting': [
-    '/sounds/voices/merchant_female_greeting_01.wav',
-    '/sounds/voices/merchant_female_greeting_02.wav',
-    '/sounds/voices/merchant_female_greeting_03.wav',
+    '/sounds/voices/merchant_female_greeting_01.mp3',
+    '/sounds/voices/merchant_female_greeting_02.mp3',
+    '/sounds/voices/merchant_female_greeting_03.mp3',
   ],
-  'merchant:female:farewell': ['/sounds/voices/merchant_female_farewell_01.wav'],
-  // Filename keyword is `agree`; semantic intent remains `confirmation`.
-  'merchant:female:confirmation': ['/sounds/voices/merchant_female_agree_01.wav'],
+  'merchant:female:farewell': [
+    '/sounds/voices/merchant_female_farewell_01.mp3',
+  ],
+  'merchant:female:confirmation': [
+    '/sounds/voices/merchant_female_agree_01.mp3',
+  ],
+  'merchant:female:thanks': [
+    '/sounds/voices/merchant_female_thanks_01.mp3',
+  ],
 
   'guard:male:greeting': [
     '/sounds/voices/guard_male_greeting_01.mp3',
     '/sounds/voices/guard_male_greeting_02.mp3',
   ],
-  'guard:male:farewell': ['/sounds/voices/guard_male_farewell_01.mp3'],
+  'guard:male:farewell': [
+    '/sounds/voices/guard_male_farewell_01.mp3',
+  ],
+  'guard:male:attention': [
+    '/sounds/voices/guard_male_attention_01.mp3',
+  ],
+  'guard:male:refusal': [
+    '/sounds/voices/guard_male_refusal_01.mp3',
+  ],
+  'guard:male:thanks': [
+    '/sounds/voices/guard_male_thanks_01.mp3',
+    '/sounds/voices/guard_male_thanks_02.mp3',
+  ],
+  'guard:male:quest_accepted': [
+    '/sounds/voices/guard_male_quest_accepted_01.mp3',
+    '/sounds/voices/guard_male_quest_accepted_02.mp3',
+  ],
   'guard:male:quest_declined': [
     '/sounds/voices/guard_male_quest_declined_01.mp3',
     '/sounds/voices/guard_male_quest_declined_02.mp3',
+  ],
+  'guard:male:quest_complete': [
+    '/sounds/voices/guard_male_quest_complete_01.mp3',
+    '/sounds/voices/guard_male_quest_complete_02.mp3',
+  ],
+
+  'hunter:male:greeting': [
+    '/sounds/voices/hunter_male_greeting_01.mp3',
+    '/sounds/voices/hunter_male_greeting_02.mp3',
+  ],
+  'hunter:male:farewell': [
+    '/sounds/voices/hunter_male_farewell_01.mp3',
+    '/sounds/voices/hunter_male_farewell_02.mp3',
+  ],
+  'hunter:male:confirmation': [
+    '/sounds/voices/hunter_male_agree_01.mp3',
+  ],
+  'hunter:male:attention': [
+    '/sounds/voices/hunter_male_attention_01.mp3',
+  ],
+  'hunter:male:thanks': [
+    '/sounds/voices/hunter_male_thanks_01.mp3',
+  ],
+  'hunter:male:warning': [
+    '/sounds/voices/hunter_male_warning_01.mp3',
+  ],
+  'hunter:male:well_wish': [
+    '/sounds/voices/hunter_male_well_wish_01.mp3',
+    '/sounds/voices/hunter_male_well_wish_02.mp3',
+  ],
+  'hunter:male:quest_offer': [
+    '/sounds/voices/hunter_male_quest_offer_01.mp3',
+  ],
+  'hunter:male:quest_accepted': [
+    '/sounds/voices/hunter_male_quest_accepted_01.mp3',
+    '/sounds/voices/hunter_male_quest_accepted_02.mp3',
+  ],
+  'hunter:male:quest_declined': [
+    '/sounds/voices/hunter_male_quest_declined_01.mp3',
+  ],
+  'hunter:male:quest_complete': [
+    '/sounds/voices/hunter_male_quest_complete_01.mp3',
+    '/sounds/voices/hunter_male_quest_complete_02.mp3',
   ],
 }
 
@@ -253,11 +337,14 @@ function pickLegacyVoiceLine(
   switch (intent) {
     case 'confirmation':
       return pickNpcConfirmationSound(actor)
+
     case 'farewell':
       return pickNpcFarewellSound(actor)
+
     case 'greeting':
       return pickNpcGreetingSound(actor)
-    case 'quest_declined':
+
+    default:
       return undefined
   }
 }
