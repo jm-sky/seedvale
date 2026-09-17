@@ -68,6 +68,7 @@ Generated from TypeScript imports.
 - `ai/npcCombat.ts`
 - `ai/npcDecision.ts`
 - `ai/npcLoadout.ts`
+- `ai/npcLocomotion.ts`
 - `ai/npcLogistics.ts`
 - `ai/npcMovementRecovery.ts`
 - `ai/npcMovementRoute.ts`
@@ -833,6 +834,24 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `ai/npcLoadout.test.ts`
 - `ai/npcTradeAvailability.ts`
+
+## `ai/npcLocomotion.test.ts`
+
+**Imports**
+
+- `ai/npcLocomotion.ts`
+- `shared/StaminaState.ts`
+
+## `ai/npcLocomotion.ts`
+
+**Imports**
+
+- `shared/StaminaState.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `ai/npcLocomotion.test.ts`
 
 ## `ai/npcLogistics.test.ts`
 

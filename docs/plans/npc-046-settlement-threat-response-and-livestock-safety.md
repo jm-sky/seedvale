@@ -1,7 +1,7 @@
 # Plan: NPC emergency locomotion for settlement threats
 
 **Created:** 2026-09-17
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 (implemented 2026-09-17 — browser checks are User-owned)
 **Type:** feature
 **Priority:** high · **Effort:** M
 **Depends on:** none

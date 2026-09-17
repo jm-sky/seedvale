@@ -181,25 +181,25 @@ Generated from exported TypeScript symbols.
 
 ## `ai/NpcAgent.ts`
 
-- `classifyPendingActivity` — function — line 731
-- `configureNpcPlayerReactionAudio` — function — line 979
-- `CurrentActivity` — type — line 541
-- `CurrentActivityKind` — type — line 534
-- `HUNT_RESUPPLY_ARROW_TARGET` — const — line 848
-- `NPC_HEIGHT` — const — line 473
-- `NPC_SHADOW_DISTANCE` — const — line 478
-- `NpcAgent` — class — line 1106
+- `classifyPendingActivity` — function — line 737
+- `configureNpcPlayerReactionAudio` — function — line 985
+- `CurrentActivity` — type — line 547
+- `CurrentActivityKind` — type — line 540
+- `HUNT_RESUPPLY_ARROW_TARGET` — const — line 854
+- `NPC_HEIGHT` — const — line 479
+- `NPC_SHADOW_DISTANCE` — const — line 484
+- `NpcAgent` — class — line 1112
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcAgentDeps` — type — line 996
-- `NpcInspectionSnapshot` — type — line 556
-- `NpcWhy` — type — line 706
-- `projectNpcWhy` — function — line 773
-- `promoteChainKind` — function — line 723
+- `NpcAgentDeps` — type — line 1002
+- `NpcInspectionSnapshot` — type — line 562
+- `NpcWhy` — type — line 712
+- `projectNpcWhy` — function — line 779
+- `promoteChainKind` — function — line 729
 
 ## `ai/npcAnimalThreat.ts`
 
@@ -345,6 +345,16 @@ Generated from exported TypeScript symbols.
 - `seedHunterSupplies` — function — line 61
 - `seedInitialPersonalBelongingsIfNeeded` — function — line 87
 - `seedShepherdShears` — function — line 76
+
+## `ai/npcLocomotion.ts`
+
+- `NpcLocomotionMode` — type — line 13
+  - domain: npc
+  - role: Semantic emergency locomotion mode for NPC movement (plan npc-046). `NpcAgent` owns the committed `walk`/`run` intent on its current movement episode (destination/route ownership stays exactly as it was — this is only how fast/which animation that already-committed movement executes at); this module holds no simulation state and is pure/stateless, the same split `npcAnimalThreat.ts` uses for the threat decision itself.
+- `resolveNpcEffectiveLocomotionMode` — function — line 31
+- `resolveNpcLocomotionSpeed` — function — line 42
+- `RUN_FATIGUE_RATE` — const — line 24
+- `RUN_SPEED_MULTIPLIER` — const — line 19
 
 ## `ai/npcLogistics.ts`
 

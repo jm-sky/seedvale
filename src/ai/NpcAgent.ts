@@ -306,6 +306,12 @@ import {
 import { decideNpcAction, type NpcDecisionKind, scoreNpcDecisions, shouldInterruptAction } from './npcDecision'
 import { seedHunterStartingArrows, seedInitialPersonalBelongingsIfNeeded } from './npcLoadout'
 import {
+  type NpcLocomotionMode,
+  resolveNpcEffectiveLocomotionMode,
+  resolveNpcLocomotionSpeed,
+  RUN_FATIGUE_RATE,
+} from './npcLocomotion'
+import {
   canDeliverToPlayerStorage,
   canExchangeWithHousehold,
   canWithdrawFromEconomy,
@@ -536,7 +542,7 @@ export type CurrentActivityKind = 'combat' | 'eat' | 'idle' | 'need' | 'sleep' |
 /** This NPC's `AgentAnimationSet` clip keys (review 2026-09-03 §5 E6) —
  *  the semantic mapping every `anim.resolve()`/`play()`/`playOnce()`/
  *  `settleAtEnd()` call site uses instead of a raw clip name. */
-type NpcAnimClip = 'attackMelee' | 'attackRanged' | 'death' | 'hurt' | 'idle' | 'interact' | 'walk'
+type NpcAnimClip = 'attackMelee' | 'attackRanged' | 'death' | 'hurt' | 'idle' | 'interact' | 'run' | 'walk'
 
 export type CurrentActivity = {
   kind: CurrentActivityKind
@@ -1193,6 +1199,13 @@ export class NpcAgent {
    *  mixer ticking needed). */
   private deathAnimSettleAtSimClock: number | null = null
   private phase: Phase = 'choose'
+  /** Committed movement urgency for the current phase's execution, separate
+   *  from destination/route ownership (plan npc-046) — `run` only while an
+   *  immediate personal animal threat is being fled; reset to `walk` by
+   *  `resetInFlightAction()` and on ordinary wander arrival, so it can never
+   *  outlive the episode that set it, survive reconstruction, or leak into
+   *  unrelated movement (patrol/work/logistics stay `walk` unconditionally). */
+  private locomotionMode: NpcLocomotionMode = 'walk'
   private activeNeed: NeedId = 'idle'
   /** Pressures generated for the last `choose()` arbitration (plan ai-001)
    *  — a plain-data snapshot for diagnostics, not a second copy of need
@@ -1727,6 +1740,7 @@ export class NpcAgent {
     this.anim.resolve({
       idle: ['Idle', 'Idle_Neutral', 'Idle_Loop'],
       walk: ['Walk', 'Run', 'Walk_Loop'],
+      run: ['Run', 'Run_Loop'],
       interact: ['Interact', 'Wave'],
       attackMelee: ['Sword_Slash', 'Sword_Attack'],
       attackRanged: ['Gun_Shoot', 'Idle_Gun_Shoot', 'Pistol_Shoot'],
@@ -2631,6 +2645,9 @@ export class NpcAgent {
     // see `beginCombat`). D2 fix: marks the Plan interrupted instead of
     // silently leaving it `active` under a destroyed concrete action.
     this.resetInFlightAction({ lifecycle: 'fail', clearSleepReason: true, markPlanInterrupted: true })
+    // Emergency locomotion (plan npc-046) — set after resetInFlightAction so
+    // its own unconditional `walk` reset can't immediately undo this.
+    this.locomotionMode = 'run'
 
     const dx = this.mesh.position.x - threatX
     const dz = this.mesh.position.z - threatZ
@@ -2816,6 +2833,14 @@ export class NpcAgent {
     } else if (this.phase === 'execute') {
       const rate = executeIsHeavy ? BASE_FATIGUE_RATE : LIGHT_EXECUTE_FATIGUE_RATE
       drainStamina(this.stamina, rate * this.fatigueMult * dt)
+    } else if (this.phase === 'wander' && this.locomotionMode === 'run') {
+      // Emergency flee reuses `wander` (plan npc-046) — checked ahead of
+      // `REST_PHASES` (which otherwise treats `wander` as low-intensity
+      // rest) so fleeing drains stamina instead of restoring it. Clamped by
+      // `drainStamina` itself, so a still-exhausted NPC just stays at 0
+      // rather than going negative while `steerTo` already degrades its
+      // actual speed back to walk.
+      drainStamina(this.stamina, RUN_FATIGUE_RATE * this.fatigueMult * dt)
     } else if (REST_PHASES.has(this.phase)) {
       restoreStamina(this.stamina, this.effectiveRestRate() * dt)
     } else if (this.phase === 'combat' && this.isCombatCycleIdle()) {
@@ -3321,7 +3346,10 @@ export class NpcAgent {
         }
         break
       case 'wander':
-        if (this.steerWithRescue(this.target, dt)) this.phase = 'choose'
+        if (this.steerWithRescue(this.target, dt)) {
+          this.phase = 'choose'
+          this.locomotionMode = 'walk'
+        }
         break
     }
 
@@ -3583,7 +3611,12 @@ export class NpcAgent {
     // Interact over locomotion even if `moving` somehow stayed true.
     if (this.isBusyPhase() && this.anim.has('interact')) {
       this.anim.play('interact')
+    } else if (this.moving && resolveNpcEffectiveLocomotionMode(this.locomotionMode, this.stamina) === 'run' && this.anim.has('run')) {
+      this.anim.play('run')
     } else if (this.moving && this.anim.has('walk')) {
+      // Also the safe fallback for a `run`-intent NPC on a model with no
+      // authored Run clip (plan npc-046) — real run-speed movement, Walk
+      // presentation, same as any other missing-clip fallback here.
       this.anim.play('walk')
     } else if (this.anim.has('idle')) {
       this.anim.play('idle')
@@ -4201,6 +4234,10 @@ export class NpcAgent {
     this.wait = 0
     this.clearRepath()
     resetMovementWatchdog(this.watchdog)
+    // Unconditional (plan npc-046) — any in-flight action being reset/
+    // cancelled ends whatever emergency locomotion it was running under; a
+    // fresh `fleeFromThreat()` re-commits `run` right after calling this.
+    this.locomotionMode = 'walk'
     if (opts.clearSleepReason) this.sleepReason = null
     if (opts.markPlanInterrupted) this.markPlanInterrupted()
   }
@@ -6469,6 +6506,9 @@ export class NpcAgent {
   private wanderNear(anchor: THREE.Vector3): void {
     resetMovementWatchdog(this.watchdog)
     this.clearRepath()
+    // Defensive (plan npc-046) — ordinary idle wander is never emergency
+    // locomotion, whichever `phase` this is called from.
+    this.locomotionMode = 'walk'
     for (let attempt = 0; attempt < 6; attempt++) {
       const x = anchor.x + (Math.random() - 0.5) * IDLE_WANDER_SPREAD
       const z = anchor.z + (Math.random() - 0.5) * IDLE_WANDER_SPREAD
@@ -6610,7 +6650,8 @@ export class NpcAgent {
     const dist = Math.hypot(this.tmp.x, this.tmp.z)
     if (dist < ARRIVE) return true
     this.tmp.multiplyScalar(1 / dist)
-    const speed = WALK_SPEED * this.healthSpeedMultiplier()
+    const effectiveLocomotion = resolveNpcEffectiveLocomotionMode(this.locomotionMode, this.stamina)
+    const speed = resolveNpcLocomotionSpeed(effectiveLocomotion, WALK_SPEED) * this.healthSpeedMultiplier()
     this.mesh.rotation.y = Math.atan2(this.tmp.x, this.tmp.z)
     const current = this.resolveCurrentSpatialContext()
     const caveId = npcActiveCaveId(current, this.composedRoute, this.routeExecution)

@@ -99,6 +99,8 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `ai/npcLocomotion.test.ts`
+- `ai/npcLocomotion.ts`
 - `ai/npcStamina.test.ts`
 - `ai/npcVigor.test.ts`
 - `app/actions/cookMealIntent.test.ts`
