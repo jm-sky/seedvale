@@ -8,6 +8,7 @@
 **Domain:** `world-terrain`
 **Subdomains:** `rendering`
 **Tags:** `shadows` `performance` `settlements` `agents`
+**Model:** Sonnet, Composer
 
 ## Cel
 
