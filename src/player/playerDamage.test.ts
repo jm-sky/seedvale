@@ -3,7 +3,7 @@ import type { EquipmentModifiers } from '../items/equipment'
 import type { PlayerController } from './PlayerController'
 import { NEUTRAL_EQUIPMENT_MODIFIERS } from '../items/equipment'
 import { createHealthState } from '../shared/HealthState'
-import { applyPlayerDamage, applyDownedRecovery, tickPlayerStarvationDamage } from './playerDamage'
+import { applyDownedRecovery, applyPlayerDamage, tickPlayerStarvationDamage } from './playerDamage'
 import { createPlayerNeeds, hungerSevereDurationSec } from './PlayerNeeds'
 
 /** Narrow test double for the slice of `PlayerController` `applyPlayerDamage`

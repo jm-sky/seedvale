@@ -63,11 +63,11 @@ function stabilizeFloor(physicalInjury: number, maxHp: number): number {
   switch (severity) {
     case 'critical':
       return criticalInjuryFloor(maxHp)
-    case 'serious':
-      return seriousInjuryFloor(maxHp)
     case 'minor':
     case 'none':
       return 0
+    case 'serious':
+      return seriousInjuryFloor(maxHp)
   }
 }
 

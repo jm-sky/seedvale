@@ -3,8 +3,8 @@ import {
   resolveMaxStaminaFromEndurance,
 } from '../shared/enduranceStamina'
 import { healHealth, type HealthState } from '../shared/HealthState'
-import { clampPhysicalInjuryToMissingHp, type InjuryRecoveryState } from '../shared/injuryRecovery'
 import { createHungerState, drainHunger, type HungerState, isStarving, restoreHunger } from '../shared/HungerState'
+import { clampPhysicalInjuryToMissingHp, type InjuryRecoveryState } from '../shared/injuryRecovery'
 import { createStaminaState, drainStamina, restoreStamina, type StaminaState } from '../shared/StaminaState'
 import { createThirstState, drainThirst, isDehydrated, restoreThirst, type ThirstState } from '../shared/ThirstState'
 import { createVigorState, drainVigor, restoreVigor, type VigorState } from '../shared/VigorState'
