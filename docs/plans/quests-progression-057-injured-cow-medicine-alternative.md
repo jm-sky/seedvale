@@ -9,6 +9,7 @@
 **Subdomains:** `quests` `relationships`
 **Tags:** `medicine` `livestock` `world-driven` `alternative-resolution`
 **Roadmap:** -
+**Model:** Sonnet, Composer
 
 ## Goal
 
