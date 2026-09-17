@@ -237,6 +237,7 @@ export function computeChunkItems(
     else if (roll < (threshold += flaxWeight)) kind = 'flax'
     else if (roll < (threshold += poisonousHerbWeight)) kind = 'poisonous_herb'
     else if (roll < (threshold += berriesWeight)) kind = 'berries'
+    // eslint-disable-next-line no-useless-assignment
     else if (roll < (threshold += nutsWeight)) kind = 'nuts'
     else kind = 'beam'
 

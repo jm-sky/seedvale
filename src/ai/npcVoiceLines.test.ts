@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildNpcVoiceLookupKeys,
+  type NpcVoiceResolveInput,
   resolveNpcVoiceLine,
   resolveNpcVoiceLineWithManifest,
   voiceAgeBandForAge,
   voiceScopeForRole,
-  type NpcVoiceResolveInput,
 } from './npcVoiceLines'
 
 function npc(partial: Partial<NpcVoiceResolveInput> = {}): NpcVoiceResolveInput {

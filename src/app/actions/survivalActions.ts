@@ -37,6 +37,7 @@ import {
   fillLiquidContainer,
   liquidContainerCapacity,
 } from '../../items/liquidContainer'
+import { scaleMedicinalTreatmentAmount } from '../../player/medicinalTreatmentEffectiveness'
 import {
   drinkWater as drinkWaterNeeds,
   eatFood,
@@ -47,7 +48,6 @@ import {
   survivalDurationMultiplier,
   survivalFoodMultiplier,
 } from '../../player/PlayerSkills'
-import { scaleMedicinalTreatmentAmount } from '../../player/medicinalTreatmentEffectiveness'
 import { IGNITE_DURATION_SEC } from '../../settlement/VillageFire'
 import {
   foodPoisoningExposureEventRoll,

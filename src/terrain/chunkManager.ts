@@ -131,6 +131,8 @@ import {
   nearestWorldChunkItem,
   proceduralChunkItems,
 } from './chunkWorldItems'
+import { densityLodFraction, grassFillerLodFraction, grassGeometryLodTier } from './distanceLod'
+import { createGrassSystem, type WorldGrassChunk } from './grass'
 import {
   depleteRenewableWorldItem,
   isRenewableWorldItem,
@@ -138,8 +140,6 @@ import {
   isWorldItemPlacementAvailable,
   type RenewableWorldItemOverrides,
 } from './renewableWorldItems'
-import { densityLodFraction, grassFillerLodFraction, grassGeometryLodTier } from './distanceLod'
-import { createGrassSystem, type WorldGrassChunk } from './grass'
 import {
   nearestRiverBankDistance,
   nearestRiverBankPoint,

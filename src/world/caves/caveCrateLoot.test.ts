@@ -38,8 +38,8 @@ describe('generateCaveCrateLoot (plan world-terrain-037)', () => {
 
   it('never rolls treasure-tier kinds', () => {
     const forbidden = new Set([
-      'coin', 'gold', 'ruby', 'emerald', 'sapphire', 'diamond',
-      'key', 'treasure_map', 'quest_item',
+      'coin', 'diamond', 'emerald', 'gold', 'key', 'quest_item',
+      'ruby', 'sapphire', 'treasure_map',
     ])
     for (let seed = 0; seed < 300; seed++) {
       for (const kind of Object.keys(generateCaveCrateLoot(seed, `id:${seed}`))) {

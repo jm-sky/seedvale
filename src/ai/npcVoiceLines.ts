@@ -251,12 +251,12 @@ function pickLegacyVoiceLine(
   actor: NpcVoiceActor,
 ): string | undefined {
   switch (intent) {
-    case 'greeting':
-      return pickNpcGreetingSound(actor)
-    case 'farewell':
-      return pickNpcFarewellSound(actor)
     case 'confirmation':
       return pickNpcConfirmationSound(actor)
+    case 'farewell':
+      return pickNpcFarewellSound(actor)
+    case 'greeting':
+      return pickNpcGreetingSound(actor)
     case 'quest_declined':
       return undefined
   }

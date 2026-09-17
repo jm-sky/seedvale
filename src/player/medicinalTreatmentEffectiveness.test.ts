@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import { createPlayerSkills } from './PlayerSkills'
 import {
   MEDICINE_EFFECT_MULTIPLIER_MAX,
   MEDICINE_EFFECT_MULTIPLIER_MIN,
@@ -7,6 +6,7 @@ import {
   scaleMedicinalTreatmentAmount,
   SURVIVAL_SUPPORT_MULTIPLIER_MAX,
 } from './medicinalTreatmentEffectiveness'
+import { createPlayerSkills } from './PlayerSkills'
 
 describe('medicinalTreatmentEffectiveness (plan items-player-043)', () => {
   it('keeps novice Medicine useful and mastery within the planned bounds', () => {

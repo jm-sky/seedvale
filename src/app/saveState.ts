@@ -15,7 +15,6 @@ import type { LandOwnershipRegistry } from '../settlement/landOwnership'
 import type { TerrainModification } from '../terrain/chunkManager'
 import type { ResourceDepletionState } from '../terrain/depositMining'
 import type { RenewableWorldItemOverrides } from '../terrain/renewableWorldItems'
-import { pruneRenewableWorldItems } from '../terrain/renewableWorldItems'
 import type { VueUi } from '../ui-vue/mount'
 import type { CropPlacement } from '../world/cropLifecycle'
 import type { DayNightState } from '../world/dayNight'
@@ -33,6 +32,7 @@ import { serializeTreasureMutations, type TreasureChestMutation } from '../items
 import { CURRENT_SAVE_VERSION, type SaveData, type SaveTerrainModification, type SaveWorkContract } from '../persistence/saveData'
 import { getActiveSaveId, getPendingNewSaveName, listSavesResult, type SaveReason, writeSave, type WriteSaveResult } from '../persistence/saveDb'
 import { resolvePauseActiveSaveName } from '../persistence/saveSlots'
+import { pruneRenewableWorldItems } from '../terrain/renewableWorldItems'
 import { isTransportOrderActive } from '../world/transportOrder'
 
 /** Assembles the live runtime state into a `SaveData` and owns *when* it gets

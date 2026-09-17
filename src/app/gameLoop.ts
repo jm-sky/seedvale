@@ -158,6 +158,7 @@ import { getHungerRatio } from '../shared/HungerState'
 import { drainStamina, getStaminaRatio } from '../shared/StaminaState'
 import { getThirstRatio } from '../shared/ThirstState'
 import { getVigorRatio } from '../shared/VigorState'
+import { isMedicinalForageKind, medicinalHerbInteractRange } from '../terrain/renewableWorldItems'
 import { skyParamsFromTime, tickDayNight } from '../world/dayNight'
 import { updateFoliageWind } from '../world/foliageWind'
 import { createLightningRuntime } from '../world/lightningEvents'
@@ -182,7 +183,6 @@ import {
   INTERACT_RANGE,
   worldItemAllowsAltInteract,
 } from './interactables'
-import { medicinalHerbInteractRange, isMedicinalForageKind } from '../terrain/renewableWorldItems'
 import { activeModal } from './modalState'
 import { syncNpcQuestMarkers } from './npcQuestMarkerSync'
 import type { Object3D, PerspectiveCamera, Scene, WebGLRenderer } from 'three'
