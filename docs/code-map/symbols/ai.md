@@ -27,6 +27,13 @@ Generated from exported TypeScript symbols.
   - domain: npc
 - `resolveBurialPressure` — function — line 94
 
+## `ai/campfireTalk.ts`
+
+- `CampfireTalk` — type — line 14
+- `CampfireTalkTopic` — type — line 12
+- `resolveCampfireTalk` — function — line 87
+  - domain: npc
+
 ## `ai/characters.ts`
 
 - `CharacterDef` — type — line 21
@@ -665,14 +672,15 @@ Generated from exported TypeScript symbols.
 
 ## `ai/socialBehaviour.ts`
 
-- `advanceSocialPairing` — function — line 149
-- `conversationAttemptCooldownSec` — function — line 83
-- `conversationDurationSec` — function — line 101
-- `conversationOutcome` — function — line 126
-- `ConversationOutcome` — type — line 107
-- `findConversationPartner` — function — line 60
-- `SocialCandidateView` — type — line 48
-- `SocialParticipant` — type — line 24
+- `advanceSocialPairing` — function — line 163
+- `conversationAttemptCooldownSec` — function — line 97
+- `conversationDurationSec` — function — line 115
+- `conversationOutcome` — function — line 140
+- `ConversationOutcome` — type — line 121
+- `ConversationVoiceCue` — type — line 10
+- `findConversationPartner` — function — line 74
+- `SocialCandidateView` — type — line 62
+- `SocialParticipant` — type — line 34
 
 ## `ai/voluntaryExpeditionJoin.ts`
 

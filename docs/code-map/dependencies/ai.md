@@ -275,6 +275,23 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `ai/burialPressure.test.ts`
 
+## `ai/campfireTalk.test.ts`
+
+**Imports**
+
+- `ai/campfireTalk.ts`
+
+## `ai/campfireTalk.ts`
+
+**Imports**
+
+- `ai/characters.ts`
+
+**Imported by**
+
+- `ai/campfireTalk.test.ts`
+- `ai/socialBehaviour.ts`
+
 ## `ai/characters.test.ts`
 
 **Imports**
@@ -291,6 +308,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `ai/campfireTalk.ts`
 - `ai/characters.test.ts`
 - `ai/decisionModifiers.ts`
 - `ai/dialogueTemplates.ts`
@@ -306,6 +324,8 @@ Generated from TypeScript imports.
 - `ai/reactionChance.ts`
 - `ai/schedule.test.ts`
 - `ai/schedule.ts`
+- `ai/socialBehaviour.test.ts`
+- `ai/socialBehaviour.ts`
 - `ai/voluntaryExpeditionJoin.ts`
 - `app/createApp.ts`
 - `economy/npcWork.ts`
@@ -1392,6 +1412,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `ai/characters.ts`
 - `ai/socialBehaviour.ts`
 - `settlement/npcRelationships.ts`
 
@@ -1399,6 +1420,8 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `ai/campfireTalk.ts`
+- `ai/characters.ts`
 - `ai/dialogue.ts`
 - `settlement/npcRelationships.ts`
 - `world/timeConversion.ts`
