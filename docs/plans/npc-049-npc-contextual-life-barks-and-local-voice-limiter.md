@@ -9,6 +9,7 @@
 **Subdomains:** `dialogue` `behavior` `needs` `combat`
 **Tags:** `voice` `audio` `barks` `needs` `threats`
 **Roadmap:** -
+**Model:** Composer, Sonnet
 
 ## Goal
 
@@ -684,6 +685,10 @@ Do not introduce a God Object combining NPC needs, threat state, audio, settleme
 
 Add JSDoc for the bark limiter/request boundary and important public policy types, with `@domain npc` where useful for preflight discovery.
 
+## Implementation notes
+
+See [`implementation-notes/npc-049-npc-contextual-life-barks-and-local-voice-limiter-implementation-notes.md`](./implementation-notes/npc-049-npc-contextual-life-barks-and-local-voice-limiter-implementation-notes.md).
+
 ## Acceptance criteria
 
 - Existing `resolveNpcVoiceLine()` is reused.
@@ -698,10 +703,9 @@ Add JSDoc for the bark limiter/request boundary and important public policy type
 - Five simultaneous exhausted NPCs cannot create five simultaneous exhaustion lines.
 - `weather_shelter` only triggers when weather actually causes a shelter-seeking behavior change.
 - `work_finished` is distinct from exhaustion-driven interruption.
-- Audio denial never changes simulation behavior.
-- Bark triggers originate from existing authoritative state transitions.
-- No player/camera-owned simulation mechanism is introduced.
-- Unit tests cover limiter behavior.
+- Audio denial/missing assets never alter simulation behavior.
+- Bark triggers originate from existing authoritative transitions rather than polling.
+- Unit tests cover limiter policy and episode suppression.
 - `pnpm type-check` passes.
 - Browser verification remains with the User.
 
