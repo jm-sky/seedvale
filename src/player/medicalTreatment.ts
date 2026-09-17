@@ -1,10 +1,12 @@
 import type { NpcAgent } from '../ai/NpcAgent'
 import type { AnimalAgent } from '../fauna/AnimalAgent'
-import { isHouseholdOwned, isPlayerOwned } from '../fauna/animalOwnership'
 import type { Interactable } from '../interaction/Interactable'
-import { ITEM_CATALOG } from '../items/itemCatalog'
 import type { Inventory } from '../items/Inventory'
 import type { ItemKind } from '../items/items'
+import type { PlayerController } from './PlayerController'
+import type { PlayerSkills } from './PlayerSkills'
+import { isHouseholdOwned, isPlayerOwned } from '../fauna/animalOwnership'
+import { ITEM_CATALOG } from '../items/itemCatalog'
 import { ITEM_DEFS } from '../items/items'
 import {
   type InjurySeverity,
@@ -15,8 +17,6 @@ import {
   resolvePhysicalInjuryTreatment,
 } from '../shared/physicalInjuryTreatment'
 import { scaleMedicinalTreatmentAmount } from './medicinalTreatmentEffectiveness'
-import type { PlayerController } from './PlayerController'
-import type { PlayerSkills } from './PlayerSkills'
 
 /**
  * Player-facing Medicine wound treatment (plan items-player-046).

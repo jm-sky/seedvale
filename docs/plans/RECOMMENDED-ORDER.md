@@ -149,35 +149,31 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `M` · **Score:**  35  
    → **unlocks:** 0/0
 
-19. `items-player-046` — **Medicine targeted treatment interaction**  
-  🟡 `M` · **Score:**  33  
-   → **unlocks:** 0/0
-
-20. `tools-015` — **Chatterbox local voice generation pipeline**  
+19. `tools-015` — **Chatterbox local voice generation pipeline**  
   🔴 `M` · **Score:**  31  
    → **unlocks:** 0/0
 
-21. `items-player-014` — **Rope-pullable resource transport**  
+20. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-22. `tools-005` — **Seedvale Character Preparation Panel**  
+21. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-23. `items-player-044` — **Shoulder and forearm equipment slots**  
+22. `items-player-044` — **Shoulder and forearm equipment slots**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-24. `npc-046` — **Settlement threat response and livestock safety**  
+23. `npc-046` — **Settlement threat response and livestock safety**  
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-25. `items-player-032` — **NPC player-storage resource and context rules**  
+24. `items-player-032` — **NPC player-storage resource and context rules**  
   🟡 `L` · **Score:**  20  
    → **unlocks:** 0/0
 
-26. `fauna-034` — **Wildlife Day/Night Rest and Den Defense**  
+25. `fauna-034` — **Wildlife Day/Night Rest and Den Defense**  
   🟡 `M` · **Score:**  19  
    → **unlocks:** 0/0
 

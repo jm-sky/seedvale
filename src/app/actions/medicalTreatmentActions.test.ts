@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
-import { Inventory } from '../../items/Inventory'
 import type { TreatableTarget } from '../../player/medicalTreatment'
+import type { PlayerActionContext } from './actionContext'
+import { Inventory } from '../../items/Inventory'
 import { MEDICAL_TREATMENT_DURATION_SEC } from '../../player/medicalTreatment'
 import { createPlayerSkills, SKILL_XP_AWARD } from '../../player/PlayerSkills'
 import { createBusyAction } from '../busyAction'
-import type { PlayerActionContext } from './actionContext'
 import { createMedicalTreatmentActions } from './medicalTreatmentActions'
 
 function fakeTarget(overrides: Partial<{

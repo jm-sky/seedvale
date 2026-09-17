@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { Inventory } from '../items/Inventory'
+import { criticalInjuryFloor, seriousInjuryFloor } from '../shared/injurySeverity'
 import {
   BARE_HANDS_STABILIZE_BASE_HP,
   medicalTreatmentPromptLabel,
@@ -7,7 +8,6 @@ import {
   type TreatableTarget,
 } from './medicalTreatment'
 import { createPlayerSkills } from './PlayerSkills'
-import { criticalInjuryFloor, seriousInjuryFloor } from '../shared/injurySeverity'
 
 function fakeTarget(overrides: Partial<{
   alive: boolean

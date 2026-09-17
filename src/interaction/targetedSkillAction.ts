@@ -1,14 +1,14 @@
 import type { CampRepairTargetKind } from '../items/campRepair'
+import type { Inventory } from '../items/Inventory'
 import type { Interactable } from './Interactable'
 import { ITEM_DEFS } from '../items/items'
-import type { Inventory } from '../items/Inventory'
 import {
   medicalTreatmentPromptLabel,
   resolveMedicalTreatmentPlan,
   treatableFromInteractable,
   type TreatableTarget,
 } from '../player/medicalTreatment'
-import { SKILL_IDS, SKILL_LABEL, SKILL_USE, type PlayerSkills, type SkillId } from '../player/PlayerSkills'
+import { type PlayerSkills, SKILL_IDS, SKILL_LABEL, SKILL_USE, type SkillId } from '../player/PlayerSkills'
 import { type PlacedTrapRecord, TRAP_DEFS, type TrapState } from '../world/animalTraps'
 
 /**

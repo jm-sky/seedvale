@@ -1,4 +1,6 @@
 import type { Inventory } from '../../items/Inventory'
+import type { InjurySeverity } from '../../shared/injurySeverity'
+import type { ActionResult } from './actionContracts'
 import {
   MEDICAL_TREATMENT_DURATION_SEC,
   medicalMaterialLabel,
@@ -6,10 +8,8 @@ import {
   resolveMedicalTreatmentPlan,
   type TreatableTarget,
 } from '../../player/medicalTreatment'
-import { awardSkillXp, SKILL_XP_AWARD, type PlayerSkills } from '../../player/PlayerSkills'
-import type { InjurySeverity } from '../../shared/injurySeverity'
+import { awardSkillXp, type PlayerSkills, SKILL_XP_AWARD } from '../../player/PlayerSkills'
 import { isActionBlocked, type PlayerActionContext } from './actionContext'
-import type { ActionResult } from './actionContracts'
 
 /**
  * Player Medicine Busy Action — wound treatment for self / NPC / livestock
