@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest'
+import type { PlayerActionContext } from './actionContext'
 import { AnimalAgent, type AnimalAgentDeps } from '../../fauna/AnimalAgent'
 import { ANIMAL_DEFS } from '../../fauna/animalDefs'
 import { DRY_WATER_SAMPLE } from '../../terrain/waterSample'
-import type { PlayerActionContext } from './actionContext'
 import { createMountActions } from './mountActions'
 
 const sampleHeight = () => 0

@@ -111,8 +111,8 @@ import {
   isSourceTargetValid,
   SOURCE_SEARCH_COOLDOWN_SEC,
   SOURCE_TARGET_TIMEOUT_SEC,
-  type SourceTarget,
   sourceActionDuration,
+  type SourceTarget,
   tryCommitHandFeed,
   WATER_INTERACTION_RANGE,
 } from './animalForaging'

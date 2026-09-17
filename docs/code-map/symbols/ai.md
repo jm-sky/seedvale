@@ -587,7 +587,7 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcVoiceLines.ts`
 
-- `buildNpcVoiceLookupKeys` — function — line 319
+- `buildNpcVoiceLookupKeys` — function — line 322
 - `FRIENDLY_TALK_SOUND_VOLUME` — const — line 148
 - `NPC_CONFIRMATION_SOUND_URLS` — const — line 79
 - `NPC_FAREWELL_SOUND_URLS` — const — line 75
@@ -606,13 +606,13 @@ Generated from exported TypeScript symbols.
 - `pickNpcFriendlyTalkSound` — function — line 150
 - `pickNpcGreetingSound` — function — line 88
 - `REACTION_SOUND_VOLUME` — const — line 124
-- `resolveNpcVoiceLine` — function — line 359
+- `resolveNpcVoiceLine` — function — line 362
   - domain: npc
-- `resolveNpcVoiceLineWithManifest` — function — line 367
+- `resolveNpcVoiceLineWithManifest` — function — line 370
 - `voiceActorForIndex` — function — line 28
 - `voiceAgeBandForAge` — function — line 192
   - domain: npc
-- `voiceScopeForRole` — function — line 202
+- `voiceScopeForRole` — function — line 205
 
 ## `ai/npcWorkContract.ts`
 

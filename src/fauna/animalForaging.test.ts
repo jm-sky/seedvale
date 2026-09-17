@@ -18,8 +18,8 @@ import {
   type ForagingContext,
   isDrinkableNaturalShorePoint,
   isSourceTargetValid,
-  type SourceTarget,
   sourceActionDuration,
+  type SourceTarget,
   tryCommitHandFeed,
 } from './animalForaging'
 import { createAnimalLifeState, DEFAULT_ANIMAL_METABOLISM, FOOD_RELIEF, NEED_ELEVATED_THRESHOLD } from './AnimalLife'

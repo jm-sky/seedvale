@@ -172,7 +172,7 @@ export type NpcVoiceSemanticIntent =
  * Not an authoritative NPC lifecycle state — derived from `lifeStageForAge`.
  * @domain npc
  */
-export type NpcVoiceAgeBand = 'young' | 'old'
+export type NpcVoiceAgeBand = 'child' | 'young' | 'old'
 
 /** Minimal NPC identity consumed by the voice resolver — avoids importing `NpcAgent`. */
 export type NpcVoiceResolveInput = {
@@ -191,7 +191,10 @@ export type NpcVoiceResolveInput = {
  */
 export function voiceAgeBandForAge(age: number): NpcVoiceAgeBand | null {
   const stage = lifeStageForAge(age)
-  if (stage === 'infant' || stage === 'child' || stage === 'teen' || stage === 'youngAdult') {
+  if (stage === 'infant' || stage === 'child') {
+    return 'child'
+  }
+  if (stage === 'teen' || stage === 'youngAdult') {
     return 'young'
   }
   if (stage === 'elderly' || stage === 'veryElderly') return 'old'
