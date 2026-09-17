@@ -67,6 +67,8 @@ export function requestGamePointerLock(target: HTMLElement): void {
 export function createMouseLook(target: HTMLElement, keys: KeyState): {
   state: LookState
   commitFrame: () => void
+  /** When false, clicks do not re-acquire pointer lock (free-cursor skill aim). */
+  setPointerLockEnabled: (enabled: boolean) => void
   dispose: () => void
 } {
   const state: LookState = {
@@ -79,6 +81,7 @@ export function createMouseLook(target: HTMLElement, keys: KeyState): {
   // PoC: last look state that completed a rendered frame.
   let stableYaw = state.yaw
   let stablePitch = state.pitch
+  let pointerLockEnabled = true
 
   const commitFrame = () => {
     stableYaw = state.yaw
@@ -86,6 +89,7 @@ export function createMouseLook(target: HTMLElement, keys: KeyState): {
   }
 
   const onClick = () => {
+    if (!pointerLockEnabled) return
     if (document.pointerLockElement !== target) {
       void target.requestPointerLock()
     }
@@ -119,8 +123,11 @@ export function createMouseLook(target: HTMLElement, keys: KeyState): {
   // dialogue open), a click is reserved for re-acquiring lock via `onClick`
   // — otherwise that same click could both re-lock the camera and fire
   // whatever the crosshair happened to be resting on.
+  // Exception: free-cursor targeted-skill aim (`pointerLockEnabled === false`)
+  // uses LMB as Interact without locking.
   const onMouseDown = (event: MouseEvent) => {
-    if (event.button === 0 && document.pointerLockElement === target) {
+    if (event.button !== 0) return
+    if (document.pointerLockElement === target || !pointerLockEnabled) {
       keys.interact = true
     }
   }
@@ -161,6 +168,10 @@ export function createMouseLook(target: HTMLElement, keys: KeyState): {
   return {
     state,
     commitFrame,
+    setPointerLockEnabled: (enabled) => {
+      pointerLockEnabled = enabled
+      if (!enabled) exitGamePointerLock(target)
+    },
     dispose: () => {
       if (!touch) {
         target.removeEventListener('click', onClick)

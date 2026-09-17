@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted, watch } from 'vue'
 import { isTouchDevice } from '../../input/isTouchDevice'
-import { abortTargetedSkill, ui } from '../store'
+import { abortTargetedSkill, setHudSkillAimScreen, ui } from '../store'
 
 const touchDevice = isTouchDevice()
 
@@ -19,12 +19,41 @@ const reticleStyle = computed(() => {
   return { left: '50%', top: `calc(50% - ${FREE_AIM_RETICLE_OFFSET_PX}px)` }
 })
 
-/** Targeted-skill aim reticle — same free-aim vertical offset as the bow
- *  reticle so it clears the player mesh under pointer-lock. */
-const skillAimStyle = {
-  left: '50%',
-  top: `calc(50% - ${FREE_AIM_RETICLE_OFFSET_PX}px)`,
+/** Targeted-skill crosshair follows the free mouse cursor (desktop). Touch
+ *  keeps a fixed free-aim offset because there is no persistent pointer. */
+const skillAimStyle = computed(() => {
+  const aim = ui.hud.skillAimScreen
+  if (aim) return { left: `${aim.x * 100}%`, top: `${aim.y * 100}%` }
+  return { left: '50%', top: `calc(50% - ${FREE_AIM_RETICLE_OFFSET_PX}px)` }
+})
+
+function onSkillAimMouseMove(event: MouseEvent): void {
+  if (!ui.skillsScreen.selectedSkill || touchDevice) return
+  const w = window.innerWidth || 1
+  const h = window.innerHeight || 1
+  setHudSkillAimScreen({ x: event.clientX / w, y: event.clientY / h })
 }
+
+watch(
+  () => ui.skillsScreen.selectedSkill,
+  (skill) => {
+    if (!skill || touchDevice) {
+      setHudSkillAimScreen(null)
+      return
+    }
+    // Seed to viewport center until the first mousemove so picking isn't empty.
+    if (!ui.hud.skillAimScreen) {
+      setHudSkillAimScreen({ x: 0.5, y: 0.5 - FREE_AIM_RETICLE_OFFSET_PX / (window.innerHeight || 1) })
+    }
+  },
+)
+
+onMounted(() => {
+  if (!touchDevice) window.addEventListener('mousemove', onSkillAimMouseMove)
+})
+onUnmounted(() => {
+  if (!touchDevice) window.removeEventListener('mousemove', onSkillAimMouseMove)
+})
 
 /** Plan 106 + issue 034 — colors match the existing NPC/animal label bars
  *  (`.npc-label__bar--{hp,stamina,vigor,satiety,hydration}`, index.html) so the
@@ -143,9 +172,9 @@ const needBars = computed(() => [
     </div>
   </div>
 
-  <!-- Targeted-skill aim crosshair — pointer-lock hides the system cursor, so
-       this on-screen plus marks gaze center while Medicine/Traps/Repair is
-       selected. Hidden while the bow reticle already owns the screen. -->
+  <!-- Targeted-skill aim crosshair — follows free mouse (system cursor hidden
+       via body.seedvale-skill-aiming). Hidden while the bow reticle owns the
+       screen. -->
   <div
     v-else-if="ui.skillsScreen.selectedSkill"
     class="pointer-events-none fixed z-[5]"

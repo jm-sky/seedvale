@@ -1168,6 +1168,7 @@ Generated from TypeScript imports.
 - `interaction/findInteractionTarget.ts`
 - `interaction/interactionView.ts`
 - `interaction/resolveInteraction.ts`
+- `interaction/skillAimPick.ts`
 - `interaction/targetedSkillAction.ts`
 - `interaction/treeInspection.ts`
 - `items/HeldTool.ts`

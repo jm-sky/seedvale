@@ -1131,7 +1131,10 @@ export async function createApp(
     onToggleSneak: () => toggleSneak(player.skills),
     onSelectTargetedSkill: (id) => {
       targetedSkillSelection.toggle(id)
-      vueUi.setSelectedTargetedSkill(targetedSkillSelection.get())
+      const selected = targetedSkillSelection.get()
+      vueUi.setSelectedTargetedSkill(selected)
+      // Free-cursor skill aim: unlock pointer so the crosshair can follow the mouse.
+      mouseLook.setPointerLockEnabled(selected == null)
     },
   })
   const hud = createHud(container)
@@ -2411,6 +2414,7 @@ export async function createApp(
     if (targetedSkillSelection.get() == null) return false
     targetedSkillSelection.clear()
     vueUi.setSelectedTargetedSkill(null)
+    mouseLook.setPointerLockEnabled(true)
     return true
   })
   vueUi.configureAbortTerrainPreparation(terrainPrep.cancelActive)

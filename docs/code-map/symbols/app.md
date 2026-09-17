@@ -290,9 +290,9 @@ Generated from exported TypeScript symbols.
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 694
-- `GameLoop` — type — line 653
-- `GameLoopDeps` — type — line 319
+- `createGameLoop` — function — line 695
+- `GameLoop` — type — line 654
+- `GameLoopDeps` — type — line 320
 
 ## `app/graphicsSettings.ts`
 

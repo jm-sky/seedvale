@@ -34,6 +34,7 @@ Generated from TypeScript imports.
 - `interaction/interactionView.test.ts`
 - `interaction/interactionView.ts`
 - `interaction/resolveInteraction.ts`
+- `interaction/skillAimPick.ts`
 - `interaction/targetedSkillAction.test.ts`
 - `interaction/targetedSkillAction.ts`
 - `items/foreignProperty.test.ts`
@@ -94,6 +95,24 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/gameLoop.ts`
+
+## `interaction/skillAimPick.test.ts`
+
+**Imports**
+
+- `interaction/skillAimPick.ts`
+
+## `interaction/skillAimPick.ts`
+
+**Imports**
+
+- `combat/rangedReticle.ts`
+- `interaction/Interactable.ts`
+
+**Imported by**
+
+- `app/gameLoop.ts`
+- `interaction/skillAimPick.test.ts`
 
 ## `interaction/targetedSkillAction.test.ts`
 

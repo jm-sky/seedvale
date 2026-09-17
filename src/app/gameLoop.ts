@@ -88,6 +88,7 @@ import { countNearbyHumans } from '../fauna/predatorHumanDecision'
 import { isTouchDevice } from '../input/isTouchDevice'
 import { type createMouseLook, exitGamePointerLock } from '../input/MouseLook'
 import { pickInGaze, rankInGaze } from '../interaction/findInteractionTarget'
+import { pickInteractableNearScreen } from '../interaction/skillAimPick'
 import {
   buildInteractionGazePrompt,
   interactableStableKey,
@@ -1598,34 +1599,48 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         const gazePrevious = gazeStableTargetKey
           ? cycleCandidates.find((candidate) => interactableStableKey(candidate) === gazeStableTargetKey) ?? null
           : null
-        target = (cycleActive ? cycleCandidates[cycleIndex]! : null) ?? pickInGaze(
-          interactables,
-          player.mesh.position,
-          mouseLook.state.yaw,
-          herbDiscoveryRange,
-          INTERACT_MIN_DOT,
-          {
-            ...gazeRankOptions,
-            previous: gazePrevious,
-            sameCandidate: (a, b) => interactableStableKey(a) === interactableStableKey(b),
-          },
-        ) ?? buildDigTarget(
-          player.mesh.position,
-          mouseLook.state.yaw,
-          held,
-          bundle.chunkManager,
-          playerSpatialContext,
-        ) ?? buildCombatTarget(
-          bundle.settlementsManager.getLoaded(),
-          bundle.fauna,
-          player.mesh.position,
-          mouseLook.state.yaw,
-          held,
-          playerMelee.recentTargetIds(),
-          aimMode,
-          playerSpatialContext,
-          resolveSpatialContextAt,
-        )
+        const skillAimScreen = targetedSkillSelection.get() != null
+          ? vueUi.getHudSkillAimScreen()
+          : null
+        const skillScreenTarget = skillAimScreen
+          ? pickInteractableNearScreen(
+            interactables,
+            player.mesh.position,
+            camera,
+            skillAimScreen,
+            herbDiscoveryRange,
+          )
+          : null
+        target = (cycleActive ? cycleCandidates[cycleIndex]! : null)
+          ?? skillScreenTarget
+          ?? pickInGaze(
+            interactables,
+            player.mesh.position,
+            mouseLook.state.yaw,
+            herbDiscoveryRange,
+            INTERACT_MIN_DOT,
+            {
+              ...gazeRankOptions,
+              previous: gazePrevious,
+              sameCandidate: (a, b) => interactableStableKey(a) === interactableStableKey(b),
+            },
+          ) ?? buildDigTarget(
+            player.mesh.position,
+            mouseLook.state.yaw,
+            held,
+            bundle.chunkManager,
+            playerSpatialContext,
+          ) ?? buildCombatTarget(
+            bundle.settlementsManager.getLoaded(),
+            bundle.fauna,
+            player.mesh.position,
+            mouseLook.state.yaw,
+            held,
+            playerMelee.recentTargetIds(),
+            aimMode,
+            playerSpatialContext,
+            resolveSpatialContextAt,
+          )
       }
       // While mounted, the only player action is the dedicated Dismount
       // button (plan fauna-003 §10) — no gaze prompt, no `[E]`/`[R]`

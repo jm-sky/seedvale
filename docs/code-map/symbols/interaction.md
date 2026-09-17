@@ -44,6 +44,13 @@ Generated from exported TypeScript symbols.
 - `InteractionOutcome` — type — line 13
 - `resolveInteraction` — function — line 115
 
+## `interaction/skillAimPick.ts`
+
+- `pickInteractableNearScreen` — function — line 30
+- `SKILL_AIM_SCREEN_RADIUS` — const — line 15
+  - domain: items-player
+  - system: interaction
+
 ## `interaction/targetedSkillAction.ts`
 
 - `executeTargetedSkillAction` — function — line 203

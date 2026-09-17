@@ -684,6 +684,9 @@ type HudState = {
    *  0-1, y from the top) — `null` for Free Aim, which renders at a fixed
    *  screen-space offset instead (plan 186 follow-up: reticle positioning). */
   aimTargetScreen: { x: number, y: number } | null
+  /** Free-cursor targeted-skill aim point (viewport fractions, y from top).
+   *  Set from mouse move while a targeted skill is selected; `null` clears. */
+  skillAimScreen: { x: number, y: number } | null
   /** Primary melee/ranged weapon shortcut labels (plan `ui-input-002` §6) —
    *  empty string hides the corresponding HUD button, same convention as
    *  `held`. Backed by `items/primaryWeapons.ts`, not a separate UI model. */
@@ -869,6 +872,7 @@ export const ui = reactive({
     playerCondition: '',
     aiming: false,
     aimTargetScreen: null,
+    skillAimScreen: null,
     primaryMeleeLabel: '',
     primaryRangedLabel: '',
     combatWeapon: null,
@@ -2047,6 +2051,7 @@ export function pushSkillsState(skills: PlayerSkills): void {
 export function setSelectedTargetedSkill(id: SkillId | null): void {
   if (ui.skillsScreen.selectedSkill === id) return
   ui.skillsScreen.selectedSkill = id
+  syncSkillAimingBodyClass(id != null)
 }
 
 const SKILL_VALUE_FIELD: Record<SkillId, keyof SkillsScreenState> = {
@@ -2159,6 +2164,27 @@ export function setHudAiming(aiming: boolean, targetScreen: { x: number, y: numb
   ui.hud.aiming = aiming
   ui.hud.aimTargetScreen = targetScreen
 }
+
+/** Free-cursor aim for targeted skills — viewport fractions, y from top. */
+export function setHudSkillAimScreen(pos: { x: number, y: number } | null): void {
+  if (pos == null) {
+    ui.hud.skillAimScreen = null
+    return
+  }
+  const prev = ui.hud.skillAimScreen
+  if (prev && prev.x === pos.x && prev.y === pos.y) return
+  ui.hud.skillAimScreen = pos
+}
+
+export function getHudSkillAimScreen(): { x: number, y: number } | null {
+  return ui.hud.skillAimScreen
+}
+
+function syncSkillAimingBodyClass(active: boolean): void {
+  document.body.classList.toggle('seedvale-skill-aiming', active)
+  if (!active) ui.hud.skillAimScreen = null
+}
+
 /** Dedicated Dismount button (plan fauna-003 §10). Pushed once on mount/
  *  dismount by `app/actions/mountActions.ts` via the vanilla `Hud` facade. */
 export function setHudMounted(mounted: boolean, animalLabel: string, onDismount: (() => void) | null): void {

@@ -223,6 +223,13 @@
           0 0 10px 2px rgba(255, 196, 92, 0.5);
       }
 
+      /* Free-cursor targeted-skill aim — hide the system pointer; HudScreen
+         draws the following crosshair instead. */
+      body.seedvale-skill-aiming,
+      body.seedvale-skill-aiming * {
+        cursor: none !important;
+      }
+
       /* --- Touch controls (joystick / look-drag / action buttons) --- */
       /* IMPORTANT: `.seedvale-touch` is the *component root* of the touch
          overlay only. Never reuse this class as a state/marker class on <body>

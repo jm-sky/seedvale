@@ -125,55 +125,67 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `L` · **Score:**  56  
    → **unlocks:** 1/1
 
-13. `quests-progression-056` — **Dungeon bandit story-item integrity and recovery**  
+13. `npc-046` — **NPC emergency locomotion for settlement threats**  
+  🔴 `M` · **Score:**  55  
+   → **unlocks:** 2/2
+
+14. `fauna-037` — **Domestic livestock safe flee**  
+  🔴 `M` · **Score:**  51  
+   → **unlocks:** 1/2
+
+15. `quests-progression-056` — **Dungeon bandit story-item integrity and recovery**  
   🔴 `M` · **Score:**  49  
    → **unlocks:** 0/0
 
-14. `settlements-004` — **Gold Economic Realization & Source Entitlements**  
+16. `settlements-004` — **Gold Economic Realization & Source Entitlements**  
   🔴 `M` · **Score:**  49  
    → **unlocks:** 1/1
 
-15. `quests-progression-010` — **Abandoned gold mine → mining colony integration**  
+17. `quests-progression-010` — **Abandoned gold mine → mining colony integration**  
   🔴 `M` · **Score:**  61  
    → **unlocks:** 0/0
 
-16. `quests-progression-054` — **Hunters Brotherhood — exceptional animal finale**  
+18. `quests-progression-054` — **Hunters Brotherhood — exceptional animal finale**  
   🟡 `L` · **Score:**  44  
    → **unlocks:** 0/0
 
-17. `settlements-npcs-022` — **Household help and age-based work participation**  
+19. `npc-047` — **Shepherd livestock threat response**  
+  🔴 `M` · **Score:**  43  
+   → **unlocks:** 1/1
+
+20. `settlements-npcs-022` — **Household help and age-based work participation**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 0/0
 
-18. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
+21. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
   🔴 `M` · **Score:**  35  
    → **unlocks:** 0/0
 
-19. `tools-015` — **Chatterbox local voice generation pipeline**  
+22. `npc-048` — **Local threat assistance and guard response**  
   🔴 `M` · **Score:**  31  
    → **unlocks:** 0/0
 
-20. `items-player-014` — **Rope-pullable resource transport**  
+23. `tools-015` — **Chatterbox local voice generation pipeline**  
+  🔴 `M` · **Score:**  31  
+   → **unlocks:** 0/0
+
+24. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-21. `tools-005` — **Seedvale Character Preparation Panel**  
+25. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-22. `items-player-044` — **Shoulder and forearm equipment slots**  
+26. `items-player-044` — **Shoulder and forearm equipment slots**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-23. `npc-046` — **Settlement threat response and livestock safety**  
-  🔴 `L` · **Score:**  24  
-   → **unlocks:** 0/0
-
-24. `items-player-032` — **NPC player-storage resource and context rules**  
+27. `items-player-032` — **NPC player-storage resource and context rules**  
   🟡 `L` · **Score:**  20  
    → **unlocks:** 0/0
 
-25. `fauna-034` — **Wildlife Day/Night Rest and Den Defense**  
+28. `fauna-034` — **Wildlife Day/Night Rest and Den Defense**  
   🟡 `M` · **Score:**  19  
    → **unlocks:** 0/0
 
@@ -184,6 +196,14 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
 - [`items-player-032-npc-player-storage-resource-and-context-rules.md`](items-player-032-npc-player-storage-resource-and-context-rules.md)  
   is blocked by:
   - [`items-player-028-npc-player-storage-access-policies.md`](items-player-028-npc-player-storage-access-policies.md)
+- [`npc-047-shepherd-livestock-threat-response.md`](npc-047-shepherd-livestock-threat-response.md)  
+  is blocked by:
+  - [`npc-046-settlement-threat-response-and-livestock-safety.md`](npc-046-settlement-threat-response-and-livestock-safety.md)
+  - [`fauna-037-domestic-livestock-safe-flee.md`](fauna-037-domestic-livestock-safe-flee.md)
+- [`npc-048-local-threat-assistance-and-guard-response.md`](npc-048-local-threat-assistance-and-guard-response.md)  
+  is blocked by:
+  - [`npc-046-settlement-threat-response-and-livestock-safety.md`](npc-046-settlement-threat-response-and-livestock-safety.md)
+  - [`npc-047-shepherd-livestock-threat-response.md`](npc-047-shepherd-livestock-threat-response.md)
 - [`quests-progression-010-abandoned-gold-mine-colony.md`](quests-progression-010-abandoned-gold-mine-colony.md)  
   is blocked by:
   - [`settlements-003-colony-bootstrap.md`](settlements-003-colony-bootstrap.md)
@@ -293,6 +313,7 @@ graph TD
   fauna_034["fauna-034 — Wildlife Day/Night Rest and Den Defense"]
   fauna_035["fauna-035 — Dismount Follow/Stay anchor semantics"]
   fauna_036["fauna-036 — Interruptible Carcass Feeding"]
+  fauna_037["fauna-037 — Domestic livestock safe flee"]
   items_player_001["items-player-001 — Containers, Waterskins & Copper Items"]
   items_player_002["items-player-002 — Food provenance, freshness and storage"]
   items_player_003["items-player-003 — Player Physical Effort — Stamina & Vigor"]
@@ -377,7 +398,9 @@ graph TD
   npc_042["npc-042 — NPC voice and dialogue catalog infrastructure"]
   npc_044["npc-044 — NPC hierarchical voice resolver"]
   npc_045["npc-045 — Campfire spoken conversation pairs"]
-  npc_046["npc-046 — Settlement threat response and livestock safety"]
+  npc_046["npc-046 — NPC emergency locomotion for settlement threats"]
+  npc_047["npc-047 — Shepherd livestock threat response"]
+  npc_048["npc-048 — Local threat assistance and guard response"]
   persistence_001["persistence-001 — Full Simulation Persistence"]
   persistence_002["persistence-002 — save integrity guard"]
   persistence_003["persistence-003 — save schema versioning and future migrations"]
@@ -711,6 +734,7 @@ graph TD
   fauna_028 --> fauna_034
   fauna_029 --> fauna_030
   fauna_031 --> quests_progression_049
+  fauna_037 --> npc_047
   items_player_001 --> fauna_002
   items_player_002 --> items_player_025
   items_player_009 --> items_player_013
@@ -814,6 +838,9 @@ graph TD
   npc_041 --> tools_015
   npc_042 --> tools_015
   npc_044 --> npc_045
+  npc_046 --> npc_047
+  npc_046 --> npc_048
+  npc_047 --> npc_048
   persistence_002 --> persistence_003
   persistence_002 --> persistence_004
   persistence_003 --> persistence_004
