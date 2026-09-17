@@ -32,7 +32,7 @@ import type { ToastVariant } from '../ui/createToast'
 import type { TrapKind } from '../world/animalTraps'
 import type { CropId } from '../world/cropLifecycle'
 import type { SeedChoice, SeedRecord } from '../world/seedLibrary'
-import { pickNpcConfirmationSound, pickNpcFarewellSound, pickNpcGreetingSound } from '../ai/npcVoiceLines'
+import { resolveNpcVoiceLine } from '../ai/npcVoiceLines'
 import {
   type AudioVolumeKey,
   type AudioVolumes,
@@ -1021,7 +1021,7 @@ export function openNpcDialogueMenu(npc: NpcAgent, settlement: Settlement, quest
   state.joinProposal = npc.pendingVoluntaryJoinProposal()
   state.open = true
   emitUiOpen()
-  playNpcVoice(npc, pickNpcGreetingSound(npc.voiceActor))
+  playNpcVoice(npc, resolveNpcVoiceLine(npc, 'greeting'))
 }
 /** Topic the dialogue menu should open on. Payment wage-claim and a pending
  *  self-initiated join proposal are the only automatic exceptions; quest
@@ -1046,7 +1046,7 @@ export function selectNpcDialogueHelpAction(index: number): void {
   if (!state.open || !action) return
   const line = action.onSelect()
   const npc = state.npc as NpcAgent | null
-  playNpcVoice(npc, npc ? pickNpcConfirmationSound(npc.voiceActor) : undefined)
+  playNpcVoice(npc, npc ? resolveNpcVoiceLine(npc, 'confirmation') : undefined)
   state.helpResult = { line }
 }
 /** Resolve one `QuestDialogTopic` from the current multi-quest picker and
@@ -1079,8 +1079,10 @@ export function closeNpcDialogueMenu(opts?: { decline?: boolean }): void {
   if (!state.open) return
   const npc = state.npc as NpcAgent | null
   if (opts?.decline !== false) {
+    const decliningOffer = state.helpResult?.offer != null
     state.helpResult?.offer?.onDecline?.()
-    playNpcVoice(npc, npc ? pickNpcFarewellSound(npc.voiceActor) : undefined)
+    const intent = decliningOffer ? 'quest_declined' : 'farewell'
+    playNpcVoice(npc, npc ? resolveNpcVoiceLine(npc, intent) : undefined)
   }
   resetNpcDialogueMenu()
 }
@@ -1089,7 +1091,7 @@ export function acceptNpcDialogueOffer(): void {
   if (!state.open || !state.helpResult?.offer) return
   const npc = state.npc as NpcAgent | null
   state.helpResult.offer.onAccept()
-  playNpcVoice(npc, npc ? pickNpcConfirmationSound(npc.voiceActor) : undefined)
+  playNpcVoice(npc, npc ? resolveNpcVoiceLine(npc, 'confirmation') : undefined)
   resetNpcDialogueMenu()
 }
 export function isNpcDialogueMenuOpen(): boolean { return ui.npcDialogueMenu.open }

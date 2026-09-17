@@ -50,6 +50,28 @@ Christian). `NN` is our curated sequence, not the pack's original line number
 | thank-you | 01–04 | Completion | 1, 2, 3, 4 | All done / Finished / Complete / Ready | merged into `NPC_QUEST_COMPLETE_SOUND_URLS` (`src/ai/NpcAgent.ts`) — extra variety for quest turn-in |
 | hmm | 01–03 | Miscellaneous | 2, 3, 10 | Hmm… / Huh? / Wow! | merged into `NPC_REACTION_SOUND_URLS` picks in `playReactionSound()` — extra variety for the `lookAtPlayer` reaction |
 
+### NPC generated voice barks — `voices/` (plan npc-044)
+
+English spoken barks resolved by `resolveNpcVoiceLine` in `src/ai/npcVoiceLines.ts`. Flat directory `public/sounds/voices/` (do not nest under `public/sounds/npc/` for this batch). Super Dialogue packs above remain the legacy fallback for greeting/farewell/confirmation when no generated clip matches.
+
+Naming: `<scope>_<gender>_[<age>]_<semantic-keyword>_<variant>.{wav,mp3}` or `npc_<npc-id>_<semantic-keyword>_<variant>.{wav,mp3}`. Simulation role `trader` → scope `merchant`. Semantic intent `confirmation` may map to filename keyword `agree`.
+
+| filename | notes |
+|---|---|
+| `general_male_greeting_01.wav` | wired — general male greeting |
+| `general_male_farewell_01.wav` | wired — general male farewell |
+| `merchant_female_greeting_01.wav` … `_03.wav` | wired — merchant female greeting variants |
+| `merchant_female_farewell_01.wav` | wired — merchant female farewell |
+| `merchant_female_agree_01.wav` | wired — merchant female confirmation (`agree` filename) |
+| `merchant_female_thanks_01.wav` | in repo — not wired (no call-site in npc-044) |
+| `guard_male_greeting_01.mp3` … `_02.mp3` | wired — guard male greeting |
+| `guard_male_farewell_01.mp3` | wired — guard male farewell |
+| `guard_male_quest_declined_01.mp3` … `_02.mp3` | wired — guard male quest decline |
+| `guard_male_attention_01.mp3` / `guard_male_refusal_01.mp3` / `guard_male_thanks_01.mp3` … `_02.mp3` | in repo — not wired |
+| `voices/references/` | reference material for generation — not runtime clips |
+
+Provenance/licensing for generated clips: record when known; do not invent attribution here.
+
 ## Animals
 
 | filename         | oryginal filename | source url | notes |

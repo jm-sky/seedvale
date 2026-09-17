@@ -10,6 +10,8 @@
 **Tags:** `voice` `dialogue` `audio` `documentation`
 **Roadmap:** -
 
+> **Supersession (npc-044, 2026-09-17):** Spoken NPC samples are English; visible dialogue stays Polish. Runtime assets for the generated batch live flat under `public/sounds/voices/` (`.wav`/`.mp3` as shipped) — do not treat the nested `public/sounds/npc/...` layout below as the current runtime contract. Hierarchical resolve + dialogue wiring for greeting/farewell/confirmation/`quest_declined` is owned by [`npc-044-npc-voice-resolver.md`](./npc-044-npc-voice-resolver.md). The Polish-first universal batch size below is historical planning context only.
+
 ## Goal
 
 Create one maintainable source of truth for NPC spoken content and voice assets so Seedvale can scale from a few universal barks to profession-specific and quest-specific dialogue without duplicating text, filenames or playback rules.

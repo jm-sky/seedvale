@@ -1,11 +1,14 @@
-import type { NpcGender } from './characters'
+import type { NpcGender, Role } from './characters'
+import { lifeStageForAge } from '../settlement/npcPhysicalProfile'
 
 /**
- * NPC voice-line pool selection (plan 202) — assigns each NPC one of the 5
- * recorded voice actors in the Super Dialogue Audio Pack v1
+ * NPC voice-line pool selection (plan 202 / npc-044) — assigns each NPC one of
+ * the 5 recorded voice actors in the Super Dialogue Audio Pack v1
  * (public/sounds/README.md) and picks lines from the greeting/farewell/
- * confirmation/reaction/quest-complete categories. Pure data + pure
- * selection functions, no dependency on `NpcAgent`'s runtime/FSM state —
+ * confirmation/reaction/quest-complete categories. Plan npc-044 adds a
+ * hierarchical generated-asset resolver (`resolveNpcVoiceLine`) with legacy
+ * Super Dialogue pools as final fallback. Pure data + pure selection
+ * functions, no dependency on `NpcAgent`'s runtime/FSM state —
  * `NpcAgent` only reads the pools/pickers below (`voiceActorForIndex` at
  * construction, `playReactionSound()` per-reaction) and owns none of this
  * itself.
@@ -147,4 +150,141 @@ export const FRIENDLY_TALK_SOUND_VOLUME = 0.25
 export function pickNpcFriendlyTalkSound(gender: NpcGender): string | undefined {
   const pool = NPC_FRIENDLY_TALK_SOUND_URLS[gender]
   return pool[Math.floor(Math.random() * pool.length)]
+}
+
+/** Semantic dialogue voice events resolved by `resolveNpcVoiceLine` (npc-044). */
+export type NpcVoiceSemanticIntent =
+  | 'greeting'
+  | 'farewell'
+  | 'confirmation'
+  | 'quest_declined'
+
+/**
+ * Presentation-only age band for generated voice filenames (`young` / `old`).
+ * Not an authoritative NPC lifecycle state — derived from `lifeStageForAge`.
+ * @domain npc
+ */
+export type NpcVoiceAgeBand = 'young' | 'old'
+
+/** Minimal NPC identity consumed by the voice resolver — avoids importing `NpcAgent`. */
+export type NpcVoiceResolveInput = {
+  id: string
+  gender: NpcGender
+  role: Role
+  age: number
+  voiceActor: NpcVoiceActor
+}
+
+/**
+ * Maps real age → voice filename age band. Middle adulthood returns `null`
+ * (skip age-keyed lookup steps). Thresholds follow `lifeStageForAge`:
+ * young ≤ youngAdult (≤24); old ≥ elderly (≥65).
+ * @domain npc
+ */
+export function voiceAgeBandForAge(age: number): NpcVoiceAgeBand | null {
+  const stage = lifeStageForAge(age)
+  if (stage === 'infant' || stage === 'child' || stage === 'teen' || stage === 'youngAdult') {
+    return 'young'
+  }
+  if (stage === 'elderly' || stage === 'veryElderly') return 'old'
+  return null
+}
+
+/** Simulation `trader` ships as voice scope `merchant` in generated filenames. */
+export function voiceScopeForRole(role: Role): string {
+  return role === 'trader' ? 'merchant' : role
+}
+
+/**
+ * Static generated-voice registry (npc-044). Keys are
+ * `npc:<id>:<intent>`, `<scope>:<gender>:<intent>`, or
+ * `<scope>:<gender>:<young|old>:<intent>`. Values are public URLs under
+ * `/sounds/voices/`. Only assets that exist in the tree are listed — no
+ * runtime probing.
+ */
+const GENERATED_VOICE_MANIFEST: Readonly<Record<string, readonly string[]>> = {
+  'general:male:greeting': ['/sounds/voices/general_male_greeting_01.wav'],
+  'general:male:farewell': ['/sounds/voices/general_male_farewell_01.wav'],
+
+  'merchant:female:greeting': [
+    '/sounds/voices/merchant_female_greeting_01.wav',
+    '/sounds/voices/merchant_female_greeting_02.wav',
+    '/sounds/voices/merchant_female_greeting_03.wav',
+  ],
+  'merchant:female:farewell': ['/sounds/voices/merchant_female_farewell_01.wav'],
+  // Filename keyword is `agree`; semantic intent remains `confirmation`.
+  'merchant:female:confirmation': ['/sounds/voices/merchant_female_agree_01.wav'],
+
+  'guard:male:greeting': [
+    '/sounds/voices/guard_male_greeting_01.mp3',
+    '/sounds/voices/guard_male_greeting_02.mp3',
+  ],
+  'guard:male:farewell': ['/sounds/voices/guard_male_farewell_01.mp3'],
+  'guard:male:quest_declined': [
+    '/sounds/voices/guard_male_quest_declined_01.mp3',
+    '/sounds/voices/guard_male_quest_declined_02.mp3',
+  ],
+}
+
+function pickFromUrlPool(pool: readonly string[] | undefined): string | undefined {
+  if (!pool || pool.length === 0) return undefined
+  return pool[Math.floor(Math.random() * pool.length)]
+}
+
+/** Most-specific → least-specific generated lookup keys for one NPC + intent. */
+export function buildNpcVoiceLookupKeys(
+  npc: Pick<NpcVoiceResolveInput, 'id' | 'gender' | 'role' | 'age'>,
+  intent: NpcVoiceSemanticIntent,
+): readonly string[] {
+  const scope = voiceScopeForRole(npc.role)
+  const ageBand = voiceAgeBandForAge(npc.age)
+  const keys: string[] = [`npc:${npc.id}:${intent}`]
+  if (ageBand) keys.push(`${scope}:${npc.gender}:${ageBand}:${intent}`)
+  keys.push(`${scope}:${npc.gender}:${intent}`)
+  if (ageBand) keys.push(`general:${npc.gender}:${ageBand}:${intent}`)
+  keys.push(`general:${npc.gender}:${intent}`)
+  return keys
+}
+
+function pickLegacyVoiceLine(
+  intent: NpcVoiceSemanticIntent,
+  actor: NpcVoiceActor,
+): string | undefined {
+  switch (intent) {
+    case 'greeting':
+      return pickNpcGreetingSound(actor)
+    case 'farewell':
+      return pickNpcFarewellSound(actor)
+    case 'confirmation':
+      return pickNpcConfirmationSound(actor)
+    case 'quest_declined':
+      return undefined
+  }
+}
+
+/**
+ * Resolve a spoken NPC bark URL from semantic intent + NPC identity.
+ * Hierarchy: NPC-specific → profession(+age) → general(+age) → legacy
+ * Super Dialogue actor pool (greeting/farewell/confirmation only) → undefined.
+ *
+ * @domain npc
+ */
+export function resolveNpcVoiceLine(
+  npc: NpcVoiceResolveInput,
+  intent: NpcVoiceSemanticIntent,
+): string | undefined {
+  return resolveNpcVoiceLineWithManifest(GENERATED_VOICE_MANIFEST, npc, intent)
+}
+
+/** Manifest-injectable resolver — used by unit tests; production calls the bound wrapper. */
+export function resolveNpcVoiceLineWithManifest(
+  manifest: Readonly<Record<string, readonly string[]>>,
+  npc: NpcVoiceResolveInput,
+  intent: NpcVoiceSemanticIntent,
+): string | undefined {
+  for (const key of buildNpcVoiceLookupKeys(npc, intent)) {
+    const hit = pickFromUrlPool(manifest[key])
+    if (hit) return hit
+  }
+  return pickLegacyVoiceLine(intent, npc.voiceActor)
 }
