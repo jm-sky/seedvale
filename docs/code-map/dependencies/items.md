@@ -211,6 +211,7 @@ Generated from TypeScript imports.
 - `terrain/digAction.ts`
 - `ui-vue/npcDialogueOpen.test.ts`
 - `ui-vue/npcDialogueTrade.test.ts`
+- `ui-vue/npcDialogueVoice.test.ts`
 - `world/createPlacedContainers.ts`
 - `world/expeditionProvisioning.test.ts`
 - `world/expeditionProvisioning.ts`

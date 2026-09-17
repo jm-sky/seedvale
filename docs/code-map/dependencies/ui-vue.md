@@ -228,6 +228,16 @@ Generated from TypeScript imports.
 - `settlement/household.ts`
 - `ui-vue/store.ts`
 
+## `ui-vue/npcDialogueVoice.test.ts`
+
+**Imports**
+
+- `ai/NpcAgent.ts`
+- `items/Inventory.ts`
+- `quests/QuestManager.ts`
+- `settlement/createSettlement.ts`
+- `ui-vue/store.ts`
+
 ## `ui-vue/playerQuickActions.test.ts`
 
 **Imports**
@@ -316,6 +326,7 @@ Generated from TypeScript imports.
 - `ui-vue/mount.ts`
 - `ui-vue/npcDialogueOpen.test.ts`
 - `ui-vue/npcDialogueTrade.test.ts`
+- `ui-vue/npcDialogueVoice.test.ts`
 - `ui-vue/playerQuickActions.test.ts`
 - `ui-vue/playerQuickActions.ts`
 - `ui/createHud.ts`

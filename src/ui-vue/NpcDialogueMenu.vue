@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import type { NpcAgent } from '../ai/NpcAgent'
+import type { QuestDialoguePreviewEntry } from '../quests/QuestManager'
 import { nearestArchetype } from '../ai/dialogue'
 import { aboutSelfLine, aboutVillageLine, currentActivityLine, goodbyeLine } from '../ai/dialogueTemplates'
-import type { QuestDialoguePreviewEntry } from '../quests/QuestManager'
 import { useOverlayScreen } from './composables/useOverlayScreen'
 import {
   acceptNpcDialogueOffer,

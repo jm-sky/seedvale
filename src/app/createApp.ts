@@ -9,6 +9,7 @@ import type { TrapCaptureEvent } from '../world/createPlacedTraps'
 import type { GrassForageOverrides } from '../world/grassForage'
 import type { NearbyPlayerWellLookup } from '../world/playerWell'
 import type { PlayerActionContext } from './actions/actionContext'
+import { configureNpcPlayerReactionAudio } from '../ai/NpcAgent'
 import { NEUTRAL_PLAYER_SOCIAL_STATE } from '../ai/reactionChance'
 import { playAnimalCombatDeath } from '../audio/actionSounds'
 import { playNegativeConsequence } from '../audio/consequenceSounds'
@@ -840,6 +841,7 @@ export async function createApp(
   const houseDoors = createHouseDoorTracker()
   configureUiSounds(worldAudio.playOnce)
   configureNpcVoiceSounds(worldAudio.playAt)
+  configureNpcPlayerReactionAudio(worldAudio.playAtCancelable)
 
   const mapDiscovery = createMapDiscovery(initialSave?.map.discoveredCells)
   const mapProjection = createMapProjection(rawSampleParamsFromWorld(config))
@@ -3485,6 +3487,7 @@ export async function createApp(
     groundFog.dispose()
     configureUiSounds(null)
     configureNpcVoiceSounds(null)
+    configureNpcPlayerReactionAudio(null)
     configureAudioVolumes(worldAudio.getVolumes(), null)
     worldAudio.dispose()
     // Marks a still-in-flight initial-boot background phase stale before

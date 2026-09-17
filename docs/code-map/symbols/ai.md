@@ -175,19 +175,20 @@ Generated from exported TypeScript symbols.
 ## `ai/NpcAgent.ts`
 
 - `classifyPendingActivity` — function — line 730
+- `configureNpcPlayerReactionAudio` — function — line 978
 - `CurrentActivity` — type — line 540
 - `CurrentActivityKind` — type — line 533
 - `HUNT_RESUPPLY_ARROW_TARGET` — const — line 847
 - `NPC_HEIGHT` — const — line 472
 - `NPC_SHADOW_DISTANCE` — const — line 477
-- `NpcAgent` — class — line 1087
+- `NpcAgent` — class — line 1105
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcAgentDeps` — type — line 981
+- `NpcAgentDeps` — type — line 995
 - `NpcInspectionSnapshot` — type — line 555
 - `NpcWhy` — type — line 705
 - `projectNpcWhy` — function — line 772

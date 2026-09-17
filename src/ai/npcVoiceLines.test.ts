@@ -129,6 +129,16 @@ describe('resolveNpcVoiceLineWithManifest hierarchy', () => {
     expect([...urls].sort()).toEqual(['/m1', '/m2', '/m3'])
   })
 
+  it('returns only the generated URL when the manifest matches (no legacy dual result)', () => {
+    const url = resolveNpcVoiceLineWithManifest(
+      { 'general:male:greeting': ['/generated-only'] },
+      npc({ voiceActor: 'sean' }),
+      'greeting',
+    )
+    expect(url).toBe('/generated-only')
+    expect(url).not.toMatch(/sean|male-greeting/)
+  })
+
   it('uses legacy voiceActor fallback when the generated manifest has no match', () => {
     const url = resolveNpcVoiceLineWithManifest({}, npc({ voiceActor: 'sean' }), 'greeting')
     expect(url).toMatch(/^\/sounds\/male-greeting-sean-\d{2}\.ogg$/)

@@ -123,6 +123,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `ai/npcPlayerReactionVoice.test.ts`
 - `app/actions/actionContext.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`

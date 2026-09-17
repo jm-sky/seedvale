@@ -22,12 +22,15 @@ function stubNpc(partial: Partial<NpcAgent> & Pick<NpcAgent, 'id' | 'displayName
   return {
     name: partial.displayName,
     role: 'farmer',
+    gender: 'male',
+    age: 40,
     health: { dead: false },
     getDialogueLine: () => 'hello',
     preparePaymentRequest: () => null,
     pendingVoluntaryJoinProposal: () => null,
     voiceActor: 'alex',
     mesh: { position: { x: 0, y: 0, z: 0 } },
+    stopPlayerReactionVoice: () => {},
     ...partial,
   } as NpcAgent
 }

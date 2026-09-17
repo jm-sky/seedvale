@@ -1030,6 +1030,9 @@ export function openNpcDialogueMenu(npc: NpcAgent, settlement: Settlement, quest
   state.joinProposal = npc.pendingVoluntaryJoinProposal()
   state.open = true
   emitUiOpen()
+  // Cut any in-flight lookAtPlayer reaction bark so it cannot stack with the
+  // dialogue greeting (same NPC, two human voice clips).
+  npc.stopPlayerReactionVoice()
   playNpcVoice(npc, resolveNpcVoiceLine(npc, 'greeting'))
 }
 /** Topic the dialogue menu should open on. Payment wage-claim and a pending
@@ -1059,14 +1062,15 @@ export function resolveNpcDialogueHelp(): void {
   if (!state.open || !state.npc) return
   state.helpResult = state.resolveQuestHelp?.() ?? { line: state.npc.getDialogueLine() }
 }
-/** Invoke one authored quest dialogue action and replace the shown NPC line. */
+/** Invoke one authored quest dialogue action and replace the shown NPC line.
+ *  No automatic voice bark — `QuestDialogAction` is an arbitrary player choice
+ *  (including quest turn-in, which already plays legacy quest-complete audio
+ *  via `QuestManager`). Confirmation belongs on `acceptNpcDialogueOffer`. */
 export function selectNpcDialogueHelpAction(index: number): void {
   const state = ui.npcDialogueMenu
   const action = state.helpResult?.actions?.[index]
   if (!state.open || !action) return
   const line = action.onSelect()
-  const npc = state.npc as NpcAgent | null
-  playNpcVoice(npc, npc ? resolveNpcVoiceLine(npc, 'confirmation') : undefined)
   state.helpResult = { line }
 }
 /** Resolve one `QuestDialogTopic` from the current multi-quest picker and

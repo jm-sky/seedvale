@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import type { PlayAt } from '../audio/createWorldAudio'
+import type { ActiveSound, PlayAt, PlayAtCancelable } from '../audio/createWorldAudio'
 import type { CombatIntent } from '../combat/combatIntent'
 import type { ResolvedDefense } from '../combat/defenseResolver'
 import type { Projectile } from '../combat/projectile'
@@ -966,6 +966,20 @@ function applySociableBoost(
 }
 
 /**
+ * Module-level cancelable audio for lookAtPlayer reaction voice — wired from
+ * `createApp` via `worldAudio.playAtCancelable`, same pattern as
+ * `configureNpcVoiceSounds` in the Vue store. Avoids threading cancelable
+ * through the settlements positional DI chain. Per-agent `deps.playAtCancelable`
+ * wins when provided (tests).
+ */
+let sharedPlayerReactionPlayAtCancelable: PlayAtCancelable | null = null
+
+/** Production wiring for cancelable NPC player-reaction voice; pass `null` on dispose. */
+export function configureNpcPlayerReactionAudio(playAtCancelable: PlayAtCancelable | null): void {
+  sharedPlayerReactionPlayAtCancelable = playAtCancelable
+}
+
+/**
  * `NpcAgent.create`/`createCapsuleFallback`/the private constructor's shared
  * input (review 2026-09-03 §5 P4 / §8 step 11) — collapses three 30-
  * positional-parameter lists (one per method, all forwarding the same
@@ -993,6 +1007,10 @@ export type NpcAgentDeps = {
   member: FamilyMember
   familyMembers: readonly FamilyMemberRef[]
   playAt?: PlayAt
+  /** Optional cancelable seam for lookAtPlayer reaction voice only — when
+   *  omitted, falls back to the module-level
+   *  `configureNpcPlayerReactionAudio` wiring (or non-cancelable `playAt`). */
+  playAtCancelable?: PlayAtCancelable
   /** Which GLB to load — defaults to `resolveNpcAppearance(...)`. The one
    *  field only `create()` reads; the constructor itself already has
    *  `root`/`animations` loaded from it by then. When set, skips the
@@ -1386,6 +1404,12 @@ export class NpcAgent {
   private readonly vendorMarker: string | null
   private highlighted = false
   private readonly playAt: PlayAt
+  /** Optional per-agent override (tests); production uses module configure
+   *  resolved at play time so boot order vs `createWorldBundle` does not matter. */
+  private readonly playAtCancelableOverride: PlayAtCancelable | null
+  /** In-flight lookAtPlayer reaction bark — stopped when dialogue opens or a
+   *  new reaction replaces it. */
+  private playerReactionVoice: ActiveSound | null = null
   private readonly forest: SettlementForestHooks | undefined
   /** Settlement interaction queues (well today; garden/stall later). */
   private readonly queues: ReadonlyMap<string, InteractionQueue>
@@ -1606,6 +1630,7 @@ export class NpcAgent {
     const getPlayerSocial = deps.getPlayerSocial ?? (() => NEUTRAL_PLAYER_SOCIAL_STATE)
     const mining = deps.mining ?? null
     this.playAt = playAt
+    this.playAtCancelableOverride = deps.playAtCancelable ?? null
     this.forest = forest
     this.id = npcId
     this.queues = queues
@@ -6394,7 +6419,8 @@ export class NpcAgent {
 
   /** Reuses existing voice pools per tier (plan 117 §3) — no new audio
    *  assets: `warm` borrows the greeting pool ("Hej!"), `enthusiastic`
-   *  borrows the quest-complete/cheer pool ("Brawo!"). */
+   *  borrows the quest-complete/cheer pool ("Brawo!"). Cancelable when a
+   *  `playAtCancelable` seam is available so dialogue open can cut the clip. */
   private playReactionSound(tier: ReactionTier): void {
     const pool = tier === 'warm'
       ? NPC_GREETING_SOUND_URLS[this.voiceActor]
@@ -6402,7 +6428,21 @@ export class NpcAgent {
         ? NPC_QUEST_COMPLETE_SOUND_URLS[this.gender]
         : [...NPC_REACTION_SOUND_URLS[this.gender], ...NPC_HMM_VOICE_URLS[this.voiceActor]]
     const url = pool[Math.floor(Math.random() * pool.length)]
-    if (url) this.playAt(url, this.mesh.position, REACTION_SOUND_VOLUME)
+    if (!url) return
+    this.stopPlayerReactionVoice()
+    const cancelable = this.playAtCancelableOverride ?? sharedPlayerReactionPlayAtCancelable
+    if (cancelable) {
+      this.playerReactionVoice = cancelable(url, this.mesh.position, REACTION_SOUND_VOLUME)
+      return
+    }
+    this.playAt(url, this.mesh.position, REACTION_SOUND_VOLUME)
+  }
+
+  /** Stops an in-flight lookAtPlayer reaction bark. Safe when nothing is playing.
+   *  Called by dialogue open so greeting does not stack with the reaction. */
+  stopPlayerReactionVoice(): void {
+    this.playerReactionVoice?.stop()
+    this.playerReactionVoice = null
   }
 
   /** `collidersNear`, filtered to the NPC's current Y so underground cave

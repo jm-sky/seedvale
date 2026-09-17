@@ -70,11 +70,15 @@ function stubNpc(
     id,
     name,
     displayName: name,
+    gender: 'male',
+    role: 'farmer',
+    age: 40,
     getDialogueLine: () => dialogueLine,
     preparePaymentRequest: () => paymentClaim,
     pendingVoluntaryJoinProposal: () => null,
     voiceActor: 'alex',
     mesh: { position: { x: 0, y: 0, z: 0 } },
+    stopPlayerReactionVoice: () => {},
   } as NpcAgent
 }
 

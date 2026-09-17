@@ -286,6 +286,7 @@ Generated from TypeScript imports.
 - `settlement/structureRepairCandidates.ts`
 - `ui-vue/npcDialogueOpen.test.ts`
 - `ui-vue/npcDialogueTrade.test.ts`
+- `ui-vue/npcDialogueVoice.test.ts`
 - `ui-vue/store.ts`
 
 ## `settlement/decorProps.test.ts`
@@ -1329,6 +1330,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `ai/npcPlayerReactionVoice.test.ts`
 - `ai/npcProfessionWork.ts`
 - `settlement/createSettlement.ts`
 - `settlement/livestock.ts`
@@ -1542,6 +1544,7 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `ai/npcLogistics.ts`
+- `ai/npcPlayerReactionVoice.test.ts`
 - `ai/npcProfessionWork.ts`
 - `app/actions/groundActions.test.ts`
 - `fauna/AnimalAgent.ts`

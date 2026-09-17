@@ -847,6 +847,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `ai/NpcAgent.ts`
 - `ai/characters.ts`
 - `ai/reactionChance.ts`
 - `app/actions/actionContext.ts`

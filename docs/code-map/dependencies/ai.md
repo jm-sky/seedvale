@@ -187,10 +187,12 @@ Generated from TypeScript imports.
 - `ai/npcMovementCaveIntegration.test.ts`
 - `ai/npcMovementRecovery.test.ts`
 - `ai/npcMovementTarget.test.ts`
+- `ai/npcPlayerReactionVoice.test.ts`
 - `ai/npcTradeAvailability.test.ts`
 - `ai/npcTradeAvailability.ts`
 - `ai/npcWhy.test.ts`
 - `app/actions/containerActions.ts`
+- `app/createApp.ts`
 - `app/dialogueTimeControl.ts`
 - `app/gameLoop.ts`
 - `app/inventoryWiring.ts`
@@ -207,6 +209,7 @@ Generated from TypeScript imports.
 - `ui-vue/lib/drawMinimap.ts`
 - `ui-vue/npcDialogueOpen.test.ts`
 - `ui-vue/npcDialogueTrade.test.ts`
+- `ui-vue/npcDialogueVoice.test.ts`
 - `ui-vue/store.ts`
 - `ui/createNpcInspector.ts`
 
@@ -1057,6 +1060,15 @@ Generated from TypeScript imports.
 - `ai/npcPlan.test.ts`
 - `debug/npcTrace.ts`
 - `settlement/npcState.ts`
+
+## `ai/npcPlayerReactionVoice.test.ts`
+
+**Imports**
+
+- `ai/NpcAgent.ts`
+- `audio/createWorldAudio.ts`
+- `settlement/places.ts`
+- `settlement/props.ts`
 
 ## `ai/npcProfessionWork.test.ts`
 
