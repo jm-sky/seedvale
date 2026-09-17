@@ -340,6 +340,8 @@ Generated from TypeScript imports.
 - `debug/npcDebugApi.ts`
 - `debug/npcInspector.ts`
 - `economy/initial.ts`
+- `perf/heavySettlementScenario.test.ts`
+- `perf/heavySettlementScenario.ts`
 - `quests/lostTreasureChronicleDeciphering.test.ts`
 - `quests/lostTreasureChronicleSearch.test.ts`
 - `quests/materializeAuthoredQuests.test.ts`
@@ -1890,6 +1892,9 @@ Generated from TypeScript imports.
 - `debug/npcDebugApi.test.ts`
 - `debug/villageInspector.test.ts`
 - `debug/villageInspector.ts`
+- `perf/benchmark.ts`
+- `perf/heavySettlementScenario.test.ts`
+- `perf/heavySettlementScenario.ts`
 - `quests/lostHunterNaturalCave.ts`
 - `quests/lostTreasureChronicleDeciphering.test.ts`
 - `quests/lostTreasureChronicleDeciphering.ts`

@@ -61,6 +61,7 @@ Generated from TypeScript imports.
 - `perf/agentCpuDiag.ts`
 - `perf/benchmarkScenarios.ts`
 - `perf/grassFinalizationDiag.ts`
+- `perf/heavySettlementScenario.ts`
 - `perf/isolationProbe.ts`
 - `perf/longFrameFormat.ts`
 - `perf/monitor.ts`
@@ -68,6 +69,7 @@ Generated from TypeScript imports.
 - `perf/report.ts`
 - `perf/sceneCensus.ts`
 - `perf/types.ts`
+- `settlement/settlementGenerator.ts`
 - `terrain/chunkGrid.ts`
 - `world/dayNight.ts`
 
@@ -87,6 +89,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `perf/benchmark.ts`
+- `perf/flags.test.ts`
 - `perf/flags.ts`
 - `perf/index.ts`
 - `ui/createDebugGui.ts`
@@ -113,6 +116,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `perf/benchmarkScenarios.ts`
 - `perf/flags.ts`
 
 ## `perf/flags.ts`
@@ -166,6 +170,27 @@ Generated from TypeScript imports.
 - `perf/types.ts`
 - `terrain/chunkManager.ts`
 - `terrain/grass.ts`
+
+## `perf/heavySettlementScenario.test.ts`
+
+**Imports**
+
+- `perf/heavySettlementScenario.ts`
+- `settlement/families.ts`
+- `settlement/settlementGenerator.ts`
+
+## `perf/heavySettlementScenario.ts`
+
+**Imports**
+
+- `perf/types.ts`
+- `settlement/families.ts`
+- `settlement/settlementGenerator.ts`
+
+**Imported by**
+
+- `perf/benchmark.ts`
+- `perf/heavySettlementScenario.test.ts`
 
 ## `perf/index.ts`
 
@@ -354,6 +379,7 @@ Generated from TypeScript imports.
 - `perf/benchmark.ts`
 - `perf/detector.test.ts`
 - `perf/detector.ts`
+- `perf/heavySettlementScenario.ts`
 - `perf/index.ts`
 - `perf/isolationProbe.test.ts`
 - `perf/isolationProbe.ts`

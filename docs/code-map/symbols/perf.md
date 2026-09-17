@@ -21,9 +21,9 @@ Generated from exported TypeScript symbols.
 
 ## `perf/benchmark.ts`
 
-- `BenchmarkHost` — type — line 49
-- `BenchmarkRunner` — type — line 37
-- `createBenchmarkRunner` — function — line 124
+- `BenchmarkHost` — type — line 54
+- `BenchmarkRunner` — type — line 42
+- `createBenchmarkRunner` — function — line 136
 
 ## `perf/benchmarkFixture.ts`
 
@@ -33,7 +33,7 @@ Generated from exported TypeScript symbols.
 ## `perf/benchmarkScenarios.ts`
 
 - `BENCHMARK_SCENARIO_IDS` — const — line 1
-- `BenchmarkScenarioId` — type — line 11
+- `BenchmarkScenarioId` — type — line 12
 
 ## `perf/detector.ts`
 
@@ -44,12 +44,13 @@ Generated from exported TypeScript symbols.
 
 ## `perf/flags.ts`
 
-- `benchmarkScenarioFromUrl` — function — line 69
-- `DEFAULT_POINT_LIGHT_BUDGET` — const — line 38
-- `isPerfUrlEnabled` — function — line 19
-- `isProgramCensusUrlEnabled` — function — line 29
-- `parsePointLightBudgetFlag` — function — line 50
-- `pointLightBudgetFromUrl` — function — line 63
+- `benchmarkScenarioFromUrl` — function — line 78
+- `DEFAULT_POINT_LIGHT_BUDGET` — const — line 40
+- `isPerfUrlEnabled` — function — line 21
+- `isProgramCensusUrlEnabled` — function — line 31
+- `parseBenchmarkScenarioId` — function — line 71
+- `parsePointLightBudgetFlag` — function — line 52
+- `pointLightBudgetFromUrl` — function — line 65
 
 ## `perf/gpuTimer.ts`
 
@@ -73,6 +74,19 @@ Generated from exported TypeScript symbols.
 - `GrassSpeciesFinalizationStats` — type — line 25
 - `readJsHeapUsedBytes` — function — line 329
 - `setActiveGrassFinalizationDiag` — function — line 321
+
+## `perf/heavySettlementScenario.ts`
+
+- `HEAVY_SETTLEMENT_SEARCH_RADIUS` — const — line 16
+  - domain: tools
+- `HeavySettlementPeek` — type — line 32
+- `HeavySettlementSelectFail` — type — line 29
+- `HeavySettlementSelectOk` — type — line 28
+- `HeavySettlementSelectResult` — type — line 30
+- `scenarioSettlementFromDef` — function — line 105
+- `selectHeavySettlement` — function — line 51
+  - domain: tools
+- `settlementResidentCount` — function — line 35
 
 ## `perf/isolationProbe.ts`
 
@@ -146,10 +160,10 @@ Generated from exported TypeScript symbols.
 
 ## `perf/types.ts`
 
-- `BudgetKind` — type — line 183
+- `BudgetKind` — type — line 197
 - `HitchEvent` — type — line 57
-- `HitchReportRow` — type — line 133
-- `IsolationProbeRow` — type — line 141
+- `HitchReportRow` — type — line 147
+- `IsolationProbeRow` — type — line 155
 - `LONG_FRAME_MS` — const — line 69
 - `LongFrameAttribution` — type — line 87
 - `LongFrameRecord` — type — line 77
@@ -158,15 +172,16 @@ Generated from exported TypeScript symbols.
 - `PERF_CATEGORY_COUNT` — const — line 26
 - `PERF_CATEGORY_INDEX` — const — line 28
 - `PERF_SEVERITY_RANK` — const — line 45
-- `PerfAttribution` — type — line 213
+- `PerfAttribution` — type — line 227
 - `PerfCategory` — type — line 24
-- `PerfContext` — type — line 103
-- `PerfDetection` — type — line 191
+- `PerfContext` — type — line 115
+- `PerfDetection` — type — line 205
 - `PerfFilter` — type — line 52
-- `PerfLiveStats` — type — line 162
-- `PerfLogEvent` — type — line 200
-- `PerfReportJson` — type — line 219
+- `PerfLiveStats` — type — line 176
+- `PerfLogEvent` — type — line 214
+- `PerfReportJson` — type — line 233
 - `PerfSeverity` — type — line 43
-- `PerfSuspect` — type — line 185
+- `PerfSuspect` — type — line 199
 - `ScenarioAnchor` — type — line 93
 - `ScenarioRoute` — type — line 95
+- `ScenarioSettlement` — type — line 104
