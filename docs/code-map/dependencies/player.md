@@ -86,6 +86,7 @@ Generated from TypeScript imports.
 - `player/PlayerController.test.ts`
 - `player/characterPresentation.test.ts`
 - `player/humanCarryCapacity.test.ts`
+- `player/medicalTreatment.ts`
 - `player/physicalWorkStrength.test.ts`
 - `player/playerDamage.test.ts`
 - `player/playerDamage.ts`
@@ -203,6 +204,8 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/actions/gatheringActions.ts`
+- `app/actions/medicalTreatmentActions.test.ts`
+- `app/actions/medicalTreatmentActions.ts`
 - `app/actions/mountActions.ts`
 - `app/actions/placementActions.ts`
 - `app/actions/restActions.ts`
@@ -227,6 +230,8 @@ Generated from TypeScript imports.
 - `player/PlayerSkills.test.ts`
 - `player/characterPresentation.test.ts`
 - `player/characterPresentation.ts`
+- `player/medicalTreatment.test.ts`
+- `player/medicalTreatment.ts`
 - `player/medicinalTreatmentEffectiveness.test.ts`
 - `player/medicinalTreatmentEffectiveness.ts`
 - `player/playerDamage.ts`
@@ -334,6 +339,40 @@ Generated from TypeScript imports.
 - `player/PlayerController.ts`
 - `player/humanCarryCapacity.test.ts`
 
+## `player/medicalTreatment.test.ts`
+
+**Imports**
+
+- `items/Inventory.ts`
+- `player/PlayerSkills.ts`
+- `player/medicalTreatment.ts`
+- `shared/injurySeverity.ts`
+
+## `player/medicalTreatment.ts`
+
+**Imports**
+
+- `ai/NpcAgent.ts`
+- `fauna/AnimalAgent.ts`
+- `fauna/animalOwnership.ts`
+- `interaction/Interactable.ts`
+- `items/Inventory.ts`
+- `items/itemCatalog.ts`
+- `items/items.ts`
+- `player/PlayerController.ts`
+- `player/PlayerSkills.ts`
+- `player/medicinalTreatmentEffectiveness.ts`
+- `shared/injurySeverity.ts`
+- `shared/physicalInjuryTreatment.ts`
+
+**Imported by**
+
+- `app/actions/medicalTreatmentActions.test.ts`
+- `app/actions/medicalTreatmentActions.ts`
+- `app/gameLoop.ts`
+- `interaction/targetedSkillAction.ts`
+- `player/medicalTreatment.test.ts`
+
 ## `player/medicinalTreatmentEffectiveness.test.ts`
 
 **Imports**
@@ -351,6 +390,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/actions/survivalActions.ts`
+- `player/medicalTreatment.ts`
 - `player/medicinalTreatmentEffectiveness.test.ts`
 
 ## `player/physicalWorkStrength.test.ts`

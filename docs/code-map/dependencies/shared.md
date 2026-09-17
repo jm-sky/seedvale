@@ -344,9 +344,12 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `ai/healingPressure.test.ts`
 - `ai/healingPressure.ts`
+- `app/actions/medicalTreatmentActions.ts`
 - `debug/npcDebugApi.ts`
 - `items/Inventory.ts`
 - `items/itemCatalog.ts`
+- `player/medicalTreatment.test.ts`
+- `player/medicalTreatment.ts`
 - `shared/effectivePhysicalAttributes.ts`
 - `shared/injuryRecovery.test.ts`
 - `shared/injuryRecovery.ts`
@@ -373,6 +376,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `player/medicalTreatment.ts`
 - `shared/physicalInjuryTreatment.test.ts`
 
 ## `shared/temporaryConditions.test.ts`

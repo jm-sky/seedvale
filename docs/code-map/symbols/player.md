@@ -52,6 +52,23 @@ Generated from exported TypeScript symbols.
   - role: Maps resolved human Strength onto body carry capacity in kilograms.
 - `humanBodyCarryCapacityKg` — function — line 32
 
+## `player/medicalTreatment.ts`
+
+- `BARE_HANDS_STABILIZE_BASE_HP` — const — line 32
+  - domain: items-player
+  - system: player-skills
+- `MEDICAL_TREATMENT_DURATION_SEC` — const — line 35
+- `medicalMaterialLabel` — function — line 188
+- `MedicalTreatmentPlan` — type — line 54
+- `medicalTreatmentPromptLabel` — function — line 126
+- `resolveMedicalTreatmentPlan` — function — line 69
+- `treatableFromInteractable` — function — line 181
+- `treatableFromLivestock` — function — line 161
+- `treatableFromNpc` — function — line 143
+- `treatableFromPlayer` — function — line 130
+- `TreatableTarget` — type — line 43
+- `TreatableTargetKind` — type — line 37
+
 ## `player/medicinalTreatmentEffectiveness.ts`
 
 - `MEDICINE_EFFECT_MULTIPLIER_MAX` — const — line 13
@@ -222,9 +239,9 @@ Generated from exported TypeScript symbols.
 
 ## `player/PlayerSkills.ts`
 
-- `accumulateRidingUse` — function — line 262
-- `accumulateSneakUse` — function — line 240
-- `applySneakSpeedModifier` — function — line 281
+- `accumulateRidingUse` — function — line 267
+- `accumulateSneakUse` — function — line 245
+- `applySneakSpeedModifier` — function — line 286
 - `awardSkillXp` — function — line 137
 - `createPlayerSkills` — function — line 119
 - `isTargetedSkill` — function — line 44
@@ -232,9 +249,9 @@ Generated from exported TypeScript symbols.
 - `RaiseSkillResult` — type — line 144
 - `raiseSkillToValue` — function — line 156
 - `restorePersistedSkills` — function — line 184
-- `RIDING_XP_DISTANCE_M` — const — line 256
-- `ridingSpeedMultiplier` — function — line 322
-- `ridingStaminaDrainMultiplier` — function — line 336
+- `RIDING_XP_DISTANCE_M` — const — line 261
+- `ridingSpeedMultiplier` — function — line 327
+- `ridingStaminaDrainMultiplier` — function — line 341
 - `setSkillValueForDebug` — function — line 174
 - `SKILL_IDS` — const — line 42
 - `SKILL_LABEL` — const — line 52
@@ -251,10 +268,10 @@ Generated from exported TypeScript symbols.
 - `SkillUseKind` — type — line 29
 - `SNEAK_LEGACY_VALUE` — const — line 112
 - `SNEAK_LEGACY_XP` — const — line 113
-- `SNEAK_SPEED_MULTIPLIER` — const — line 279
-- `SNEAK_XP_DISTANCE_M` — const — line 232
-- `survivalDurationMultiplier` — function — line 295
-- `survivalFoodMultiplier` — function — line 345
+- `SNEAK_SPEED_MULTIPLIER` — const — line 284
+- `SNEAK_XP_DISTANCE_M` — const — line 237
+- `survivalDurationMultiplier` — function — line 300
+- `survivalFoodMultiplier` — function — line 350
 - `toggleSneak` — function — line 197
 - `xpForSkillValue` — function — line 102
 - `xpToSkillValue` — function — line 89

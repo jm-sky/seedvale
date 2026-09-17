@@ -135,6 +135,7 @@ Generated from TypeScript imports.
 - `items/foreignProperty.test.ts`
 - `items/foreignProperty.ts`
 - `persistence/saveData.ts`
+- `player/medicalTreatment.ts`
 - `player/playerCombat.ts`
 - `quests/QuestManager.ts`
 - `quests/quests.ts`
@@ -559,6 +560,7 @@ Generated from TypeScript imports.
 - `fauna/animalOwnership.test.ts`
 - `fauna/animalStray.test.ts`
 - `fauna/animalStray.ts`
+- `player/medicalTreatment.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/livestock.test.ts`
 - `settlement/livestock.ts`

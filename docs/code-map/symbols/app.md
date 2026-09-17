@@ -86,6 +86,14 @@ Generated from exported TypeScript symbols.
   - domain: fauna
   - role: Temporary player→animal lead attach/detach and cart hitch, keyed by stable `animalId`. Does not own Follow/Stay or AnimalOwner.
 
+## `app/actions/medicalTreatmentActions.ts`
+
+- `createMedicalTreatmentActions` — function — line 82
+- `MedicalTreatmentActions` — type — line 23
+  - domain: items-player
+  - system: player-actions
+- `queryMedicalTreatmentAvailability` — function — line 108
+
 ## `app/actions/mountActions.ts`
 
 - `createMountActions` — function — line 61
@@ -266,13 +274,13 @@ Generated from exported TypeScript symbols.
 
 ## `app/createApp.ts`
 
-- `createApp` — function — line 413
+- `createApp` — function — line 414
   - system: app-composition
   - role: Composition root: builds every long-lived system, threads their dependencies and owns app-level lifecycle (boot, rebuild, dispose).
   - owns: WorldBundle, GameLoop, AppRenderLoop
   - lifecycle: boot
   - integration: Wires world, player, UI, persistence and audio systems together.
-- `NewAppOptions` — type — line 382
+- `NewAppOptions` — type — line 383
 
 ## `app/faunaEncounterComposition.ts`
 
@@ -282,9 +290,9 @@ Generated from exported TypeScript symbols.
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 687
-- `GameLoop` — type — line 646
-- `GameLoopDeps` — type — line 314
+- `createGameLoop` — function — line 694
+- `GameLoop` — type — line 653
+- `GameLoopDeps` — type — line 319
 
 ## `app/graphicsSettings.ts`
 

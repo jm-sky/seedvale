@@ -60,6 +60,8 @@ Generated from TypeScript imports.
 - `app/actions/householdResourceTransferActions.ts`
 - `app/actions/inspectionActions.ts`
 - `app/actions/leadActions.ts`
+- `app/actions/medicalTreatmentActions.test.ts`
+- `app/actions/medicalTreatmentActions.ts`
 - `app/actions/mountActions.test.ts`
 - `app/actions/mountActions.ts`
 - `app/actions/npcItemTransferActions.ts`
@@ -84,6 +86,7 @@ Generated from TypeScript imports.
 
 - `app/actions/cookMealIntent.ts`
 - `app/actions/inspectionActions.ts`
+- `app/actions/medicalTreatmentActions.ts`
 - `app/actions/placementPreviewActions.ts`
 - `app/actions/survivalActions.ts`
 - `app/userActions.ts`
@@ -380,6 +383,33 @@ Generated from TypeScript imports.
 
 - `app/createApp.ts`
 - `app/gameLoop.ts`
+
+## `app/actions/medicalTreatmentActions.test.ts`
+
+**Imports**
+
+- `app/actions/actionContext.ts`
+- `app/actions/medicalTreatmentActions.ts`
+- `app/busyAction.ts`
+- `items/Inventory.ts`
+- `player/PlayerSkills.ts`
+- `player/medicalTreatment.ts`
+
+## `app/actions/medicalTreatmentActions.ts`
+
+**Imports**
+
+- `app/actions/actionContext.ts`
+- `app/actions/actionContracts.ts`
+- `items/Inventory.ts`
+- `player/PlayerSkills.ts`
+- `player/medicalTreatment.ts`
+- `shared/injurySeverity.ts`
+
+**Imported by**
+
+- `app/actions/medicalTreatmentActions.test.ts`
+- `app/createApp.ts`
 
 ## `app/actions/mountActions.test.ts`
 
@@ -795,6 +825,7 @@ Generated from TypeScript imports.
 - `app/actions/fullCampIntent.test.ts`
 - `app/actions/fullCampIntent.ts`
 - `app/actions/groundActions.test.ts`
+- `app/actions/medicalTreatmentActions.test.ts`
 - `app/actions/survivalActions.test.ts`
 - `app/busyAction.test.ts`
 - `app/createApp.ts`
@@ -871,6 +902,7 @@ Generated from TypeScript imports.
 - `app/actions/householdResourceTransferActions.ts`
 - `app/actions/inspectionActions.ts`
 - `app/actions/leadActions.ts`
+- `app/actions/medicalTreatmentActions.ts`
 - `app/actions/mountActions.ts`
 - `app/actions/npcItemTransfer.ts`
 - `app/actions/npcItemTransferActions.ts`
@@ -1155,6 +1187,7 @@ Generated from TypeScript imports.
 - `player/PlayerSkills.ts`
 - `player/PlayerTorch.ts`
 - `player/characterPresentation.ts`
+- `player/medicalTreatment.ts`
 - `player/playerCombat.ts`
 - `player/playerDamage.ts`
 - `player/playerMelee.ts`

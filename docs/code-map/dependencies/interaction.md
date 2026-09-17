@@ -38,6 +38,7 @@ Generated from TypeScript imports.
 - `interaction/targetedSkillAction.ts`
 - `items/foreignProperty.test.ts`
 - `items/foreignProperty.ts`
+- `player/medicalTreatment.ts`
 - `player/playerCombat.test.ts`
 - `player/playerCombat.ts`
 
@@ -100,6 +101,7 @@ Generated from TypeScript imports.
 
 - `interaction/Interactable.ts`
 - `interaction/targetedSkillAction.ts`
+- `items/Inventory.ts`
 - `player/PlayerSkills.ts`
 - `world/animalTraps.ts`
 
@@ -108,9 +110,11 @@ Generated from TypeScript imports.
 **Imports**
 
 - `interaction/Interactable.ts`
+- `items/Inventory.ts`
 - `items/campRepair.ts`
 - `items/items.ts`
 - `player/PlayerSkills.ts`
+- `player/medicalTreatment.ts`
 - `world/animalTraps.ts`
 
 **Imported by**

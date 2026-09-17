@@ -99,6 +99,8 @@ Generated from TypeScript imports.
 - `app/actions/groundActions.test.ts`
 - `app/actions/groundActions.ts`
 - `app/actions/householdResourceTransferActions.test.ts`
+- `app/actions/medicalTreatmentActions.test.ts`
+- `app/actions/medicalTreatmentActions.ts`
 - `app/actions/npcItemTransfer.test.ts`
 - `app/actions/npcItemTransfer.ts`
 - `app/actions/placementRequirementView.ts`
@@ -134,6 +136,8 @@ Generated from TypeScript imports.
 - `fauna/animalHarvest.ts`
 - `fauna/foodWaterTargeting.test.ts`
 - `fauna/huntingHooks.ts`
+- `interaction/targetedSkillAction.test.ts`
+- `interaction/targetedSkillAction.ts`
 - `items/HeldTool.test.ts`
 - `items/HeldTool.ts`
 - `items/Inventory.test.ts`
@@ -177,6 +181,8 @@ Generated from TypeScript imports.
 - `persistence/saveData.ts`
 - `player/characterPresentation.test.ts`
 - `player/characterPresentation.ts`
+- `player/medicalTreatment.test.ts`
+- `player/medicalTreatment.ts`
 - `player/playerCombatMode.test.ts`
 - `quests/QuestManager.test.ts`
 - `quests/QuestManager.ts`
@@ -916,6 +922,7 @@ Generated from TypeScript imports.
 - `items/treasureGameplay.ts`
 - `persistence/saveData.ts`
 - `player/PlayerController.ts`
+- `player/medicalTreatment.ts`
 - `player/playerCombat.test.ts`
 - `player/playerDamage.ts`
 - `player/playerMelee.test.ts`
@@ -1211,6 +1218,7 @@ Generated from TypeScript imports.
 - `items/villageTools.test.ts`
 - `persistence/saveData.ts`
 - `player/PlayerTorch.ts`
+- `player/medicalTreatment.ts`
 - `player/playerCombatMode.ts`
 - `player/playerEquipmentVisual.ts`
 - `quests/QuestManager.test.ts`
