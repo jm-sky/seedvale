@@ -142,6 +142,35 @@ export type QuestDialogOverride = {
   topics?: readonly QuestDialogTopic[]
 }
 
+/**
+ * Semantic kind for one NPC quest context in the dialogue root/help
+ * presentation preview (plan ui-input-024). Mirrors marker meaning
+ * (`✓` / `?` / `!` / `…`) without collapsing concurrent contexts to one glyph.
+ *
+ * @domain quests-progression
+ */
+export type QuestDialoguePreviewKind =
+  | 'report'
+  | 'required-action'
+  | 'active'
+  | 'offer'
+
+/**
+ * Read-only preview of one quest context currently relevant when talking to
+ * an NPC. `questId` is for stable UI keys/tests only — Vue must not interpret
+ * it. `resolve()` re-reads live state on deliberate selection; constructing
+ * the preview must not admit offers, advance progress, stamp journals, or
+ * launch world-knowledge work (plan ui-input-024).
+ *
+ * @domain quests-progression
+ */
+export type QuestDialoguePreviewEntry = {
+  questId: string
+  title: string
+  kind: QuestDialoguePreviewKind
+  resolve: () => QuestDialogOverride
+}
+
 export type { QuestProgressEntry }
 
 export type QuestPromisedReward = {
@@ -2769,6 +2798,55 @@ export class QuestManager {
     }
 
     return { line: DEFAULT_NPC_PROMPT, topics }
+  }
+
+  /**
+   * Read-only per-context dialogue preview for `npcId` — used by the NPC
+   * dialogue root menu for actionable shortcuts and Aktywne sprawy without
+   * calling `onInteract()` (plan ui-input-024). Classification reuses the
+   * same predicates as `labelMarker()`; each entry's `resolve()` routes
+   * through `resolveNpcQuestContribution` like `QuestDialogTopic`. Does
+   * not admit offers, mutate progress, stamp journals, or launch
+   * world-knowledge work.
+   *
+   * @domain quests-progression
+   */
+  previewNpcDialogue(npcId: NpcId): readonly QuestDialoguePreviewEntry[] {
+    const exposable = this.selectableOfferIds(npcId)
+    const entries: QuestDialoguePreviewEntry[] = []
+    for (const def of this.defs) {
+      const kind = this.classifyNpcDialoguePreview(def, npcId, exposable)
+      if (!kind) continue
+      entries.push({
+        questId: def.id,
+        title: def.title,
+        kind,
+        resolve: () => this.resolveNpcQuestContribution(def, npcId) ?? { line: def.reportLine },
+      })
+    }
+    return entries
+  }
+
+  /**
+   * One definition's semantic dialogue kind for `npcId`, or null when this
+   * NPC currently has no previewable quest context for that def. Stronger
+   * kinds win: report > required-action > offer > active.
+   *
+   * @domain quests-progression
+   */
+  private classifyNpcDialoguePreview(
+    def: QuestDef,
+    npcId: NpcId,
+    exposable: ReadonlySet<string>,
+  ): QuestDialoguePreviewKind | null {
+    if (this.hasGiverCompletionActionNow(def, npcId)) return 'report'
+    if (this.hasActionableRequiredTalkNow(def, npcId)) return 'required-action'
+    if (npcId !== def.giver.npcId) return null
+    const s = this.stateOf(def.id)
+    if (s.state === 'offered' && this.canAcceptOrdinaryGiverQuest(def)) return 'offer'
+    if (s.state === 'not_offered' && exposable.has(def.id)) return 'offer'
+    if (s.state === 'active') return 'active'
+    return null
   }
 
   /** Quest-driven line for interacting with a non-NPC world object (well/tree/

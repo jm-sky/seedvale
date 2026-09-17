@@ -5353,3 +5353,270 @@ describe('QuestManager socially consequential dialogue (plan quests-progression-
   })
 })
 
+describe('QuestManager.previewNpcDialogue (plan ui-input-024)', () => {
+  function kinds(qm: QuestManager, npcId: string) {
+    return qm.previewNpcDialogue(npcId).map((entry) => ({ id: entry.questId, kind: entry.kind, title: entry.title }))
+  }
+
+  it('returns report for ready_to_report and agrees with labelMarker ✓', () => {
+    const qm = makeManager([simpleQuest])
+    acceptOffer(qm, 'Anna')
+    qm.onInteractObjective({ type: 'interact_well' })
+    expect(qm.getState('simple')).toBe('ready_to_report')
+    expect(kinds(qm, 'Anna')).toEqual([{ id: 'simple', kind: 'report', title: 'simple' }])
+    expect(qm.labelMarker('Anna')).toBe(QUEST_MARKER_READY)
+    expect(qm.previewNpcDialogue('Anna')[0]!.resolve().actions?.[0]?.label).toBeDefined()
+  })
+
+  it('classifies an active gather hand-in as report while state stays active', () => {
+    const gather = quest({
+      id: 'stones',
+      title: 'Kamienie',
+      giverName: 'Piotr',
+      offerLine: 'offer stones',
+      stages: [{
+        objective: { type: 'gather_item', kind: 'stone', count: 6 },
+        description: 'stones',
+        reminderLine: 'Masz już kamienie?',
+        playerLine: 'Przyniosłem kamienie.',
+      }],
+      reportLine: 'dzięki',
+      outcomes: [{ id: 'delivered', state: 'complete' }],
+    })
+    const inventory = new Inventory()
+    inventory.add('stone', 6)
+    const qm = new QuestManager([gather], undefined, inventory)
+    acceptOffer(qm, 'Piotr')
+    expect(qm.getState('stones')).toBe('active')
+    expect(kinds(qm, 'Piotr')).toEqual([{ id: 'stones', kind: 'report', title: 'Kamienie' }])
+    expect(qm.labelMarker('Piotr')).toBe(QUEST_MARKER_READY)
+  })
+
+  it('returns required-action for an active talk_to_npc target and agrees with labelMarker ?', () => {
+    const relay = quest({
+      id: 'relay',
+      title: 'Przekaz',
+      giverName: 'Anna',
+      offerLine: 'offer',
+      stages: [{
+        objective: { type: 'talk_to_npc', npc: { npcId: 'Piotr' } },
+        description: 'talk',
+        reminderLine: 'remind',
+        playerLine: 'Anna prosiła, żebym ci coś przekazał.',
+        progressLine: 'got it',
+      }],
+      reportLine: 'report',
+    })
+    const qm = makeManager([relay])
+    acceptOffer(qm, 'Anna')
+    expect(kinds(qm, 'Piotr')).toEqual([{ id: 'relay', kind: 'required-action', title: 'Przekaz' }])
+    expect(qm.labelMarker('Piotr')).toBe(QUEST_MARKER_TALK_TARGET)
+    expect(kinds(qm, 'Anna')).toEqual([{ id: 'relay', kind: 'active', title: 'Przekaz' }])
+    expect(qm.labelMarker('Anna')).toBe(QUEST_MARKER_IN_PROGRESS)
+  })
+
+  it('does not classify a cooled-down stage dialogue action as required-action', () => {
+    let elapsedDays = 1
+    const clock: QuestWorldTimeLookup = {
+      getWorldSeed: () => 0,
+      getTimeOfDay: () => 0,
+      getElapsedDays: () => elapsedDays,
+    }
+    const cooled = quest({
+      id: 'cooldown-talk',
+      giverName: 'Piotr',
+      offerLine: 'offer cooldown',
+      stages: [{
+        objective: { type: 'spot_animal', kind: 'stag', range: 16 },
+        description: 'spot',
+        reminderLine: 'Widziałeś jelenia?',
+        dialogueActions: [{
+          npc: { npcId: 'Piotr' },
+          playerLine: 'Potrzebuję więcej szczegółów.',
+          npcLine: 'Notatki, które masz, wystarczą.',
+          skipAdvance: true,
+          reactions: [{
+            when: [{ type: 'relation', npc: { npcId: 'Piotr' }, maximum: 'acquainted' }],
+            npcLine: 'Najpierw sprawdź trop, który już dostałeś.',
+            cooldown: {
+              hours: 6,
+              line: 'Przejrzyj to, co już masz. Potem wrócimy do jelenia.',
+            },
+          }],
+        }],
+      }],
+      reportLine: 'report cooldown',
+    })
+    const qm = makeManager(
+      [cooled],
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      clock,
+    )
+    acceptOffer(qm, 'Piotr')
+    expect(kinds(qm, 'Piotr').some((entry) => entry.kind === 'required-action')).toBe(true)
+    qm.onInteract('Piotr')?.actions?.find((action) => action.label === 'Potrzebuję więcej szczegółów.')?.onSelect()
+    expect(kinds(qm, 'Piotr').some((entry) => entry.kind === 'required-action')).toBe(false)
+    expect(kinds(qm, 'Piotr')).toEqual([{ id: 'cooldown-talk', kind: 'active', title: 'cooldown-talk' }])
+    elapsedDays = 1 + 6 / 24
+    expect(kinds(qm, 'Piotr')).toEqual([{ id: 'cooldown-talk', kind: 'required-action', title: 'cooldown-talk' }])
+  })
+
+  it('returns active for an ordinary giver reminder', () => {
+    const qm = makeManager([simpleQuest])
+    acceptOffer(qm, 'Anna')
+    expect(qm.getState('simple')).toBe('active')
+    expect(kinds(qm, 'Anna')).toEqual([{ id: 'simple', kind: 'active', title: 'simple' }])
+    expect(qm.labelMarker('Anna')).toBe(QUEST_MARKER_IN_PROGRESS)
+  })
+
+  it('returns offer for a selectable not_offered quest without admitting it', () => {
+    const qm = makeManager([simpleQuest])
+    expect(qm.getState('simple')).toBe('not_offered')
+    const before = structuredClone(qm.exportProgress())
+    expect(kinds(qm, 'Anna')).toEqual([{ id: 'simple', kind: 'offer', title: 'simple' }])
+    expect(qm.getState('simple')).toBe('not_offered')
+    expect(qm.exportProgress()).toEqual(before)
+    expect(qm.exportProgress()[0]?.journal).toBeUndefined()
+  })
+
+  it('leaves serialized progress unchanged across repeated preview calls', () => {
+    const qm = makeManager([simpleQuest])
+    acceptOffer(qm, 'Anna')
+    const before = structuredClone(qm.exportProgress())
+    qm.previewNpcDialogue('Anna')
+    qm.previewNpcDialogue('Anna')
+    expect(qm.exportProgress()).toEqual(before)
+  })
+
+  it('returns multiple contexts in defs order without collapsing kinds', () => {
+    const ready = quest({
+      id: 'readyQ',
+      title: 'Gotowe',
+      giverName: 'Anna',
+      offerLine: 'offer ready',
+      stages: [{ objective: { type: 'interact_tree' }, description: 't', reminderLine: 'remindReady' }],
+      reportLine: 'reportReadyLine',
+      reportPromptLine: 'Zrobione?',
+      reportPlayerLine: 'Tak, zrobione.',
+    })
+    const remind = quest({
+      id: 'remindQ',
+      title: 'Przypomnienie',
+      giverName: 'Anna',
+      offerLine: 'offer remind',
+      stages: [{ objective: { type: 'interact_well' }, description: 'w', reminderLine: 'remindA' }],
+      reportLine: 'reportA',
+    })
+    const qm = makeManager([remind, ready])
+    acceptNextOffered(qm, 'Anna')
+    acceptNextOffered(qm, 'Anna')
+    qm.onInteractObjective({ type: 'interact_tree' })
+    expect(qm.getState('readyQ')).toBe('ready_to_report')
+    expect(qm.getState('remindQ')).toBe('active')
+    expect(kinds(qm, 'Anna')).toEqual([
+      { id: 'remindQ', kind: 'active', title: 'Przypomnienie' },
+      { id: 'readyQ', kind: 'report', title: 'Gotowe' },
+    ])
+    expect(qm.labelMarker('Anna')).toBe(QUEST_MARKER_READY)
+  })
+
+  it('re-reads live state from each entry resolve()', () => {
+    const relay = quest({
+      id: 'relay',
+      title: 'Przekaz',
+      giverName: 'Anna',
+      offerLine: 'offer',
+      stages: [{
+        objective: { type: 'talk_to_npc', npc: { npcId: 'Piotr' } },
+        description: 'talk',
+        reminderLine: 'remind',
+        playerLine: 'Anna prosiła, żebym ci coś przekazał.',
+        progressLine: 'got it',
+      }],
+      reportLine: 'report',
+    })
+    const qm = makeManager([relay])
+    acceptOffer(qm, 'Anna')
+    const preview = qm.previewNpcDialogue('Piotr')
+    expect(preview).toHaveLength(1)
+    const resolve = preview[0]!.resolve
+    expect(resolve().actions?.[0]?.label).toBe('Anna prosiła, żebym ci coś przekazał.')
+    expect(selectAction(resolve())).toBe('got it')
+    expect(qm.getState('relay')).toBe('ready_to_report')
+    expect(resolve().actions).toBeUndefined()
+    expect(kinds(qm, 'Anna')).toEqual([{ id: 'relay', kind: 'report', title: 'Przekaz' }])
+  })
+
+  it('does not start world-knowledge resolution or journal stamps merely by building preview', () => {
+    const knowledgeQuest = quest({
+      id: 'knowledge',
+      giverName: 'Anna',
+      offerLine: 'offer knowledge',
+      worldKnowledge: [{
+        id: 'target',
+        revealDelayDays: 0,
+        bind: { type: 'landmark', kind: 'monolith' },
+        pendingPhrase: 'Muszę zajrzeć do starych papierów.',
+        unavailablePhrase: 'Nie odtworzyłam trasy.',
+        unavailablePolicy: 'fail',
+        unavailableOutcomeId: 'lost',
+      }],
+      stages: [{
+        objective: { type: 'receive_world_knowledge', knowledgeId: 'target', npc: { npcId: 'Anna' } },
+        description: 'ask',
+        reminderLine: 'remind knowledge',
+        playerLine: 'Wiesz coś o tym miejscu?',
+        progressLine: 'Szukaj {worldKnowledgeClue:target}.',
+      }],
+      reportLine: 'done knowledge',
+      outcomes: [
+        { id: 'complete', state: 'complete' },
+        { id: 'lost', state: 'failed', resultText: 'Trop się urwał.' },
+      ],
+    })
+    let resolveCalls = 0
+    const resolver: QuestWorldKnowledgeResolver = {
+      resolve: async () => {
+        resolveCalls += 1
+        return null
+      },
+      describe: () => null,
+    }
+    const qm = new QuestManager(
+      [knowledgeQuest],
+      undefined,
+      new Inventory(),
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      resolver,
+    )
+    acceptOffer(qm, 'Anna')
+    const before = structuredClone(qm.exportProgress())
+    expect(kinds(qm, 'Anna')).toEqual([{ id: 'knowledge', kind: 'active', title: 'knowledge' }])
+    expect(qm.exportProgress()).toEqual(before)
+    expect(resolveCalls).toBe(0)
+  })
+})
+

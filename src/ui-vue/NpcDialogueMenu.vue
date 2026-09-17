@@ -3,12 +3,42 @@ import { computed, ref, watch } from 'vue'
 import type { NpcAgent } from '../ai/NpcAgent'
 import { nearestArchetype } from '../ai/dialogue'
 import { aboutSelfLine, aboutVillageLine, currentActivityLine, goodbyeLine } from '../ai/dialogueTemplates'
+import type { QuestDialoguePreviewEntry } from '../quests/QuestManager'
 import { useOverlayScreen } from './composables/useOverlayScreen'
-import { acceptNpcDialogueOffer, closeNpcDialogueMenu, emitUiClick, isNpcDialogueMenuOpen, resolveNpcDialogueHelp, resolveNpcDialogueOpenTopic, selectNpcDialogueHelpAction, selectNpcDialogueHelpTopic, ui } from './store'
+import {
+  acceptNpcDialogueOffer,
+  applyNpcDialogueQuestOverride,
+  closeNpcDialogueMenu,
+  emitUiClick,
+  getNpcDialogueQuestPreview,
+  isNpcDialogueMenuOpen,
+  resolveNpcDialogueHelp,
+  resolveNpcDialogueOpenTopic,
+  selectNpcDialogueHelpAction,
+  selectNpcDialogueHelpTopic,
+  ui,
+} from './store'
 
 const BACKDROP_CLOSE_GUARD_MS = 300
 
-type Topic = 'aboutSelf' | 'aboutVillage' | 'currentActivity' | 'goodbye' | 'help' | 'guardReward' | 'requestFood' | 'requestWater' | 'aboutArea' | 'payment' | 'proposeJoin' | 'proposeJoinResult' | 'joinProposal'
+type Topic =
+  | 'aboutSelf'
+  | 'aboutVillage'
+  | 'currentActivity'
+  | 'goodbye'
+  | 'help'
+  | 'guardReward'
+  | 'requestFood'
+  | 'requestWater'
+  | 'aboutArea'
+  | 'payment'
+  | 'proposeJoin'
+  | 'proposeJoinResult'
+  | 'joinProposal'
+  | 'activeMatters'
+
+/** One presentation-level category above existing topics (plan ui-input-024). */
+type DialogueGroup = 'help' | 'conversation' | 'actions'
 
 /** Duration presets offered when the player proposes a voluntary expedition
  *  (plan npc-031) — presentation-only, mirrors the shape of the paid
@@ -22,7 +52,12 @@ const JOIN_DURATION_OPTIONS = [
 ] as const
 const state = ui.npcDialogueMenu
 const topic = ref<Topic | null>(null)
+const group = ref<DialogueGroup | null>(null)
+/** Group to restore when leaving a topic opened from a category (plan ui-input-024). */
+const topicOriginGroup = ref<DialogueGroup | null>(null)
 const openedAt = ref(0)
+/** Bumped so live quest preview re-reads after in-menu quest mutations. */
+const previewEpoch = ref(0)
 
 useOverlayScreen('npc-dialogue', isNpcDialogueMenuOpen, closeNpcDialogueMenu)
 
@@ -36,6 +71,8 @@ const helpTopics = computed(() => state.helpResult?.topics ?? [])
  *  override rather than the top-level (possibly multi-topic) payload — drives
  *  what "Wróć" does inside "help" (plan quests-progression-020). */
 const helpDrilled = ref(false)
+/** When true, leaving a drilled help payload returns to Aktywne sprawy. */
+const activeMattersOrigin = ref(false)
 const isHomeGuard = computed(() => state.npc?.role === 'guard' && state.settlement?.isHome === true)
 const guardRewardLine = ref('')
 const foodLine = ref('')
@@ -46,12 +83,30 @@ const joinProposeLine = ref('')
 const joinProposalLine = ref('')
 const discoveringArea = ref(false)
 
+const questPreview = computed(() => {
+  void previewEpoch.value
+  return getNpcDialogueQuestPreview()
+})
+const reportShortcuts = computed(() => questPreview.value.filter((entry) => entry.kind === 'report'))
+const requiredActionShortcuts = computed(() => (
+  questPreview.value.filter((entry) => entry.kind === 'required-action')
+))
+const activeMatters = computed(() => questPreview.value.filter((entry) => entry.kind === 'active'))
+
+const showHelpGroup = computed(() => true)
+const showConversationGroup = computed(() => (
+  isHomeGuard.value || true
+))
+const showActionsGroup = computed(() => true)
+const showAboutVillage = computed(() => state.settlement != null)
+
 const responseText = computed(() => {
   if (!state.npc || topic.value === null) return ''
   switch (topic.value) {
     case 'aboutArea': return areaLine.value
     case 'aboutSelf': return aboutSelfLine(state.npc.displayName, state.npc.role, state.npc.familyMembers, archetype.value)
     case 'aboutVillage': return state.settlement ? aboutVillageLine(state.settlement.name, state.settlement.size, state.settlement.terrain, state.settlement.foodSourceType, state.settlement.dominantResource, archetype.value) : ''
+    case 'activeMatters': return 'Którą sprawę chcesz omówić?'
     case 'currentActivity': return currentActivityLine(state.npc.getCurrentActivity(state.timeOfDay), archetype.value)
     case 'goodbye': return goodbyeLine(archetype.value)
     case 'guardReward': return guardRewardLine.value
@@ -69,8 +124,14 @@ const responseText = computed(() => {
   }
 })
 
+function bumpPreview(): void {
+  previewEpoch.value += 1
+}
+
 function resetMenu(): void {
   topic.value = null
+  group.value = null
+  topicOriginGroup.value = null
   guardRewardLine.value = ''
   foodLine.value = ''
   waterLine.value = ''
@@ -79,13 +140,54 @@ function resetMenu(): void {
   joinProposeLine.value = ''
   joinProposalLine.value = ''
   helpDrilled.value = false
+  activeMattersOrigin.value = false
 }
-function backToTopics(): void { emitUiClick(); resetMenu() }
+
+function enterGroup(next: DialogueGroup): void {
+  emitUiClick()
+  group.value = next
+  topic.value = null
+  topicOriginGroup.value = null
+  helpDrilled.value = false
+  activeMattersOrigin.value = false
+}
+
+function leaveGroup(): void {
+  emitUiClick()
+  group.value = null
+  topic.value = null
+  topicOriginGroup.value = null
+}
+
+function backToTopics(): void {
+  emitUiClick()
+  bumpPreview()
+  topic.value = null
+  helpDrilled.value = false
+  activeMattersOrigin.value = false
+  if (topicOriginGroup.value) {
+    group.value = topicOriginGroup.value
+    topicOriginGroup.value = null
+    return
+  }
+  group.value = null
+}
+
 function selectTopic(next: Topic): void {
   emitUiClick()
   if (next === 'help') {
     helpDrilled.value = false
+    activeMattersOrigin.value = false
+    topicOriginGroup.value = group.value
     resolveNpcDialogueHelp()
+    bumpPreview()
+  } else if (next === 'activeMatters') {
+    topicOriginGroup.value = group.value
+    helpDrilled.value = false
+    activeMattersOrigin.value = false
+    bumpPreview()
+  } else {
+    topicOriginGroup.value = group.value
   }
   topic.value = next
 }
@@ -93,6 +195,7 @@ function selectTopic(next: Topic): void {
 function selectHelpAction(index: number): void {
   emitUiClick()
   selectNpcDialogueHelpAction(index)
+  bumpPreview()
 }
 
 /** Drills into one quest/topic entry from the multi-quest picker (plan
@@ -101,7 +204,29 @@ function selectHelpAction(index: number): void {
 function selectHelpTopic(index: number): void {
   emitUiClick()
   helpDrilled.value = true
+  activeMattersOrigin.value = false
   selectNpcDialogueHelpTopic(index)
+  bumpPreview()
+}
+
+function selectActiveMatter(entry: QuestDialoguePreviewEntry): void {
+  emitUiClick()
+  applyNpcDialogueQuestOverride(entry.resolve())
+  topic.value = 'help'
+  helpDrilled.value = true
+  activeMattersOrigin.value = true
+  bumpPreview()
+}
+
+function openQuestShortcut(entry: QuestDialoguePreviewEntry): void {
+  emitUiClick()
+  group.value = null
+  topicOriginGroup.value = null
+  helpDrilled.value = false
+  activeMattersOrigin.value = false
+  applyNpcDialogueQuestOverride(entry.resolve())
+  topic.value = 'help'
+  bumpPreview()
 }
 
 /** "Wróć" inside the "help" topic: from a drilled-in quest, return to the
@@ -109,17 +234,30 @@ function selectHelpTopic(index: number): void {
  *  otherwise behave like the generic "Wróć" and leave "help" entirely. */
 function helpBack(): void {
   emitUiClick()
+  bumpPreview()
   if (helpDrilled.value) {
     helpDrilled.value = false
+    if (activeMattersOrigin.value) {
+      activeMattersOrigin.value = false
+      topic.value = 'activeMatters'
+      return
+    }
     resolveNpcDialogueHelp()
     return
   }
-  resetMenu()
   topic.value = null
+  activeMattersOrigin.value = false
+  if (topicOriginGroup.value) {
+    group.value = topicOriginGroup.value
+    topicOriginGroup.value = null
+    return
+  }
+  group.value = null
 }
 
 function claimGuardReward(): void {
   emitUiClick()
+  topicOriginGroup.value = group.value
   guardRewardLine.value = state.onClaimGuardReward?.() ?? ''
   topic.value = 'guardReward'
   state.canClaimGuardReward = state.getCanClaimGuardReward?.() ?? false
@@ -127,6 +265,7 @@ function claimGuardReward(): void {
 
 function requestFood(): void {
   emitUiClick()
+  topicOriginGroup.value = group.value
   const npc = state.npc as NpcAgent | null
   if (npc) foodLine.value = state.onRequestFood?.(npc) ?? ''
   topic.value = 'requestFood'
@@ -134,6 +273,7 @@ function requestFood(): void {
 
 function requestWater(): void {
   emitUiClick()
+  topicOriginGroup.value = group.value
   const npc = state.npc as NpcAgent | null
   if (npc) waterLine.value = state.onRequestWater?.(npc) ?? ''
   topic.value = 'requestWater'
@@ -142,6 +282,7 @@ function requestWater(): void {
 async function askAboutArea(): Promise<void> {
   if (discoveringArea.value) return
   emitUiClick()
+  topicOriginGroup.value = group.value
   discoveringArea.value = true
   try {
     areaLine.value = await state.onAskAboutArea?.() ?? ''
@@ -164,6 +305,7 @@ function deferWage(): void {
 
 function openProposeJoin(): void {
   emitUiClick()
+  topicOriginGroup.value = group.value
   topic.value = 'proposeJoin'
 }
 
@@ -208,13 +350,30 @@ function closeFromBackdrop(): void {
   close()
 }
 
+function shortcutLabel(entry: QuestDialoguePreviewEntry): string {
+  const prefix = entry.kind === 'report' ? '✓' : '?'
+  return `${prefix} ${entry.title}`
+}
+
+function shortcutClass(kind: QuestDialoguePreviewEntry['kind']): string {
+  if (kind === 'report') {
+    return 'cursor-pointer rounded-md bg-white/15 px-3 py-2 text-left text-sm font-medium hover:bg-white/25'
+  }
+  return 'cursor-pointer rounded-md bg-white/10 px-3 py-2 text-left text-sm font-medium hover:bg-white/20'
+}
+
 watch(() => state.open, (open) => {
   if (!open) return
 
   openedAt.value = performance.now()
   resetMenu()
+  bumpPreview()
   const initialTopic = resolveNpcDialogueOpenTopic()
-  if (initialTopic) topic.value = initialTopic
+  if (initialTopic) {
+    topicOriginGroup.value = null
+    group.value = null
+    topic.value = initialTopic
+  }
 })
 </script>
 
@@ -232,9 +391,35 @@ watch(() => state.open, (open) => {
         {{ state.npc?.displayName }}
       </h2>
       <div
-        v-if="topic === null"
+        v-if="topic === null && group === null"
         class="flex flex-col gap-2"
       >
+        <button
+          v-for="entry in reportShortcuts"
+          :key="`report:${entry.questId}`"
+          type="button"
+          :class="shortcutClass('report')"
+          @click="openQuestShortcut(entry)"
+        >
+          {{ shortcutLabel(entry) }}
+        </button>
+        <button
+          v-for="entry in requiredActionShortcuts"
+          :key="`required:${entry.questId}`"
+          type="button"
+          :class="shortcutClass('required-action')"
+          @click="openQuestShortcut(entry)"
+        >
+          {{ shortcutLabel(entry) }}
+        </button>
+        <button
+          v-if="showHelpGroup"
+          type="button"
+          class="cursor-pointer rounded-md bg-white/5 px-3 py-2 text-left text-sm hover:bg-white/10"
+          @click="enterGroup('help')"
+        >
+          Sprawy i pomoc
+        </button>
         <button
           v-if="state.canTrade"
           type="button"
@@ -244,28 +429,47 @@ watch(() => state.open, (open) => {
           Handel
         </button>
         <button
-          v-if="isHomeGuard && state.canClaimGuardReward"
+          v-if="showConversationGroup"
           type="button"
           class="cursor-pointer rounded-md bg-white/5 px-3 py-2 text-left text-sm hover:bg-white/10"
-          @click="claimGuardReward"
+          @click="enterGroup('conversation')"
         >
-          Poproś o uznanie
+          Rozmowa
         </button>
         <button
-          v-if="isHomeGuard"
+          v-if="showActionsGroup"
           type="button"
           class="cursor-pointer rounded-md bg-white/5 px-3 py-2 text-left text-sm hover:bg-white/10"
-          :disabled="discoveringArea"
-          @click="askAboutArea"
+          @click="enterGroup('actions')"
         >
-          Opowiedz mi coś o okolicy.
+          Działania
         </button>
         <button
           type="button"
           class="cursor-pointer rounded-md bg-white/5 px-3 py-2 text-left text-sm hover:bg-white/10"
-          @click="giveItem"
+          @click="selectTopic('goodbye')"
         >
-          Daj przedmiot
+          Nic, miłego dnia!
+        </button>
+      </div>
+      <div
+        v-else-if="topic === null && group === 'help'"
+        class="flex flex-col gap-2"
+      >
+        <button
+          type="button"
+          class="cursor-pointer rounded-md bg-white/5 px-3 py-2 text-left text-sm hover:bg-white/10"
+          @click="selectTopic('help')"
+        >
+          Może w czymś ci pomóc?
+        </button>
+        <button
+          v-if="activeMatters.length > 0"
+          type="button"
+          class="cursor-pointer rounded-md bg-white/5 px-3 py-2 text-left text-sm hover:bg-white/10"
+          @click="selectTopic('activeMatters')"
+        >
+          Aktywne sprawy
         </button>
         <button
           type="button"
@@ -282,6 +486,76 @@ watch(() => state.open, (open) => {
           Poproś o wodę
         </button>
         <button
+          v-if="isHomeGuard && state.canClaimGuardReward"
+          type="button"
+          class="cursor-pointer rounded-md bg-white/5 px-3 py-2 text-left text-sm hover:bg-white/10"
+          @click="claimGuardReward"
+        >
+          Poproś o uznanie
+        </button>
+        <button
+          type="button"
+          class="cursor-pointer self-start rounded-md bg-white/5 px-3 py-2 text-sm hover:bg-white/10"
+          @click="leaveGroup"
+        >
+          Wróć
+        </button>
+      </div>
+      <div
+        v-else-if="topic === null && group === 'conversation'"
+        class="flex flex-col gap-2"
+      >
+        <button
+          v-if="isHomeGuard"
+          type="button"
+          class="cursor-pointer rounded-md bg-white/5 px-3 py-2 text-left text-sm hover:bg-white/10"
+          :disabled="discoveringArea"
+          @click="askAboutArea"
+        >
+          Opowiedz mi coś o okolicy.
+        </button>
+        <button
+          type="button"
+          class="cursor-pointer rounded-md bg-white/5 px-3 py-2 text-left text-sm hover:bg-white/10"
+          @click="selectTopic('aboutSelf')"
+        >
+          Powiedz coś o sobie.
+        </button>
+        <button
+          type="button"
+          class="cursor-pointer rounded-md bg-white/5 px-3 py-2 text-left text-sm hover:bg-white/10"
+          @click="selectTopic('currentActivity')"
+        >
+          Co teraz robisz?
+        </button>
+        <button
+          v-if="showAboutVillage"
+          type="button"
+          class="cursor-pointer rounded-md bg-white/5 px-3 py-2 text-left text-sm hover:bg-white/10"
+          @click="selectTopic('aboutVillage')"
+        >
+          Powiedz coś o wiosce.
+        </button>
+        <button
+          type="button"
+          class="cursor-pointer self-start rounded-md bg-white/5 px-3 py-2 text-sm hover:bg-white/10"
+          @click="leaveGroup"
+        >
+          Wróć
+        </button>
+      </div>
+      <div
+        v-else-if="topic === null && group === 'actions'"
+        class="flex flex-col gap-2"
+      >
+        <button
+          type="button"
+          class="cursor-pointer rounded-md bg-white/5 px-3 py-2 text-left text-sm hover:bg-white/10"
+          @click="giveItem"
+        >
+          Daj przedmiot
+        </button>
+        <button
           type="button"
           class="cursor-pointer rounded-md bg-white/5 px-3 py-2 text-left text-sm hover:bg-white/10"
           @click="openProposeJoin"
@@ -289,13 +563,11 @@ watch(() => state.open, (open) => {
           Zaproponuj udział w wyprawie
         </button>
         <button
-          v-for="item in ([['help', 'Może w czymś ci pomóc?'], ['aboutSelf', 'Powiedz coś o sobie.'], ['currentActivity', 'Co teraz robisz?'], ['aboutVillage', 'Powiedz coś o wiosce.'], ['goodbye', 'Nic, miłego dnia!']] as const)"
-          :key="item[0]"
           type="button"
-          class="cursor-pointer rounded-md bg-white/5 px-3 py-2 text-left text-sm hover:bg-white/10"
-          @click="selectTopic(item[0])"
+          class="cursor-pointer self-start rounded-md bg-white/5 px-3 py-2 text-sm hover:bg-white/10"
+          @click="leaveGroup"
         >
-          {{ item[1] }}
+          Wróć
         </button>
       </div>
       <div
@@ -313,6 +585,30 @@ watch(() => state.open, (open) => {
           @click="proposeJoin(opt.days)"
         >
           {{ opt.label }}
+        </button>
+        <button
+          type="button"
+          class="cursor-pointer self-start rounded-md bg-white/5 px-3 py-2 text-sm hover:bg-white/10"
+          @click="backToTopics"
+        >
+          Wróć
+        </button>
+      </div>
+      <div
+        v-else-if="topic === 'activeMatters'"
+        class="flex flex-col gap-2"
+      >
+        <p class="text-sm leading-relaxed opacity-90">
+          {{ responseText }}
+        </p>
+        <button
+          v-for="entry in activeMatters"
+          :key="entry.questId"
+          type="button"
+          class="cursor-pointer rounded-md bg-white/5 px-3 py-2 text-left text-sm hover:bg-white/10"
+          @click="selectActiveMatter(entry)"
+        >
+          {{ entry.title }}
         </button>
         <button
           type="button"

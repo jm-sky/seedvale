@@ -1,7 +1,7 @@
 # Plan: Chatterbox NPC voice proof of concept
 
 **Created:** 2026-09-16
-**Status:** `planned` 📋
+**Status:** `done` ✅
 **Type:** feature
 **Priority:** high · **Effort:** XS
 **Depends on:** none

@@ -58,10 +58,10 @@
    🔴 `M` · ✅ ready · unlocks 3/5
 3. `settlements-003` — **Colony settlement bootstrap**  
    🔴 `L` · ✅ ready · unlocks 1/1
-4. `npc-041` — **Chatterbox NPC voice proof of concept**  
-   🔴 `XS` · ✅ ready · unlocks 2/3
-5. `quests-progression-049` — **Hunters Brotherhood — hunting-ground investigation**  
+4. `quests-progression-049` — **Hunters Brotherhood — hunting-ground investigation**  
    🟡 `M` · ✅ ready · unlocks 1/2
+5. `settlements-npcs-038` — **Travelling Merchant inter-settlement role**  
+   🔴 `L` · ✅ ready · unlocks 0/0
 
 ---
 
@@ -111,87 +111,75 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `L` · **Score:**  70  
    → **unlocks:** 1/1
 
-9. `npc-041` — **Chatterbox NPC voice proof of concept**  
-  🔴 `XS` · **Score:**  68  
-   → **unlocks:** 2/3
-
-10. `quests-progression-049` — **Hunters Brotherhood — hunting-ground investigation**  
+9. `quests-progression-049` — **Hunters Brotherhood — hunting-ground investigation**  
   🟡 `M` · **Score:**  67  
    → **unlocks:** 1/2
 
-11. `quests-progression-046` — **Lost Treasure Chronicles — integration, legacy catch-up and superseded quest cleanup**  
+10. `quests-progression-046` — **Lost Treasure Chronicles — integration, legacy catch-up and superseded quest cleanup**  
   🔴 `L` · **Score:**  66  
    → **unlocks:** 0/0
 
-12. `settlements-npcs-038` — **Travelling Merchant inter-settlement role**  
+11. `settlements-npcs-038` — **Travelling Merchant inter-settlement role**  
   🔴 `L` · **Score:**  64  
    → **unlocks:** 0/0
 
-13. `settlements-018` — **Pasture and paddock fence road clearance and collision**  
+12. `settlements-018` — **Pasture and paddock fence road clearance and collision**  
   🔴 `S` · **Score:**  61  
    → **unlocks:** 0/0
 
-14. `npc-042` — **NPC voice and dialogue catalog infrastructure**  
-  🔴 `M` · **Score:**  57  
-   → **unlocks:** 2/2
-
-15. `quests-progression-053` — **Hunters Brotherhood — competing hunting strategies**  
+13. `quests-progression-053` — **Hunters Brotherhood — competing hunting strategies**  
   🟡 `L` · **Score:**  56  
    → **unlocks:** 1/1
 
-16. `settlements-004` — **Gold Economic Realization & Source Entitlements**  
+14. `settlements-004` — **Gold Economic Realization & Source Entitlements**  
   🔴 `M` · **Score:**  49  
    → **unlocks:** 1/1
 
-17. `quests-progression-010` — **Abandoned gold mine → mining colony integration**  
+15. `quests-progression-010` — **Abandoned gold mine → mining colony integration**  
   🔴 `M` · **Score:**  61  
    → **unlocks:** 0/0
 
-18. `quests-progression-054` — **Hunters Brotherhood — exceptional animal finale**  
+16. `quests-progression-054` — **Hunters Brotherhood — exceptional animal finale**  
   🟡 `L` · **Score:**  44  
    → **unlocks:** 0/0
 
-19. `settlements-npcs-022` — **Household help and age-based work participation**  
+17. `settlements-npcs-022` — **Household help and age-based work participation**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 0/0
 
-20. `npc-045` — **Campfire spoken conversation pairs**  
+18. `npc-045` — **Campfire spoken conversation pairs**  
   🔴 `S` · **Score:**  37  
    → **unlocks:** 0/0
 
-21. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
+19. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
   🔴 `M` · **Score:**  35  
    → **unlocks:** 0/0
 
-22. `tools-015` — **Chatterbox local voice generation pipeline**  
+20. `tools-015` — **Chatterbox local voice generation pipeline**  
   🔴 `M` · **Score:**  31  
    → **unlocks:** 0/0
 
-23. `npc-043` — **Dialogue language migration to English**  
-  🔴 `L` · **Score:**  28  
-   → **unlocks:** 0/0
-
-24. `items-player-014` — **Rope-pullable resource transport**  
+21. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-25. `tools-005` — **Seedvale Character Preparation Panel**  
+22. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-26. `ui-input-024` — **NPC dialogue grouping and quest priority**  
+23. `ui-input-024` — **NPC dialogue grouping and quest priority**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-27. `items-player-044` — **Shoulder and forearm equipment slots**  
+24. `items-player-044` — **Shoulder and forearm equipment slots**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-28. `items-player-032` — **NPC player-storage resource and context rules**  
+25. `items-player-032` — **NPC player-storage resource and context rules**  
   🟡 `L` · **Score:**  20  
    → **unlocks:** 0/0
 
-29. `fauna-034` — **Wildlife Day/Night Rest and Den Defense**  
+26. `fauna-034` — **Wildlife Day/Night Rest and Den Defense**  
   🟡 `M` · **Score:**  19  
    → **unlocks:** 0/0
 
@@ -202,12 +190,6 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
 - [`items-player-032-npc-player-storage-resource-and-context-rules.md`](items-player-032-npc-player-storage-resource-and-context-rules.md)  
   is blocked by:
   - [`items-player-028-npc-player-storage-access-policies.md`](items-player-028-npc-player-storage-access-policies.md)
-- [`npc-042-npc-voice-dialogue-catalog-infrastructure.md`](npc-042-npc-voice-dialogue-catalog-infrastructure.md)  
-  is blocked by:
-  - [`npc-041-chatterbox-voice-poc.md`](npc-041-chatterbox-voice-poc.md)
-- [`npc-043-dialogue-language-migration-to-english.md`](npc-043-dialogue-language-migration-to-english.md)  
-  is blocked by:
-  - [`npc-042-npc-voice-dialogue-catalog-infrastructure.md`](npc-042-npc-voice-dialogue-catalog-infrastructure.md)
 - [`quests-progression-010-abandoned-gold-mine-colony.md`](quests-progression-010-abandoned-gold-mine-colony.md)  
   is blocked by:
   - [`settlements-003-colony-bootstrap.md`](settlements-003-colony-bootstrap.md)
@@ -243,10 +225,6 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
 - [`quests-progression-054-hunters-brotherhood-exceptional-animal-finale.md`](quests-progression-054-hunters-brotherhood-exceptional-animal-finale.md)  
   is blocked by:
   - [`quests-progression-053-hunters-brotherhood-competing-hunting-strategies.md`](quests-progression-053-hunters-brotherhood-competing-hunting-strategies.md)
-- [`tools-015-chatterbox-local-voice-generation-pipeline.md`](tools-015-chatterbox-local-voice-generation-pipeline.md)  
-  is blocked by:
-  - [`npc-041-chatterbox-voice-poc.md`](npc-041-chatterbox-voice-poc.md)
-  - [`npc-042-npc-voice-dialogue-catalog-infrastructure.md`](npc-042-npc-voice-dialogue-catalog-infrastructure.md)
 
 ---
 
@@ -399,7 +377,6 @@ graph TD
   npc_040["npc-040 — UBC profession appearance variants for NPCs"]
   npc_041["npc-041 — Chatterbox NPC voice proof of concept"]
   npc_042["npc-042 — NPC voice and dialogue catalog infrastructure"]
-  npc_043["npc-043 — Dialogue language migration to English"]
   npc_044["npc-044 — NPC hierarchical voice resolver"]
   npc_045["npc-045 — Campfire spoken conversation pairs"]
   persistence_001["persistence-001 — Full Simulation Persistence"]
@@ -826,7 +803,6 @@ graph TD
   npc_040 --> npc_012
   npc_041 --> npc_042
   npc_041 --> tools_015
-  npc_042 --> npc_043
   npc_042 --> tools_015
   npc_044 --> npc_045
   persistence_002 --> persistence_003

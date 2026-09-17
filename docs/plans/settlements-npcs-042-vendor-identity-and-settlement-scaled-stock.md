@@ -2,7 +2,7 @@
 
 **Created:** 2026-09-16
 **Status:** `verification needed` 🔍
-**Implemented at:** 2026-09-16
+**Implemented at:** 2026-09-16 18:36
 **Type:** feature
 **Priority:** high · **Effort:** M
 **Depends on:** ~~settlements-npcs-033~~, ~~settlements-npcs-036~~, ~~settlements-npcs-040~~, ~~settlements-012~~, items-player-040

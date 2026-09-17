@@ -22,7 +22,7 @@ import type { CreateSaveResult, SaveManagementResult, SaveSlotInfo, WriteSaveRes
 import type { CharacterPresentation } from '../player/characterPresentation'
 import type { CombatWeaponCategory } from '../player/playerCombatMode'
 import type { PlayerSkills, SkillId } from '../player/PlayerSkills'
-import type { QuestDialogOverride, QuestListEntry, QuestManager } from '../quests/QuestManager'
+import type { QuestDialogOverride, QuestDialoguePreviewEntry, QuestListEntry, QuestManager } from '../quests/QuestManager'
 import type { Reputation } from '../reputation/ReputationManager'
 import type { Settlement } from '../settlement/createSettlement'
 import type { FoodSourceType } from '../settlement/settlementGenerator'
@@ -64,6 +64,14 @@ type NpcDialogueMenuState = {
   /** Resolves the current quest/help line when the player selects that topic.
    *  Opening the menu must not invoke it (plan quests-progression-014). */
   resolveQuestHelp: (() => QuestDialogOverride | null) | null
+  /**
+   * Read-only quest dialogue preview for the open NPC. Opening the menu must
+   * not invoke it for mutation — callers read kinds/titles for root shortcuts
+   * and Aktywne sprawy; each entry's `resolve()` is live (plan ui-input-024).
+   *
+   * @domain ui-input
+   */
+  resolveQuestPreview: (() => readonly QuestDialoguePreviewEntry[]) | null
   canClaimGuardReward: boolean
   getCanClaimGuardReward: (() => boolean) | null
   onClaimGuardReward: (() => string) | null
@@ -729,7 +737,7 @@ function emitUiOpen(): void {
 
 let npcVoicePlayAt: PlayAt | null = null
 /** Quiet enough to sit under the `emitUiOpen()` panel chirp. */
-const NPC_VOICE_VOLUME = 0.35
+const NPC_VOICE_VOLUME = 0.75
 
 export function configureNpcVoiceSounds(playAt: PlayAt | null): void {
   npcVoicePlayAt = playAt
@@ -744,7 +752,7 @@ export function emitUiClick(): void {
 }
 
 export const ui = reactive({
-  npcDialogueMenu: { open: false, npc: null, settlement: null, timeOfDay: 0, helpResult: null, resolveQuestHelp: null, canClaimGuardReward: false, getCanClaimGuardReward: null, onClaimGuardReward: null, canTrade: false, getCanTrade: null, onOpenTrade: null, onRequestFood: null, onRequestWater: null, onAskAboutArea: null, paymentClaim: null, onPayWage: null, onGiveItem: null, joinProposal: null, onRespondToJoinProposal: null, onProposeJoin: null } as NpcDialogueMenuState,
+  npcDialogueMenu: { open: false, npc: null, settlement: null, timeOfDay: 0, helpResult: null, resolveQuestHelp: null, resolveQuestPreview: null, canClaimGuardReward: false, getCanClaimGuardReward: null, onClaimGuardReward: null, canTrade: false, getCanTrade: null, onOpenTrade: null, onRequestFood: null, onRequestWater: null, onAskAboutArea: null, paymentClaim: null, onPayWage: null, onGiveItem: null, joinProposal: null, onRespondToJoinProposal: null, onProposeJoin: null } as NpcDialogueMenuState,
   villagers: { open: false, entries: [] as VillagerEntry[], page: 0, containers: [] as VillagerContainerOption[] },
   inventory: { open: false, counts: {}, groups: [], totalWeight: 0, maxWeight: 0, totalSize: 0, maxSize: 0, heldTool: null, heldInstanceId: null, primaryMelee: null, primaryRanged: null, onDrop: null, onEquip: null, onUnequip: null, equippedSlots: {}, onEquipArmor: null, onUnequipArmor: null, onConsume: null, onRead: null, onPlaceTrap: null, onSellInstances: null, onSharpen: null, onPlaceContainer: null, onPlaceTent: null, onSetPrimaryMelee: null, onSetPrimaryRanged: null } as InventoryState,
   pauseMenu: {
@@ -1015,6 +1023,7 @@ export function openNpcDialogueMenu(npc: NpcAgent, settlement: Settlement, quest
   state.timeOfDay = timeOfDay
   state.helpResult = null
   state.resolveQuestHelp = () => questManager.onInteract(npc.id)
+  state.resolveQuestPreview = () => questManager.previewNpcDialogue(npc.id)
   state.canClaimGuardReward = state.getCanClaimGuardReward?.() ?? false
   state.canTrade = state.getCanTrade?.() ?? false
   state.paymentClaim = npc.preparePaymentRequest()
@@ -1032,6 +1041,17 @@ export function resolveNpcDialogueOpenTopic(): 'payment' | 'joinProposal' | null
   if (state.paymentClaim) return 'payment'
   if (state.joinProposal) return 'joinProposal'
   return null
+}
+/**
+ * Live read-only quest dialogue preview for the open NPC. Does not set
+ * `helpResult` or admit offers (plan ui-input-024).
+ *
+ * @domain ui-input
+ */
+export function getNpcDialogueQuestPreview(): readonly QuestDialoguePreviewEntry[] {
+  const state = ui.npcDialogueMenu
+  if (!state.open) return []
+  return state.resolveQuestPreview?.() ?? []
 }
 /** Resolve the current quest/help payload when the player selects that topic. */
 export function resolveNpcDialogueHelp(): void {
@@ -1061,6 +1081,17 @@ export function selectNpcDialogueHelpTopic(index: number): void {
   if (!state.open || !topicEntry) return
   state.helpResult = topicEntry.resolve()
 }
+/**
+ * Apply a live quest dialogue override from a root shortcut or Aktywne sprawy
+ * preview entry without going through `onInteract` admission (plan ui-input-024).
+ *
+ * @domain ui-input
+ */
+export function applyNpcDialogueQuestOverride(override: QuestDialogOverride): void {
+  const state = ui.npcDialogueMenu
+  if (!state.open) return
+  state.helpResult = override
+}
 function resetNpcDialogueMenu(): void {
   const state = ui.npcDialogueMenu
   state.open = false
@@ -1068,6 +1099,7 @@ function resetNpcDialogueMenu(): void {
   state.settlement = null
   state.helpResult = null
   state.resolveQuestHelp = null
+  state.resolveQuestPreview = null
   state.paymentClaim = null
   state.joinProposal = null
 }

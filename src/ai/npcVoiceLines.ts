@@ -121,7 +121,7 @@ export const NPC_QUEST_COMPLETE_SOUND_URLS: Record<NpcGender, readonly string[]>
 
 /** Quiet enough to stay under dialogue/ambient, audible enough to register —
  *  `NpcAgent.playReactionSound()`'s playback volume. */
-export const REACTION_SOUND_VOLUME = 0.35
+export const REACTION_SOUND_VOLUME = 0.5
 
 /**
  * Short, non-verbal "friendly talk" murmur played when a Social Place

@@ -1,7 +1,7 @@
 # Plan: NPC voice and dialogue catalog infrastructure
 
 **Created:** 2026-09-16
-**Status:** `planned` 📋
+**Status:** `done` ✅
 **Type:** infrastructure
 **Priority:** high · **Effort:** M
 **Depends on:** npc-041
