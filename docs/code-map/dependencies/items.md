@@ -1252,6 +1252,7 @@ Generated from TypeScript imports.
 - `ui/createInventoryScreen.ts`
 - `world/animalAttractionSource.ts`
 - `world/animalTraps.ts`
+- `world/caves/caveCrateLoot.ts`
 - `world/containerProp.ts`
 - `world/createPlacedContainers.ts`
 - `world/createPlacedTraps.ts`

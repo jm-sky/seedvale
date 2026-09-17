@@ -1589,6 +1589,15 @@ Generated from TypeScript imports.
 - `app/userActions.test.ts`
 - `ui-vue/playerQuickActions.ts`
 
+## `app/worldBundle.caveCrate.test.ts`
+
+**Imports**
+
+- `app/worldBundle.ts`
+- `world/caves/caveAdventureContentPolicy.ts`
+- `world/caves/caveCrateLoot.ts`
+- `world/createCaves.ts`
+
 ## `app/worldBundle.caveTreasure.test.ts`
 
 **Imports**
@@ -1676,6 +1685,7 @@ Generated from TypeScript imports.
 - `world/caves/caveAdventureContentPolicy.ts`
 - `world/caves/caveAdventureProps.ts`
 - `world/caves/caveAuthoredAnchorClaims.ts`
+- `world/caves/caveCrateLoot.ts`
 - `world/caves/caveWorldgenCache.ts`
 - `world/createBeehives.ts`
 - `world/createCarts.ts`
@@ -1753,6 +1763,7 @@ Generated from TypeScript imports.
 - `app/saveState.ts`
 - `app/userActions.test.ts`
 - `app/userActions.ts`
+- `app/worldBundle.caveCrate.test.ts`
 - `app/worldBundle.caveTreasure.test.ts`
 - `debug/faunaInspector.ts`
 - `debug/npcDebugApi.test.ts`

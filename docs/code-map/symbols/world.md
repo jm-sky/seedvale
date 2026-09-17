@@ -182,30 +182,29 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/caveAdventureProps.ts`
 
-- `_resetCaveAdventurePropTemplatesForTests` — function — line 278
-- `adventurePropPlacementFromAnchor` — function — line 98
+- `_resetCaveAdventurePropTemplatesForTests` — function — line 272
+- `adventurePropPlacementFromAnchor` — function — line 96
   - domain: world-terrain
-- `adventurePropPlacementsFromAnchors` — function — line 112
-- `CAVE_ADVENTURE_LANTERN_LIGHT_LIMIT` — const — line 57
+- `adventurePropPlacementsFromAnchors` — function — line 110
+- `CAVE_ADVENTURE_LANTERN_LIGHT_LIMIT` — const — line 54
 - `CAVE_ADVENTURE_PROPS_GROUP_NAME` — const — line 22
 - `CAVE_ADVENTURE_PROPS_USERDATA_KEY` — const — line 24
-- `CAVE_CRATE_TARGET_HEIGHT` — const — line 54
 - `CAVE_PRESENTATION_PROP_ROLES` — const — line 26
-- `CAVE_SUPPORT_FIT_MAX` — const — line 53
-- `CAVE_SUPPORT_LAY_FLAT_ROLL` — const — line 60
-- `CAVE_TORCH_YAW_OFFSET` — const — line 63
-- `CaveAdventurePropAssetKind` — type — line 35
-- `CaveAdventurePropPlacement` — type — line 37
-- `CaveAdventurePropTemplates` — type — line 129
-- `CavePresentationPropRole` — type — line 33
-- `createCaveAdventurePropsGroup` — function — line 230
+- `CAVE_SUPPORT_FIT_MAX` — const — line 51
+- `CAVE_SUPPORT_LAY_FLAT_ROLL` — const — line 57
+- `CAVE_TORCH_YAW_OFFSET` — const — line 60
+- `CaveAdventurePropAssetKind` — type — line 34
+- `CaveAdventurePropPlacement` — type — line 36
+- `CaveAdventurePropTemplates` — type — line 127
+- `CavePresentationPropRole` — type — line 32
+- `createCaveAdventurePropsGroup` — function — line 224
   - domain: world-terrain
-- `CreateCaveAdventurePropsGroupResult` — type — line 215
-- `getCaveAdventurePropTemplates` — function — line 175
+- `CreateCaveAdventurePropsGroupResult` — type — line 209
+- `getCaveAdventurePropTemplates` — function — line 170
   - domain: world-terrain
-- `preloadCaveAdventurePropTemplates` — function — line 145
+- `preloadCaveAdventurePropTemplates` — function — line 142
   - domain: world-terrain
-- `presentationAnchorsFromContent` — function — line 80
+- `presentationAnchorsFromContent` — function — line 78
   - domain: world-terrain
 
 ## `world/caves/caveArchetype.ts`
@@ -255,6 +254,16 @@ Generated from exported TypeScript symbols.
   - domain: world-terrain
 - `resolveCaveContentAnchors` — function — line 605
   - domain: world-terrain
+
+## `world/caves/caveCrateLoot.ts`
+
+- `CAVE_CRATE_EMPTY_CHANCE` — const — line 24
+- `CAVE_CRATE_LOOT_KINDS` — const — line 12
+- `CAVE_CRATE_SECOND_ITEM_CHANCE` — const — line 27
+- `CaveCrateLootKind` — type — line 21
+- `generateCaveCrateLoot` — function — line 80
+  - domain: world-terrain
+- `isValidCaveCrateLoot` — function — line 104
 
 ## `world/caves/caveGroundQuery.ts`
 
@@ -815,8 +824,10 @@ Generated from exported TypeScript symbols.
 
 - `CHEST_DEPTH` — const — line 13
 - `CHEST_WIDTH` — const — line 12
+- `CRATE_SIZE` — const — line 53
 - `createPlacedContainerProp` — function — line 17
-- `disposePlacedContainerProp` — function — line 50
+- `createPlacedCrateProp` — function — line 55
+- `disposePlacedContainerProp` — function — line 66
 
 ## `world/createBeehives.ts`
 
@@ -2380,9 +2391,10 @@ Generated from exported TypeScript symbols.
 
 ## `world/worldGeneratedContainers.ts`
 
-- `createWorldGeneratedContainers` — function — line 108
+- `createWorldGeneratedContainers` — function — line 117
   - domain: world
-- `SaveWorldGeneratedContainer` — type — line 15
-- `WorldGeneratedContainerEntry` — type — line 25
-- `WorldGeneratedContainers` — type — line 36
-- `WorldGeneratedContainerSpec` — type — line 73
+- `SaveWorldGeneratedContainer` — type — line 19
+- `WorldGeneratedContainerEntry` — type — line 29
+- `WorldGeneratedContainers` — type — line 40
+- `WorldGeneratedContainerSpec` — type — line 79
+- `WorldGeneratedContainerVisual` — type — line 77

@@ -362,6 +362,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/worldBundle.caveCrate.test.ts`
 - `app/worldBundle.caveTreasure.test.ts`
 - `app/worldBundle.ts`
 - `quests/dungeonBanditTreasure.test.ts`
@@ -397,7 +398,6 @@ Generated from TypeScript imports.
 - `settlement/houseLighting.ts`
 - `settlement/propSpecs.ts`
 - `settlement/propUtils.ts`
-- `settlement/settlementStructures.ts`
 - `world/cartProp.ts`
 - `world/caves/caveContentAnchors.ts`
 
@@ -531,6 +531,25 @@ Generated from TypeScript imports.
 - `world/createCaves.ts`
 - `world/locations/treasureMapBearCave.test.ts`
 - `world/locations/treasureMapBearCave.ts`
+
+## `world/caves/caveCrateLoot.test.ts`
+
+**Imports**
+
+- `world/caves/caveCrateLoot.ts`
+
+## `world/caves/caveCrateLoot.ts`
+
+**Imports**
+
+- `items/items.ts`
+- `world/parseSeed.ts`
+
+**Imported by**
+
+- `app/worldBundle.caveCrate.test.ts`
+- `app/worldBundle.ts`
+- `world/caves/caveCrateLoot.test.ts`
 
 ## `world/caves/caveGroundQuery.test.ts`
 
@@ -1824,6 +1843,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/worldBundle.caveCrate.test.ts`
 - `app/worldBundle.caveTreasure.test.ts`
 - `app/worldBundle.ts`
 - `world/caves/caveWorldgenCache.test.ts`
@@ -3504,6 +3524,7 @@ Generated from TypeScript imports.
 - `terrain/riverNetwork.ts`
 - `terrain/terrainDetailNormalMap.ts`
 - `world/caveGenerator.ts`
+- `world/caves/caveCrateLoot.ts`
 - `world/caves/caveRng.ts`
 - `world/caves/mountainCaveSites.ts`
 - `world/caves/spikeTestCave.ts`

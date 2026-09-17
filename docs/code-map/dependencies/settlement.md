@@ -2151,7 +2151,6 @@ Generated from TypeScript imports.
 
 - `app/worldBundle.ts`
 - `settlement/props.ts`
-- `world/caves/caveAdventureProps.ts`
 - `world/createPlayerTroughs.ts`
 - `world/playerWellProp.ts`
 
