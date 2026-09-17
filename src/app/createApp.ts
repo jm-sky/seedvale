@@ -2648,6 +2648,10 @@ export async function createApp(
       const def = bundle.settlementsManager.getHomeDef()
       return { x: def.x, z: def.z }
     },
+    settlements: () => ({
+      getHomeDef: () => bundle.settlementsManager.getHomeDef(),
+      peekDef: (cell) => bundle.settlementsManager.peekDef(cell),
+    }),
     dayNight,
     player,
     monitor: perfMonitor,

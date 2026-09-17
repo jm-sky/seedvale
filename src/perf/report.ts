@@ -173,6 +173,12 @@ export function formatReport(report: PerfReportJson): string {
     ctx.grassMacroVariation != null ? `  grassMacroVariation: ${ctx.grassMacroVariation ? 'ON' : 'OFF'}` : null,
     ctx.viewportWidth != null && ctx.viewportHeight != null ? `  viewport: ${ctx.viewportWidth}x${ctx.viewportHeight}` : null,
     ctx.scenarioAnchor ? `  anchor: (${round1(ctx.scenarioAnchor.x)}, ${round1(ctx.scenarioAnchor.z)})` : null,
+    ctx.scenarioSettlement
+      ? `  settlement: ${ctx.scenarioSettlement.name} (${ctx.scenarioSettlement.id}) `
+        + `terrain=${ctx.scenarioSettlement.terrain} size=${ctx.scenarioSettlement.size} `
+        + `families=${ctx.scenarioSettlement.familyCount} residents=${ctx.scenarioSettlement.residentCount} `
+        + `pos=(${round1(ctx.scenarioSettlement.x)}, ${round1(ctx.scenarioSettlement.z)})`
+      : null,
     ctx.route ? `  route: start=(${round1(ctx.route.startX)}, ${round1(ctx.route.startZ)}) speed=${ctx.route.speedMps} m/s duration=${ctx.route.durationSec}s` : null,
   ].filter((line): line is string => line !== null)
 

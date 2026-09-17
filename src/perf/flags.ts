@@ -1,4 +1,6 @@
-import type { BenchmarkScenarioId } from './benchmarkScenarios'
+import { BENCHMARK_SCENARIO_IDS, type BenchmarkScenarioId } from './benchmarkScenarios'
+
+const BENCHMARK_SCENARIO_ID_SET: ReadonlySet<string> = new Set(BENCHMARK_SCENARIO_IDS)
 
 function params(): URLSearchParams | null {
   if (typeof window === 'undefined') return null
@@ -66,20 +68,13 @@ export function pointLightBudgetFromUrl(): number | null {
   return parsePointLightBudgetFlag(p.get('pointLightBudget'), p.has('pointLightBudget'))
 }
 
-export function benchmarkScenarioFromUrl(): BenchmarkScenarioId | null {
-  const raw = params()?.get('benchmark')
+export function parseBenchmarkScenarioId(raw: string | null | undefined): BenchmarkScenarioId | null {
   if (!raw) return null
   const id = raw.trim().toLowerCase()
-  if (
-    id === 'current'
-    || id === 'forest'
-    || id === 'settlement'
-    || id === 'water'
-    ||     id === 'night'
-    || id === 'stress'
-    || id === 'stream'
-  ) {
-    return id
-  }
+  if (BENCHMARK_SCENARIO_ID_SET.has(id)) return id as BenchmarkScenarioId
   return null
+}
+
+export function benchmarkScenarioFromUrl(): BenchmarkScenarioId | null {
+  return parseBenchmarkScenarioId(params()?.get('benchmark'))
 }

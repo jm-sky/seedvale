@@ -18,6 +18,7 @@ export {
   DEFAULT_POINT_LIGHT_BUDGET,
   isPerfUrlEnabled,
   isProgramCensusUrlEnabled,
+  parseBenchmarkScenarioId,
   parsePointLightBudgetFlag,
   pointLightBudgetFromUrl,
 } from './flags'
@@ -67,4 +68,5 @@ export type {
   PerfFilter,
   PerfLiveStats,
   PerfReportJson,
+  ScenarioSettlement,
 } from './types'

@@ -100,6 +100,18 @@ export type ScenarioRoute = {
   durationSec: number
 }
 
+/** Settlement identity for settlement-targeted scenarios (plan tools-016). */
+export type ScenarioSettlement = {
+  id: string
+  name: string
+  terrain: string
+  size: string
+  familyCount: number
+  residentCount: number
+  x: number
+  z: number
+}
+
 export type PerfContext = {
   loadedChunks: number
   npcCount: number
@@ -123,6 +135,8 @@ export type PerfContext = {
   viewportHeight?: number
   scenarioAnchor?: ScenarioAnchor
   route?: ScenarioRoute
+  /** Selected settlement for `settlement-heavy` (plan tools-016). */
+  scenarioSettlement?: ScenarioSettlement
   /** `config.terrain.grass.macroVariationEnabled` (world-terrain-012) — recorded
    *  so an A/B benchmark export self-identifies which side of the comparison
    *  it captured, per the plan's requirement that OFF/ON captures can't be

@@ -2,6 +2,7 @@ export const BENCHMARK_SCENARIO_IDS = [
   'current',
   'forest',
   'settlement',
+  'settlement-heavy',
   'water',
   'night',
   'stress',

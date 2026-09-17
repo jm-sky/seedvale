@@ -1,7 +1,7 @@
 # Plan: Heavy settlement performance benchmark
 
 **Created:** 2026-09-17
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — implemented + technically verified (`tsc`/lint/vitest/build). Browser/manual verification owned by the user (`?benchmark=settlement-heavy`).
 **Priority:** high · **Effort:** S
 **Depends on:** ~~tools-001~~
 **Domain:** `tools`

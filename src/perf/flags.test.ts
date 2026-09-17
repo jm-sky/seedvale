@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
+import { BENCHMARK_SCENARIO_IDS } from './benchmarkScenarios'
 import {
   DEFAULT_POINT_LIGHT_BUDGET,
+  parseBenchmarkScenarioId,
   parsePointLightBudgetFlag,
   pointLightBudgetFromUrl,
 } from './flags'
@@ -38,5 +40,27 @@ describe('parsePointLightBudgetFlag — production default 16', () => {
 describe('pointLightBudgetFromUrl', () => {
   it('returns the production default when window/URL is unavailable', () => {
     expect(pointLightBudgetFromUrl()).toBe(DEFAULT_POINT_LIGHT_BUDGET)
+  })
+})
+
+describe('parseBenchmarkScenarioId', () => {
+  it('accepts settlement-heavy', () => {
+    expect(parseBenchmarkScenarioId('settlement-heavy')).toBe('settlement-heavy')
+    expect(BENCHMARK_SCENARIO_IDS).toContain('settlement-heavy')
+  })
+
+  it('accepts known scenarios case-insensitively', () => {
+    expect(parseBenchmarkScenarioId('Settlement')).toBe('settlement')
+    expect(parseBenchmarkScenarioId(' STREAM ')).toBe('stream')
+  })
+
+  it('rejects unknown scenario ids', () => {
+    expect(parseBenchmarkScenarioId('not-a-scenario')).toBeNull()
+  })
+
+  it('returns null when the param is absent or empty', () => {
+    expect(parseBenchmarkScenarioId(null)).toBeNull()
+    expect(parseBenchmarkScenarioId(undefined)).toBeNull()
+    expect(parseBenchmarkScenarioId('')).toBeNull()
   })
 })

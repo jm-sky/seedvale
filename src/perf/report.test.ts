@@ -333,4 +333,93 @@ describe('buildReport', () => {
     expect(dump).toContain('riverTileBuild')
     expect(dump).toContain('OTHER')
   })
+
+  it('includes scenarioSettlement identity in the reproducibility section', () => {
+    const categoryMsSum = new Float64Array(PERF_CATEGORY_COUNT)
+    const report = buildReport({
+      durationSec: 30,
+      scenario: 'settlement-heavy',
+      totals: {
+        frames: 2,
+        frameMsSum: 40,
+        frameMsMin: 16,
+        frameMsMax: 24,
+        frameMs: [16, 24],
+        drawCallsSum: 200,
+        drawCallsMax: 120,
+        trianglesSum: 1_000_000,
+        renderCategoryMs: [],
+        categoryMsSum,
+        spikeCounts: new Int32Array(PERF_CATEGORY_COUNT),
+        hitchCounts: new Int32Array(PERF_CATEGORY_COUNT),
+        hitchByLabel: new Map(),
+        longFrameCount: 0,
+        longFrames: [],
+        mirrorDrawCallsSum: 0,
+        geometriesLast: 0,
+        texturesLast: 0,
+      },
+      context: {
+        loadedChunks: 49,
+        npcCount: 40,
+        faunaCount: 12,
+        pixelRatio: 1,
+        quality: 'High',
+        scenarioAnchor: { x: 560, z: -280 },
+        scenarioSettlement: {
+          id: '2_-1',
+          name: 'Highpeak',
+          terrain: 'mountain',
+          size: 'XL',
+          familyCount: 8,
+          residentCount: 24,
+          x: 560,
+          z: -280,
+        },
+      },
+    })
+    const text = formatReport(report)
+    expect(text).toContain('settlement: Highpeak (2_-1)')
+    expect(text).toContain('terrain=mountain')
+    expect(text).toContain('size=XL')
+    expect(text).toContain('families=8')
+    expect(text).toContain('residents=24')
+  })
+
+  it('omits settlement identity when scenarioSettlement is absent', () => {
+    const categoryMsSum = new Float64Array(PERF_CATEGORY_COUNT)
+    const report = buildReport({
+      durationSec: 30,
+      scenario: 'settlement',
+      totals: {
+        frames: 2,
+        frameMsSum: 40,
+        frameMsMin: 16,
+        frameMsMax: 24,
+        frameMs: [16, 24],
+        drawCallsSum: 200,
+        drawCallsMax: 120,
+        trianglesSum: 1_000_000,
+        renderCategoryMs: [],
+        categoryMsSum,
+        spikeCounts: new Int32Array(PERF_CATEGORY_COUNT),
+        hitchCounts: new Int32Array(PERF_CATEGORY_COUNT),
+        hitchByLabel: new Map(),
+        longFrameCount: 0,
+        longFrames: [],
+        mirrorDrawCallsSum: 0,
+        geometriesLast: 0,
+        texturesLast: 0,
+      },
+      context: {
+        loadedChunks: 49,
+        npcCount: 8,
+        faunaCount: 12,
+        pixelRatio: 1,
+        quality: 'High',
+        scenarioAnchor: { x: 0, z: 0 },
+      },
+    })
+    expect(formatReport(report)).not.toContain('settlement:')
+  })
 })

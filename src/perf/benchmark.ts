@@ -1,10 +1,11 @@
 import type { QualityPreset } from '../config/qualityProfiles'
 import type { WorldConfig } from '../config/worldConfig'
+import type { SettlementCell, SettlementDef } from '../settlement/settlementGenerator'
 import type { DayNightState } from '../world/dayNight'
 import type { BenchmarkScenarioId } from './benchmarkScenarios'
 import type { IsolationHost } from './isolationProbe'
 import type { PerfMonitor } from './monitor'
-import type { PerfReportJson } from './types'
+import type { PerfReportJson, ScenarioSettlement } from './types'
 import { worldToChunk } from '../terrain/chunkGrid'
 import { buildAgentCpuReport, formatAgentCpuReport, getAgentCpuDiag } from './agentCpuDiag'
 import {
@@ -12,6 +13,10 @@ import {
   formatGrassFinalizationReport,
   getGrassFinalizationDiag,
 } from './grassFinalizationDiag'
+import {
+  scenarioSettlementFromDef,
+  selectHeavySettlement,
+} from './heavySettlementScenario'
 import { formatIsolationReport, runIsolationProbes } from './isolationProbe'
 import { formatLongFrameAttribution } from './longFrameFormat'
 import { formatProgramAttributionReport, formatProgramCensusReport, formatProgramCompileCostReport, getProgramCensus } from './programCensus'
@@ -55,6 +60,13 @@ export type BenchmarkHost = {
   // codebase's `WorldContext`/`bundle.x` accessor convention.
   chunkManager: () => TerrainProbe
   home: () => { x: number; z: number }
+  /** Live settlement-def seam for `settlement-heavy` (plan tools-016). Same
+   *  lifetime rule as `chunkManager` — resolve through the current
+   *  `WorldBundle`, never capture a replaceable manager by value. */
+  settlements: () => {
+    getHomeDef: () => SettlementDef
+    peekDef: (cell: SettlementCell) => SettlementDef | null
+  }
   dayNight: DayNightState
   player: { setPosition: (x: number, z: number) => void; mesh: { position: { x: number; z: number } } }
   monitor: PerfMonitor
@@ -154,10 +166,26 @@ export function createBenchmarkRunner(host: BenchmarkHost): BenchmarkRunner {
         let z = saved.z
         let timeOfDay = saved.timeOfDay
         let anchor: { x: number; z: number } | undefined
+        let scenarioSettlement: ScenarioSettlement | undefined
         if (id === 'settlement') {
           x = home.x
           z = home.z
           anchor = { x, z }
+        } else if (id === 'settlement-heavy') {
+          const settlements = host.settlements()
+          const homeDef = settlements.getHomeDef()
+          const selected = selectHeavySettlement({
+            home: homeDef,
+            peekDef: (cell) => settlements.peekDef(cell),
+          })
+          if (!selected.ok) {
+            console.error(`[benchmark] settlement-heavy: ${selected.reason}`)
+            return null
+          }
+          x = selected.def.x
+          z = selected.def.z
+          anchor = { x, z }
+          scenarioSettlement = scenarioSettlementFromDef(selected.def)
         } else if (id === 'forest' || id === 'stress') {
           const found = seekForest(host.chunkManager(), home.x, home.z)
           x = found.x
@@ -236,6 +264,7 @@ export function createBenchmarkRunner(host: BenchmarkHost): BenchmarkRunner {
             ...baseContext,
             timeOfDay,
             scenarioAnchor: anchor,
+            scenarioSettlement,
             route: id === 'stream'
               ? { startX: x, startZ: z, speedMps: STREAM_SPEED_MPS, updateMs: STREAM_UPDATE_MS, durationSec }
               : undefined,
