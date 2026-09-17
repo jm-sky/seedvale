@@ -26,7 +26,7 @@ The current code also contains a generic instance-transfer integrity hole: conta
 1. Prevent `Skrytka bandytów` from advancing past deep-stash recovery until the Player owns both exact story-item instances.
 2. Require both exact instances for every terminal decision whose authored text assumes possession of the ledger and marked property.
 3. Replace the vague no-action terminal reminder with explicit guidance that both story items must be carried.
-4. Make world-container instance withdrawal rollback-safe so an instance cannot disappear between source removal and destination insertion.
+4. Make world/player-container instance withdrawal rollback-safe so an instance cannot disappear between source removal and destination insertion.
 5. Repair already-invalid active saves conservatively, without duplicating an instance that still exists in known storage.
 6. Preserve existing ownership boundaries: Inventory owns item instances; `WorldGeneratedContainers` owns the stash; `QuestManager` owns quest progress only.
 
@@ -55,6 +55,10 @@ Use these stable ids. Do not replace exact-instance semantics with kind/count ch
 ### Story items already use normal Inventory persistence
 
 Player inventory instances serialize through `inventory.instancesToJSON()` and load through `Inventory.instancesFromJSON(...)`. No new persistence field is required for healthy saves.
+
+### Story category does not mean “must stay on Player”
+
+`story` is presentation-only. The generic container UI can move exact instances into other storage. Therefore “missing from Player Inventory” means “not carried”, not automatically “destroyed”. Recovery must locate the exact id across legal storage before recreating it.
 
 ### World-generated container snapshots are authoritative
 
@@ -102,7 +106,7 @@ If implementation can cheaply distinguish one missing item using existing invent
 
 ### 4. Make instance withdrawal rollback-safe
 
-Fix the generic world/player-container instance transfer in `src/app/actions/containerActions.ts`.
+Fix the generic container instance transfer in `src/app/actions/containerActions.ts`.
 
 For both single `onWithdrawInstance` and `onTakeAll` instance paths:
 
@@ -120,27 +124,27 @@ A failed transfer must leave the exact same instance id in exactly one authorita
 
 ### 5. Conservative recovery for already-invalid saves
 
-Add a narrow dungeon-bandit reconciliation during world/quest composition after Player Inventory and world-generated containers are available and before the quest is presented as terminally actionable.
+Add a narrow dungeon-bandit reconciliation during world/quest composition after Player Inventory and storage containers are available and before the quest is presented as terminally actionable.
 
 Recovery applies only when all are true:
 
 - the dungeon-bandit quest is accepted and still non-terminal;
 - progress is at or beyond the deep-stash acquisition / decision boundary;
 - an expected story instance is absent from Player Inventory;
-- the same exact instance is absent from the bound deep stash;
 - the implementation has checked every existing storage domain that can legally hold these story instances and confirmed the exact id is not already present.
 
-Then restore only the missing exact instance to the original bound deep stash (preferred) so the Player must physically recover it again. Do not grant it directly to inventory and do not reset unrelated loot.
-
-At minimum inspect:
+Before recreating an exact id, inspect at least:
 
 - Player Inventory;
-- the bound `WorldGeneratedContainers` deep stash;
-- Player placed containers if story instances can be deposited there in current code.
+- **all** `WorldGeneratedContainers`, not only the original dungeon stash — the generic transfer UI allows depositing instances into another world-generated container;
+- all Player placed containers;
+- the currently carried Player container, which is not part of the placed-container `list()` while carried.
 
-If another legal ownership domain exists on current `main` (for example a generic NPC transfer path that accepts arbitrary story instances), include it before enabling automatic recreation. If exhaustive ownership cannot be established safely, skip automatic recreation and keep the improved diagnostic rather than risk duplication.
+If another current ownership domain accepts arbitrary story instances (for example a generic NPC-personal-inventory transfer path), include it as well. If exhaustive ownership cannot be established safely, skip automatic recreation and keep the improved diagnostic rather than risk duplication.
 
-This is legacy/state repair, not a second source of truth. Healthy saves must be a no-op.
+Only after the exact id is proven absent everywhere should recovery recreate that canonical instance and place it back into the original bound deep stash. The Player must physically recover it again. Do not grant it directly to inventory and do not reset unrelated loot.
+
+Recovery is legacy/state repair, not a second source of truth. Healthy saves must be a no-op and repeated reconciliation must be idempotent.
 
 ## Tests
 
@@ -172,8 +176,10 @@ Add the nearest focused test around `containerActions` / extracted transfer help
 Cover:
 
 - healthy inventory-owned item → no recreation;
-- item still in deep stash → no recreation;
+- item still in original deep stash → no recreation;
+- item in another world-generated container → no recreation;
 - item in Player placed storage → no recreation;
+- item in carried Player container → no recreation;
 - genuinely absent item in qualifying active quest → recreated once in the bound deep stash;
 - repeat/reload is idempotent;
 - terminal quest → no recreation.
@@ -220,7 +226,8 @@ Manual browser verification by User:
 2. Loot both — quest advances; Marek exposes the expected choices.
 3. Put one story item in a Player chest — Marek gives a clear carry-both-items reminder, not a dead-end sentence.
 4. Retrieve it — choices return.
-5. Load an affected old save with missing story items — missing item is recoverable from the original deep stash only if reconciliation proved it absent everywhere else.
-6. Save/load after recovery — no duplicate ledger or marked valuable.
+5. Move a story item to another storage container — recovery must not duplicate it.
+6. Load an affected old save with a genuinely missing story item — the item is recoverable from the original deep stash only after reconciliation proves it absent everywhere else.
+7. Save/load after recovery — no duplicate ledger or marked valuable.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
