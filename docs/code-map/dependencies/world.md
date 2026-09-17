@@ -1974,6 +1974,7 @@ Generated from TypeScript imports.
 
 - `app/interactables.ts`
 - `app/worldBundle.ts`
+- `quests/dungeonBanditTreasure.test.ts`
 - `world/helperDeliveryHooks.ts`
 - `world/locations/treasureMapBearCave.ts`
 

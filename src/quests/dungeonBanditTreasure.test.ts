@@ -8,6 +8,7 @@ import type { QuestSocialAvailabilityLookup } from './QuestManager'
 import { Inventory } from '../items/Inventory'
 import { resolveCaveAdventureContentPolicy } from '../world/caves/caveAdventureContentPolicy'
 import { DUNGEON_DEEP_CHAMBER_NODE_ID } from '../world/caves/dungeonTopology'
+import { createPlacedContainers } from '../world/createPlacedContainers'
 import { createWorldGeneratedContainers } from '../world/worldGeneratedContainers'
 import {
   buildDungeonBanditTreasureQuest,
@@ -23,6 +24,7 @@ import {
   dungeonBanditDeepReservationKey,
   dungeonBanditLedgerInstanceId,
   dungeonBanditMarkedValuableInstanceId,
+  dungeonBanditOrphanedInstances,
   dungeonBanditSideReservationKey,
   eligibleDungeonBanditCaves,
   isDungeonBanditDeepStashLooted,
@@ -370,5 +372,262 @@ describe('dungeon bandit socially consequential dialogue (plan quests-progressio
     const keepLow = terminalManager({}, standing(0))
     expect(keepLow.qm.onInteract(binding.giverNpcId)?.actions?.[1]?.onSelect())
       .toBe('No tak. Czyli jednak po klejnot tam poszedłeś.')
+  })
+})
+
+describe('dungeon bandit exact-instance acquisition gating (plan quests-progression-056)', () => {
+  const caveId = 'cave:dungeon-a'
+  const binding = {
+    questId: 'world:dungeon-bandit:home:cave',
+    settlementId: 'home',
+    giverNpcId: 'home:npc:0',
+    claimantNpcId: 'home:npc:1',
+    caveId,
+    caveLocationId: 'cave:cave:dungeon-a',
+    deepLootAnchorId: 'deep',
+    sideTreasureAnchorIds: [] as readonly string[],
+    deepContainerId: 'deep-box',
+    sideContainerIds: [] as readonly string[],
+    ledgerInstanceId: dungeonBanditLedgerInstanceId(caveId),
+    markedValuableInstanceId: dungeonBanditMarkedValuableInstanceId(caveId),
+  }
+  const npcs = [npc('home:npc:0', 'guard'), npc('home:npc:1', 'trader')]
+
+  function acquisitionManager(instances: ReturnType<typeof createDungeonBanditLedgerInstance>[]) {
+    const def = buildDungeonBanditTreasureQuest(binding, npcs, 'Osada', 'stary loch')
+    const inventory = new Inventory({}, Infinity, instances)
+    const qm = new QuestManager(
+      [def],
+      undefined,
+      inventory,
+      { progress: [{ id: def.id, state: 'active', stageIndex: 1 }], relations: {} },
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      {
+        hasReadItem: () => false,
+        hasDiscoveredLocation: () => false,
+        isWorldContainerLooted: () => true,
+        hasResolvedHiddenFindSpot: () => false,
+        hasAcquiredPortableContainer: () => false,
+      },
+    )
+    return { def, qm }
+  }
+
+  it('does not advance past acquisition when only the marked valuable is owned', () => {
+    const { qm, def } = acquisitionManager([createDungeonBanditMarkedValuableInstance(caveId)])
+    expect(qm.exportProgress().find((entry) => entry.id === def.id)?.stageIndex).toBe(1)
+    expect(qm.getState(def.id)).toBe('active')
+  })
+
+  it('does not advance past acquisition when only the ledger is owned', () => {
+    const { qm, def } = acquisitionManager([createDungeonBanditLedgerInstance(caveId)])
+    expect(qm.exportProgress().find((entry) => entry.id === def.id)?.stageIndex).toBe(1)
+    expect(qm.getState(def.id)).toBe('active')
+  })
+
+  it('advances to the decision stage only once both exact instances are owned and the stash is looted', () => {
+    const { qm, def } = acquisitionManager([
+      createDungeonBanditLedgerInstance(caveId),
+      createDungeonBanditMarkedValuableInstance(caveId),
+    ])
+    // `catchUpActiveWorldObjectives` completes at most one newly satisfied
+    // slot per call (mirrors real play, where `gameLoop.ts` re-polls every
+    // tick) — matches the existing idiom in suspiciousTransportCaveCache.test.ts.
+    for (let i = 0; i < 3; i++) qm.pollWorldProgressionObjectives()
+    expect(qm.exportProgress().find((entry) => entry.id === def.id)?.stageIndex).toBe(2)
+  })
+
+  it('final reminder truthfully asks for both carried items', () => {
+    const def = buildDungeonBanditTreasureQuest(binding, npcs, 'Osada', 'stary loch')
+    expect(def.stages[2]?.reminderLine).toBe(
+      'Do rozstrzygnięcia sprawy musisz mieć przy sobie oznaczony klejnot i bandycki rejestr.',
+    )
+  })
+})
+
+describe('dungeon bandit story-item recovery ownership scan (plan quests-progression-056)', () => {
+  const caveId = 'cave:dungeon-a'
+  const binding = {
+    questId: 'world:dungeon-bandit:home:cave',
+    settlementId: 'home',
+    giverNpcId: 'home:npc:0',
+    claimantNpcId: 'home:npc:1',
+    caveId,
+    caveLocationId: 'cave:cave:dungeon-a',
+    deepLootAnchorId: 'deep',
+    sideTreasureAnchorIds: [] as readonly string[],
+    deepContainerId: 'deep-box',
+    sideContainerIds: [] as readonly string[],
+    ledgerInstanceId: dungeonBanditLedgerInstanceId(caveId),
+    markedValuableInstanceId: dungeonBanditMarkedValuableInstanceId(caveId),
+  }
+  const activeContext = { questState: 'active' as const, questStageIndex: 2, acquisitionStageIndex: 1 }
+
+  function emptyDomains(scene: Scene) {
+    const worldGeneratedContainers = createWorldGeneratedContainers(scene, () => 0, [
+      { id: binding.deepContainerId, kind: 'chest', x: 0, z: 0, yaw: 0, initialCounts: {} },
+    ])
+    const placedContainers = createPlacedContainers(scene, () => 0)
+    return { worldGeneratedContainers, placedContainers }
+  }
+
+  it('does not recreate an instance already owned by Player Inventory', () => {
+    const scene = new Scene()
+    const { worldGeneratedContainers, placedContainers } = emptyDomains(scene)
+    const inventory = new Inventory({}, Infinity, [
+      createDungeonBanditLedgerInstance(caveId),
+      createDungeonBanditMarkedValuableInstance(caveId),
+    ])
+    const orphaned = dungeonBanditOrphanedInstances(
+      binding,
+      activeContext,
+      { playerInventory: inventory, worldGeneratedContainers, placedContainers },
+    )
+    expect(orphaned).toEqual([])
+    worldGeneratedContainers.dispose()
+    placedContainers.dispose()
+  })
+
+  it('does not recreate an instance still in the original deep stash', () => {
+    const scene = new Scene()
+    const worldGeneratedContainers = createWorldGeneratedContainers(scene, () => 0, [
+      {
+        id: binding.deepContainerId,
+        kind: 'chest',
+        x: 0,
+        z: 0,
+        yaw: 0,
+        initialCounts: {},
+        initialInstances: [
+          createDungeonBanditLedgerInstance(caveId),
+          createDungeonBanditMarkedValuableInstance(caveId),
+        ],
+      },
+    ])
+    const placedContainers = createPlacedContainers(scene, () => 0)
+    const inventory = new Inventory({}, Infinity, [])
+    const orphaned = dungeonBanditOrphanedInstances(
+      binding,
+      activeContext,
+      { playerInventory: inventory, worldGeneratedContainers, placedContainers },
+    )
+    expect(orphaned).toEqual([])
+    worldGeneratedContainers.dispose()
+    placedContainers.dispose()
+  })
+
+  it('does not recreate an instance in another world-generated container', () => {
+    const scene = new Scene()
+    const otherId = 'other-container'
+    const worldGeneratedContainers = createWorldGeneratedContainers(scene, () => 0, [
+      { id: binding.deepContainerId, kind: 'chest', x: 0, z: 0, yaw: 0, initialCounts: {} },
+      { id: otherId, kind: 'chest', x: 1, z: 1, yaw: 0, initialCounts: {} },
+    ])
+    worldGeneratedContainers.depositInstance(otherId, createDungeonBanditLedgerInstance(caveId))
+    worldGeneratedContainers.depositInstance(otherId, createDungeonBanditMarkedValuableInstance(caveId))
+    const placedContainers = createPlacedContainers(scene, () => 0)
+    const inventory = new Inventory({}, Infinity, [])
+    const orphaned = dungeonBanditOrphanedInstances(
+      binding,
+      activeContext,
+      { playerInventory: inventory, worldGeneratedContainers, placedContainers },
+    )
+    expect(orphaned).toEqual([])
+    worldGeneratedContainers.dispose()
+    placedContainers.dispose()
+  })
+
+  it('does not recreate an instance in Player placed storage', () => {
+    const scene = new Scene()
+    const { worldGeneratedContainers, placedContainers } = emptyDomains(scene)
+    const record = placedContainers.place('chest', 0, 0, 0)
+    placedContainers.depositInstance(record.id, createDungeonBanditLedgerInstance(caveId))
+    placedContainers.depositInstance(record.id, createDungeonBanditMarkedValuableInstance(caveId))
+    const inventory = new Inventory({}, Infinity, [])
+    const orphaned = dungeonBanditOrphanedInstances(
+      binding,
+      activeContext,
+      { playerInventory: inventory, worldGeneratedContainers, placedContainers },
+    )
+    expect(orphaned).toEqual([])
+    worldGeneratedContainers.dispose()
+    placedContainers.dispose()
+  })
+
+  it('does not recreate an instance in the currently carried Player container', () => {
+    const scene = new Scene()
+    const { worldGeneratedContainers, placedContainers } = emptyDomains(scene)
+    const record = placedContainers.place('chest', 0, 0, 0)
+    placedContainers.depositInstance(record.id, createDungeonBanditLedgerInstance(caveId))
+    placedContainers.depositInstance(record.id, createDungeonBanditMarkedValuableInstance(caveId))
+    expect(placedContainers.pickUp(record.id)).toBe(true)
+    const inventory = new Inventory({}, Infinity, [])
+    const orphaned = dungeonBanditOrphanedInstances(
+      binding,
+      activeContext,
+      { playerInventory: inventory, worldGeneratedContainers, placedContainers },
+    )
+    expect(orphaned).toEqual([])
+    worldGeneratedContainers.dispose()
+    placedContainers.dispose()
+  })
+
+  it('recreates a genuinely absent instance into the bound deep stash exactly once, then stays idempotent', () => {
+    const scene = new Scene()
+    const { worldGeneratedContainers, placedContainers } = emptyDomains(scene)
+    const inventory = new Inventory({}, Infinity, [])
+    const domains = { playerInventory: inventory, worldGeneratedContainers, placedContainers }
+
+    const orphaned = dungeonBanditOrphanedInstances(binding, activeContext, domains)
+    expect(orphaned.map((instance) => instance.id).sort()).toEqual([
+      binding.ledgerInstanceId,
+      binding.markedValuableInstanceId,
+    ].sort())
+    for (const instance of orphaned) worldGeneratedContainers.depositInstance(binding.deepContainerId, instance)
+    expect(worldGeneratedContainers.containerInstances(binding.deepContainerId, 'bandit_ledger')[0]?.id)
+      .toBe(binding.ledgerInstanceId)
+    expect(worldGeneratedContainers.containerInstances(binding.deepContainerId, 'marked_valuable')[0]?.id)
+      .toBe(binding.markedValuableInstanceId)
+
+    const repeat = dungeonBanditOrphanedInstances(binding, activeContext, domains)
+    expect(repeat).toEqual([])
+    worldGeneratedContainers.dispose()
+    placedContainers.dispose()
+  })
+
+  it('does not recreate anything for a terminal quest', () => {
+    const scene = new Scene()
+    const { worldGeneratedContainers, placedContainers } = emptyDomains(scene)
+    const inventory = new Inventory({}, Infinity, [])
+    const orphaned = dungeonBanditOrphanedInstances(
+      binding,
+      { questState: 'complete', questStageIndex: 2, acquisitionStageIndex: 1 },
+      { playerInventory: inventory, worldGeneratedContainers, placedContainers },
+    )
+    expect(orphaned).toEqual([])
+    worldGeneratedContainers.dispose()
+    placedContainers.dispose()
+  })
+
+  it('does not recreate anything before the acquisition boundary', () => {
+    const scene = new Scene()
+    const { worldGeneratedContainers, placedContainers } = emptyDomains(scene)
+    const inventory = new Inventory({}, Infinity, [])
+    const orphaned = dungeonBanditOrphanedInstances(
+      binding,
+      { questState: 'active', questStageIndex: 0, acquisitionStageIndex: 1 },
+      { playerInventory: inventory, worldGeneratedContainers, placedContainers },
+    )
+    expect(orphaned).toEqual([])
+    worldGeneratedContainers.dispose()
+    placedContainers.dispose()
   })
 })

@@ -42,9 +42,15 @@ Generated from exported TypeScript symbols.
 - `dungeonBanditDeepReservationKey` — function — line 62
 - `dungeonBanditDeepStashContainerSpec` — function — line 331
   - domain: quests-progression
+- `dungeonBanditInstanceOwned` — function — line 552
+  - domain: quests-progression
 - `dungeonBanditLedgerInstanceId` — function — line 70
 - `dungeonBanditMarkedValuableInstanceId` — function — line 74
+- `dungeonBanditOrphanedInstances` — function — line 583
+  - domain: quests-progression
+- `DungeonBanditOwnershipDomains` — type — line 532
 - `dungeonBanditQuestId` — function — line 82
+- `DungeonBanditRecoveryContext` — type — line 565
 - `dungeonBanditSideCacheContainerSpecs` — function — line 300
   - domain: quests-progression
 - `dungeonBanditSideReservationKey` — function — line 66

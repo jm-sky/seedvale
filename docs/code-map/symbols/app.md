@@ -36,9 +36,16 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/containerActions.ts`
 
-- `ContainerActionDeps` — type — line 77
-- `ContainerActions` — type — line 58
-- `createContainerActions` — function — line 92
+- `ContainerActionDeps` — type — line 78
+- `ContainerActions` — type — line 59
+- `createContainerActions` — function — line 93
+
+## `app/actions/containerInstanceTransfer.ts`
+
+- `InstanceContainerStore` — type — line 6
+- `InstanceDestination` — type — line 12
+- `withdrawInstanceRollbackSafe` — function — line 30
+  - domain: items-player
 
 ## `app/actions/cookMealIntent.ts`
 
@@ -274,13 +281,13 @@ Generated from exported TypeScript symbols.
 
 ## `app/createApp.ts`
 
-- `createApp` — function — line 414
+- `createApp` — function — line 415
   - system: app-composition
   - role: Composition root: builds every long-lived system, threads their dependencies and owns app-level lifecycle (boot, rebuild, dispose).
   - owns: WorldBundle, GameLoop, AppRenderLoop
   - lifecycle: boot
   - integration: Wires world, player, UI, persistence and audio systems together.
-- `NewAppOptions` — type — line 383
+- `NewAppOptions` — type — line 384
 
 ## `app/faunaEncounterComposition.ts`
 

@@ -9,7 +9,7 @@ import type { CaveArchetype } from '../world/caves/caveArchetype'
 import type { CaveContentAnchor } from '../world/caves/caveContentAnchors'
 import type { WorldGeneratedContainerSpec } from '../world/worldGeneratedContainers'
 import type { OpportunityNpc } from './opportunities/worldQuestOpportunityTypes'
-import type { QuestDef, QuestDialogueReaction } from './quests'
+import type { QuestDef, QuestDialogueReaction, QuestState } from './quests'
 import { DUNGEON_DEEP_CHAMBER_NODE_ID } from '../world/caves/dungeonTopology'
 import { caveWorldLocationId } from '../world/locations/darkForestTreasureSite'
 import { adultOpportunityNpcs } from './opportunities/rpgQuestMatrices'
@@ -436,6 +436,12 @@ export function buildDungeonBanditTreasureQuest(
       },
       {
         objective: { type: 'loot_world_container', containerId: binding.deepContainerId },
+        objectives: [
+          { id: 'loot', objective: { type: 'loot_world_container', containerId: binding.deepContainerId } },
+          { id: 'ledger', objective: { type: 'own_item_instance', instanceId: binding.ledgerInstanceId } },
+          { id: 'valuable', objective: { type: 'own_item_instance', instanceId: binding.markedValuableInstanceId } },
+        ],
+        mode: 'all',
         description: 'Odnajdź głęboką skrytkę w lochu i zabierz oznaczony łup oraz rejestr.',
         reminderLine: 'Głęboka skrytka w lochu powinna kryć rejestr i oznaczony klejnot.',
         progressLine:
@@ -445,7 +451,7 @@ export function buildDungeonBanditTreasureQuest(
         objective: { type: 'await_quest_outcome' },
         description:
           `Zdecyduj: oddaj oznaczony łup ${claimantName}, przekaż dowody ${giverName}, albo zatrzymaj łup.`,
-        reminderLine: 'Oznaczony łup i rejestr wciąż wymagają decyzji.',
+        reminderLine: 'Do rozstrzygnięcia sprawy musisz mieć przy sobie oznaczony klejnot i bandycki rejestr.',
         dialogueActions: [
           {
             npc: { npcId: binding.claimantNpcId },
@@ -517,4 +523,73 @@ export function buildDungeonBanditTreasureQuest(
     // a generic opt-out would strand those instances outside quest tracking.
     abandonment: { allowed: false },
   }
+}
+
+/** Minimal structural read of the storage domains that can legally hold an
+ *  arbitrary story-item instance — matches `Inventory`/`WorldGeneratedContainers`/
+ *  `PlacedContainers` without importing them, so this stays testable against
+ *  plain fakes as well as the real stores. */
+export type DungeonBanditOwnershipDomains = {
+  playerInventory: { getInstance: (instanceId: string) => unknown }
+  worldGeneratedContainers: {
+    list: () => readonly { contents: { getInstance: (instanceId: string) => unknown } }[]
+  }
+  placedContainers: {
+    list: () => readonly { contents: { getInstance: (instanceId: string) => unknown } }[]
+    carriedNode: () => { instances: readonly { id: string }[] } | null
+  }
+}
+
+/**
+ * True when `instanceId` is currently held anywhere a player can legally
+ * store an item: Player Inventory, any world-generated container (not only
+ * the original dungeon stash — the generic transfer UI allows depositing
+ * into another one), any placed Player container, or the currently carried
+ * one. Reads existing owners only; never a second source of truth.
+ *
+ * @domain quests-progression
+ */
+export function dungeonBanditInstanceOwned(
+  instanceId: string,
+  domains: DungeonBanditOwnershipDomains,
+): boolean {
+  if (domains.playerInventory.getInstance(instanceId)) return true
+  if (domains.worldGeneratedContainers.list().some((entry) => entry.contents.getInstance(instanceId))) {
+    return true
+  }
+  if (domains.placedContainers.list().some((entry) => entry.contents.getInstance(instanceId))) return true
+  const carried = domains.placedContainers.carriedNode()
+  return carried?.instances.some((instance) => instance.id === instanceId) ?? false
+}
+
+export type DungeonBanditRecoveryContext = {
+  questState: QuestState
+  questStageIndex: number
+  /** Index of the materialized stage that requires both exact instances
+   *  (derived from `def.stages`, never a hardcoded display string). */
+  acquisitionStageIndex: number
+}
+
+/**
+ * Conservative legacy-save repair (plan quests-progression-056): recreates
+ * the ledger/marked-valuable instance only when the quest is `active`, at or
+ * past the deep-stash acquisition/decision boundary, and the exact id is
+ * proven absent from every legal storage domain. No-op for healthy saves;
+ * idempotent across repeated calls once the recreated instance lands back in
+ * `binding.deepContainerId`. Never grants directly to Player Inventory.
+ *
+ * @domain quests-progression
+ */
+export function dungeonBanditOrphanedInstances(
+  binding: DungeonBanditTreasureBinding,
+  context: DungeonBanditRecoveryContext,
+  domains: DungeonBanditOwnershipDomains,
+): readonly ItemInstance[] {
+  if (context.questState !== 'active') return []
+  if (context.acquisitionStageIndex < 0 || context.questStageIndex < context.acquisitionStageIndex) return []
+  const candidates = [
+    createDungeonBanditLedgerInstance(binding.caveId),
+    createDungeonBanditMarkedValuableInstance(binding.caveId),
+  ]
+  return candidates.filter((instance) => !dungeonBanditInstanceOwned(instance.id, domains))
 }

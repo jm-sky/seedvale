@@ -115,6 +115,7 @@ import {
   DUNGEON_BANDIT_LEDGER_KIND,
   DUNGEON_BANDIT_MARKED_VALUABLE_KIND,
   DUNGEON_BANDIT_RETURN_MARKED_PROPERTY_OUTCOME,
+  dungeonBanditOrphanedInstances,
   isDungeonBanditDeepStashLooted,
 } from '../quests/dungeonBanditTreasure'
 import { getActiveDungeonBanditTreasureBinding } from '../quests/dungeonBanditTreasureRuntime'
@@ -192,7 +193,7 @@ import {
   opportunityNpcsFromSettlement,
 } from '../quests/opportunities/worldQuestMaterialization'
 import { QuestManager } from '../quests/QuestManager'
-import { bindDarkForestTreasureQuest, bindExactCaveQuests, bindTreasureMapBearCaveQuest, buildDarkForestTreasureQuest, buildHorseAcquisitionQuest, buildLandmarkQuests, buildTreasureMapBearCaveQuest, QUESTS } from '../quests/quests'
+import { bindDarkForestTreasureQuest, bindExactCaveQuests, bindTreasureMapBearCaveQuest, buildDarkForestTreasureQuest, buildHorseAcquisitionQuest, buildLandmarkQuests, buildTreasureMapBearCaveQuest, QUESTS, questStageObjectiveSlots } from '../quests/quests'
 import {
   isSuspiciousTransportCacheLooted,
   SUSPICIOUS_TRANSPORT_EVIDENCE_KIND,
@@ -1646,7 +1647,9 @@ export async function createApp(
 
       if (dungeonBanditBinding && questId === dungeonBanditBinding.questId) {
         const marked = inventory.getInstance(dungeonBanditBinding.markedValuableInstanceId)
+        const ledger = inventory.getInstance(dungeonBanditBinding.ledgerInstanceId)
         if (marked?.kind !== DUNGEON_BANDIT_MARKED_VALUABLE_KIND) return false
+        if (ledger?.kind !== DUNGEON_BANDIT_LEDGER_KIND) return false
         if (outcomeId === DUNGEON_BANDIT_KEEP_MARKED_PROPERTY_OUTCOME) return true
         if (outcomeId === DUNGEON_BANDIT_RETURN_MARKED_PROPERTY_OUTCOME) {
           const npcState = bundle.settlementsManager.getNpcState(dungeonBanditBinding.claimantNpcId)
@@ -1654,8 +1657,6 @@ export async function createApp(
           return npcState.personalInventory.canAddInstance(marked)
         }
         if (outcomeId === DUNGEON_BANDIT_GIVE_EVIDENCE_TO_GUARD_OUTCOME) {
-          const ledger = inventory.getInstance(dungeonBanditBinding.ledgerInstanceId)
-          if (ledger?.kind !== DUNGEON_BANDIT_LEDGER_KIND) return false
           const npcState = bundle.settlementsManager.getNpcState(dungeonBanditBinding.giverNpcId)
           if (!npcState || npcState.health.dead) return false
           return npcState.personalInventory.canAddInstance(marked)
@@ -2001,6 +2002,39 @@ export async function createApp(
     syncGuardEveningNightPolicies(questManager, () => bundle.settlementsManager.getLoaded())
   }
   refreshGuardEveningPolicies()
+
+  // Plan quests-progression-056 — conservative one-time repair for legacy
+  // saves that reached the dungeon-bandit deep-stash acquisition/decision
+  // boundary without owning both exact story items anywhere legal. No-op for
+  // healthy saves; recreates a proven-orphaned instance back into the bound
+  // deep stash only, never directly into Player Inventory.
+  if (dungeonBanditBinding) {
+    const dungeonBanditDef = questDefs.find((entry) => entry.id === dungeonBanditBinding.questId)
+    const acquisitionStageIndex = dungeonBanditDef?.stages.findIndex((stage) => (
+      questStageObjectiveSlots(stage).some((slot) => (
+        slot.objective.type === 'loot_world_container'
+        && slot.objective.containerId === dungeonBanditBinding.deepContainerId
+      ))
+    )) ?? -1
+    const dungeonBanditProgress = questManager.exportProgress()
+      .find((entry) => entry.id === dungeonBanditBinding.questId)
+    const orphanedInstances = dungeonBanditOrphanedInstances(
+      dungeonBanditBinding,
+      {
+        questState: dungeonBanditProgress?.state ?? 'not_offered',
+        questStageIndex: dungeonBanditProgress?.stageIndex ?? 0,
+        acquisitionStageIndex,
+      },
+      {
+        playerInventory: inventory,
+        worldGeneratedContainers: bundle.worldGeneratedContainers,
+        placedContainers: bundle.placedContainers,
+      },
+    )
+    for (const instance of orphanedInstances) {
+      bundle.worldGeneratedContainers.depositInstance(dungeonBanditBinding.deepContainerId, instance)
+    }
+  }
 
   // Now that `questManager` exists, the closures passed into `createWorldBundle`
   // above can actually reach it — see those call sites' comments.

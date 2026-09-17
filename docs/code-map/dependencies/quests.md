@@ -117,6 +117,7 @@ Generated from TypeScript imports.
 - `world/caves/caveAdventureContentPolicy.ts`
 - `world/caves/caveContentAnchors.ts`
 - `world/caves/dungeonTopology.ts`
+- `world/createPlacedContainers.ts`
 - `world/worldGeneratedContainers.ts`
 
 ## `quests/dungeonBanditTreasure.ts`

@@ -125,6 +125,7 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `app/actions/actionContext.ts`
+- `app/actions/containerInstanceTransfer.ts`
 - `app/actions/placementActions.ts`
 - `app/actions/placementYaw.ts`
 - `input/MouseLook.ts`
@@ -150,6 +151,24 @@ Generated from TypeScript imports.
 
 - `app/actions/placementPreviewActions.ts`
 - `app/createApp.ts`
+
+## `app/actions/containerInstanceTransfer.test.ts`
+
+**Imports**
+
+- `app/actions/containerInstanceTransfer.ts`
+- `items/itemInstances.ts`
+
+## `app/actions/containerInstanceTransfer.ts`
+
+**Imports**
+
+- `items/itemInstances.ts`
+
+**Imported by**
+
+- `app/actions/containerActions.ts`
+- `app/actions/containerInstanceTransfer.test.ts`
 
 ## `app/actions/cookMealIntent.test.ts`
 

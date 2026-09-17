@@ -1008,6 +1008,8 @@ Generated from TypeScript imports.
 - `ai/npcTradeAvailability.ts`
 - `app/actions/acquisitionFeedback.ts`
 - `app/actions/containerActions.ts`
+- `app/actions/containerInstanceTransfer.test.ts`
+- `app/actions/containerInstanceTransfer.ts`
 - `app/actions/fullCampIntent.test.ts`
 - `app/actions/groundActions.test.ts`
 - `app/actions/groundActions.ts`

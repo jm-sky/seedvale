@@ -1,7 +1,7 @@
 # Plan: Dungeon bandit story-item integrity and recovery
 
 **Created:** 2026-09-17
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** bug
 **Priority:** high · **Effort:** M
 **Depends on:** ~~quests-progression-026~~, ~~quests-progression-035~~

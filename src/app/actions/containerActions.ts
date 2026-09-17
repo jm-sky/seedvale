@@ -35,6 +35,7 @@ import { canLootNpcCorpse, corpseLootInventory, transferCorpseCountTo, transferC
 import { CHEST_DEPTH, CHEST_WIDTH } from '../../world/containerProp'
 import { attemptTreasureUnlock, treasureSiteForContainer } from '../../world/treasureSites'
 import { isActionBlocked, type PlayerActionContext } from './actionContext'
+import { withdrawInstanceRollbackSafe } from './containerInstanceTransfer'
 import { evaluatePlacementSite, previewGroundPlacement } from './placementActions'
 import { placementAimSite } from './placementYaw'
 
@@ -482,9 +483,8 @@ export function createContainerActions(
         toast.show(inventoryFullToastText(inventory, instance.kind, 1), 'error')
         return
       }
-      const withdrawn = store.withdrawInstance(openTransfer.id, instanceId)
+      const withdrawn = withdrawInstanceRollbackSafe(store, openTransfer.id, instanceId, inventory)
       if (!withdrawn) return
-      if (!inventory.addInstance(withdrawn)) return
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       ctx.onInventoryChanged()
       ctx.onWorldContainerWithdraw?.(openTransfer.id, withdrawn.kind, 1)
@@ -537,8 +537,8 @@ export function createContainerActions(
       for (const kind of INSTANCE_BACKED_KINDS) {
         for (const instance of entry.contents.getInstances(kind)) {
           if (!inventory.canAddInstance(instance)) continue
-          const withdrawn = store.withdrawInstance(openTransfer.id, instance.id)
-          if (!withdrawn || !inventory.addInstance(withdrawn)) continue
+          const withdrawn = withdrawInstanceRollbackSafe(store, openTransfer.id, instance.id, inventory)
+          if (!withdrawn) continue
           ctx.onWorldContainerWithdraw?.(openTransfer.id, withdrawn.kind, 1)
           transferredAny = true
         }

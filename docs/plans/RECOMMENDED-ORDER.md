@@ -34,9 +34,7 @@
 
 ### Bug Fixes
 
-1. `quests-progression-056` — **Dungeon bandit story-item integrity and recovery**  
-   🔴 `M` · ✅ ready · unlocks 0/0 · type: bug
-2. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
+1. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
    🔴 `M` · ✅ ready · unlocks 0/0 · type: fix
 
 ---
@@ -129,95 +127,91 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `M` · **Score:**  51  
    → **unlocks:** 1/2
 
-14. `quests-progression-056` — **Dungeon bandit story-item integrity and recovery**  
-  🔴 `M` · **Score:**  49  
-   → **unlocks:** 0/0
-
-15. `quests-progression-057` — **Injured cow Medicine alternative**  
+14. `quests-progression-057` — **Injured cow Medicine alternative**  
   🟡 `M` · **Score:**  49  
    → **unlocks:** 1/1
 
-16. `settlements-004` — **Gold Economic Realization & Source Entitlements**  
+15. `settlements-004` — **Gold Economic Realization & Source Entitlements**  
   🔴 `M` · **Score:**  49  
    → **unlocks:** 1/1
 
-17. `quests-progression-010` — **Abandoned gold mine → mining colony integration**  
+16. `quests-progression-010` — **Abandoned gold mine → mining colony integration**  
   🔴 `M` · **Score:**  61  
    → **unlocks:** 0/0
 
-18. `quests-progression-054` — **Hunters Brotherhood — exceptional animal finale**  
+17. `quests-progression-054` — **Hunters Brotherhood — exceptional animal finale**  
   🟡 `L` · **Score:**  44  
    → **unlocks:** 0/0
 
-19. `npc-047` — **Shepherd livestock threat response**  
+18. `npc-047` — **Shepherd livestock threat response**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 1/1
 
-20. `settlements-npcs-022` — **Household help and age-based work participation**  
+19. `settlements-npcs-022` — **Household help and age-based work participation**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 0/0
 
-21. `quests-progression-058` — **Injured dog discovery thread**  
+20. `quests-progression-058` — **Injured dog discovery thread**  
   🟡 `M` · **Score:**  37  
    → **unlocks:** 0/0
 
-22. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
+21. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
   🔴 `M` · **Score:**  35  
    → **unlocks:** 0/0
 
-23. `quests-progression-059` — **Settlement Known Deeds & Reputation Badges**  
+22. `quests-progression-059` — **Settlement Known Deeds & Reputation Badges**  
   🟡 `M` · **Score:**  35  
    → **unlocks:** 0/0
 
-24. `npc-048` — **Local threat assistance and guard response**  
+23. `npc-048` — **Local threat assistance and guard response**  
   🔴 `M` · **Score:**  31  
    → **unlocks:** 0/0
 
-25. `tools-015` — **Chatterbox local voice generation pipeline**  
+24. `tools-015` — **Chatterbox local voice generation pipeline**  
   🔴 `M` · **Score:**  31  
    → **unlocks:** 0/0
 
-26. `npc-049` — **NPC contextual life barks and local voice limiter**  
+25. `npc-049` — **NPC contextual life barks and local voice limiter**  
   🔴 `M` · **Score:**  29  
    → **unlocks:** 0/0
 
-27. `items-player-014` — **Rope-pullable resource transport**  
+26. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-28. `settlements-019` — **Settlement render submission budget**  
+27. `settlements-019` — **Settlement render submission budget**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-29. `tools-005` — **Seedvale Character Preparation Panel**  
+28. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-30. `world-terrain-038` — **Shadow caster/content budget v2**  
+29. `world-terrain-038` — **Shadow caster/content budget v2**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-31. `world-terrain-039` — **N8AO / post-process cost budget**  
+30. `world-terrain-039` — **N8AO / post-process cost budget**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-32. `world-terrain-040` — **Vegetation render budget v2**  
+31. `world-terrain-040` — **Vegetation render budget v2**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-33. `items-player-044` — **Shoulder and forearm equipment slots**  
+32. `items-player-044` — **Shoulder and forearm equipment slots**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-34. `world-terrain-041` — **Agent presentation render LOD**  
+33. `world-terrain-041` — **Agent presentation render LOD**  
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-35. `items-player-032` — **NPC player-storage resource and context rules**  
+34. `items-player-032` — **NPC player-storage resource and context rules**  
   🟡 `L` · **Score:**  20  
    → **unlocks:** 0/0
 
-36. `fauna-034` — **Wildlife Day/Night Rest and Den Defense**  
+35. `fauna-034` — **Wildlife Day/Night Rest and Den Defense**  
   🟡 `M` · **Score:**  19  
    → **unlocks:** 0/0
 
