@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { isTouchDevice } from '../../input/isTouchDevice'
-import { ui } from '../store'
+import { abortTargetedSkill, ui } from '../store'
 
 const touchDevice = isTouchDevice()
 
@@ -18,6 +18,13 @@ const reticleStyle = computed(() => {
   if (target) return { left: `${target.x * 100}%`, top: `${target.y * 100}%` }
   return { left: '50%', top: `calc(50% - ${FREE_AIM_RETICLE_OFFSET_PX}px)` }
 })
+
+/** Targeted-skill aim reticle — same free-aim vertical offset as the bow
+ *  reticle so it clears the player mesh under pointer-lock. */
+const skillAimStyle = {
+  left: '50%',
+  top: `calc(50% - ${FREE_AIM_RETICLE_OFFSET_PX}px)`,
+}
 
 /** Plan 106 + issue 034 — colors match the existing NPC/animal label bars
  *  (`.npc-label__bar--{hp,stamina,vigor,satiety,hydration}`, index.html) so the
@@ -104,6 +111,21 @@ const needBars = computed(() => [
     </button>
   </div>
 
+  <!-- Targeted-skill cancel (touch) — Esc already clears selection on desktop;
+       this mirrors PlacementPreview / lodging cancel chrome. -->
+  <div
+    v-else-if="touchDevice && ui.skillsScreen.selectedSkill"
+    class="pointer-events-none fixed inset-x-0 bottom-24 z-[5] flex justify-center"
+  >
+    <button
+      type="button"
+      class="pointer-events-auto cursor-pointer rounded-md border border-white/20 bg-panel px-3 py-1 text-[13px] text-ink [text-shadow:0_1px_3px_rgba(0,0,0,0.5)] hover:bg-white/20"
+      @click="abortTargetedSkill()"
+    >
+      Anuluj
+    </button>
+  </div>
+
   <!-- Ranged-aim reticle (plan 186 §1) — visible only while drawing a bow.
        Free Aim sits at a fixed screen-space offset from center; a soft lock
        reprojects the target's world-space aim point every frame instead
@@ -118,6 +140,21 @@ const needBars = computed(() => [
     <div class="relative h-9 w-9 -translate-x-1/2 -translate-y-1/2">
       <div class="absolute inset-0 rounded-full border border-ink/70" />
       <div class="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-ink/90" />
+    </div>
+  </div>
+
+  <!-- Targeted-skill aim crosshair — pointer-lock hides the system cursor, so
+       this on-screen plus marks gaze center while Medicine/Traps/Repair is
+       selected. Hidden while the bow reticle already owns the screen. -->
+  <div
+    v-else-if="ui.skillsScreen.selectedSkill"
+    class="pointer-events-none fixed z-[5]"
+    :style="skillAimStyle"
+  >
+    <div class="relative h-8 w-8 -translate-x-1/2 -translate-y-1/2">
+      <div class="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-ink/80" />
+      <div class="absolute left-0 top-1/2 h-px w-full -translate-y-1/2 bg-ink/80" />
+      <div class="absolute left-1/2 top-1/2 size-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-ink/90" />
     </div>
   </div>
 </template>

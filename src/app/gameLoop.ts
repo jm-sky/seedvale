@@ -1643,12 +1643,6 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       const cycleHint = playerCombat.isActive()
         ? (livingTargets.length > 1 ? ' · [Tab] Cel · [Shift+Tab] Świat' : ' · [Shift+Tab] Świat')
         : (target && cycleCandidates.length > 1 ? ` · [Tab] Dalej (${cycleIndex + 1}/${cycleCandidates.length})` : '')
-      const promptHighlighted = Boolean(
-        target && (
-          cycleActive
-          || (playerCombat.isActive() && (playerCombat.softLockId() != null || playerCombat.worldCycleActive()))
-        ),
-      )
       const rangedDrawProgress = playerRanged.state() === 'draw' ? playerRanged.phaseProgress() : null
       const selectedSkill = targetedSkillSelection.get()
       const skillAction = selectedSkill && target
@@ -1668,6 +1662,17 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           ? targetedSkillPrompt(selectedSkill, skillAction, target != null)
           : (selfSkillPrompt ?? targetedSkillPrompt(selectedSkill, null, target != null)))
         : null
+      // Targeted-skill mode cancel affordance (items-player-021 / aim UX) —
+      // Esc already clears selection; this makes it visible in the gaze prompt.
+      const skillCancelHint = selectedSkill && !isTouchDevice() ? ' · Esc — anuluj' : ''
+      const skillCycleHint = `${cycleHint}${skillCancelHint}`
+      const promptHighlighted = Boolean(
+        (selectedSkill && skillAction)
+        || (target && (
+          cycleActive
+          || (playerCombat.isActive() && (playerCombat.softLockId() != null || playerCombat.worldCycleActive()))
+        )),
+      )
       const inspectAvailable = inspectionTargetRef(target) !== null
       const interactionPrompt = selectedSkill
         ? (skillAction && target
@@ -1682,8 +1687,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
               describeResidentialWork,
               previewActionConsequence,
               primaryOverride: interactionActionFromSkillPrompt(skillAction.promptLabel),
-            }, cycleHint)
-          : { targetLabel: skillPrompt ?? '', actions: [], cycleHint })
+            }, skillCycleHint)
+          : { targetLabel: skillPrompt ?? '', actions: [], cycleHint: skillCycleHint })
         : (target
           ? buildInteractionGazePrompt(target, {
               hasInspect: !isTouchDevice() && inspectAvailable,
@@ -1745,7 +1750,11 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         GAZE_RANGE,
         INTERACT_MIN_DOT,
       )
-      setHighlight(interactableAgent(target) ?? gazed?.agent ?? null)
+      setHighlight(
+        selectedSkill
+          ? (skillAction ? interactableAgent(target) : null)
+          : (interactableAgent(target) ?? gazed?.agent ?? null),
+      )
       if ((target?.kind === 'npc' || target?.kind === 'npcCorpse') && npcInspectTrigger?.consume()) {
         exitGamePointerLock(renderer.domElement)
         npcInspector?.open(target.npc, target.kind === 'npc' ? target.settlement.name : target.npc.displayName)
