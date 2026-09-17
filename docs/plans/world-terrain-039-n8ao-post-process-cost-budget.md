@@ -8,6 +8,7 @@
 **Domain:** `world-terrain`
 **Subdomains:** `rendering`
 **Tags:** `post-processing` `ao` `n8ao` `performance`
+**Model:** Sonnet, Composer
 
 ## Cel
 
