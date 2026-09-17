@@ -86,8 +86,9 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `world-terrain-039-n8ao-post-process-cost-budget.md`                        | 🔴 | M      | -                                                                                                                                                                                                                                                                                          | -                                       |
 | 💡 `world-terrain-040-vegetation-render-budget-v2.md`                          | 🔴 | M      | -                                                                                                                                                                                                                                                                                          | -                                       |
 | ◼️ `world-terrain-041-agent-presentation-render-lod.md`                        | 🔴 | L      | -                                                                                                                                                                                                                                                                                          | -                                       |
-| ◼️ `quests-progression-057-injured-cow-medicine-alternative.md`                | 🟡 | M      | ~~quests-progression-016~~, ~~items-player-046~~, ~~npc-025~~                                                                                                                                                                                                                              | -                                       |
+| 💡 `quests-progression-057-injured-cow-medicine-alternative.md`                | 🟡 | M      | ~~quests-progression-016~~, ~~items-player-046~~, ~~npc-025~~                                                                                                                                                                                                                              | -                                       |
 | ◼️ `quests-progression-058-injured-dog-discovery-thread.md`                    | 🟡 | M      | quests-progression-057, ~~items-player-046~~, ~~fauna-011~~                                                                                                                                                                                                                                | -                                       |
+| ◼️ `quests-progression-059-settlement-known-deeds-and-reputation-badges.md`    | 🟡 | M      | ~~quests-progression-001~~, ~~quests-progression-011~~, ~~items-player-046~~                                                                                                                                                                                                               | quests-and-reputation                   |
 
 ---
 
@@ -201,7 +202,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - items-player: `047`
 - npc: `049`
 - persistence: `006`
-- quests-progression: `059`
+- quests-progression: `060`
 - settlements: `020`
 - settlements-npcs: `043`
 - tools: `017`
