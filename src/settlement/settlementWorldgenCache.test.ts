@@ -426,9 +426,12 @@ describe('createSettlementWorldgenCache (plan settlements-014)', () => {
     compute(settlementCellSubKey(1, 0), realDef({ gx: 1, gz: 0 }))
     compute(settlementCellSubKey(2, 0), realDef({ gx: 2, gz: 0 }))
     compute(settlementCellSubKey(3, 0), realDef({ gx: 3, gz: 0 }))
-    await sleep(60)
-    const rows = await listCacheRecords(1, SETTLEMENT_DEFINITION_CACHE_NAMESPACE, SETTLEMENT_DEFINITION_CACHE_VERSION)
-    expect(rows.length).toBe(2)
+    // Flush is fire-and-forget after debounce; SettlementDef payloads are large
+    // enough that a fixed sleep can observe the put before enforceCacheCap.
+    await vi.waitFor(async () => {
+      const rows = await listCacheRecords(1, SETTLEMENT_DEFINITION_CACHE_NAMESPACE, SETTLEMENT_DEFINITION_CACHE_VERSION)
+      expect(rows.length).toBe(2)
+    })
     cache.dispose()
   })
 

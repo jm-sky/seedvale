@@ -168,7 +168,10 @@ import {
 } from '../quests/oldBonesAdventureCave'
 import { getActiveOldBonesAdventureCaveBinding } from '../quests/oldBonesAdventureCaveRuntime'
 import { buildGuardEveningDutyQuest, selectGuardQuestGiver } from '../quests/opportunities/guardProfessionQuests'
-import { buildHunterProfessionQuests } from '../quests/opportunities/hunterProfessionQuests'
+import {
+  buildHunterProfessionQuests,
+  parseHunterProfessionQuestId,
+} from '../quests/opportunities/hunterProfessionQuests'
 import {
   nearbyRpgSettlementDefs,
   OLD_PLACE_LANDMARK_KINDS,
@@ -1438,23 +1441,38 @@ export async function createApp(
       opportunityQuestDefs.push(quest)
       occupyQuestLandmarks(quest)
     }
+
     if (def.isHome) {
-      opportunityQuestDefs.push(...buildHunterProfessionQuests({
+      const hunterProfessionQuests = buildHunterProfessionQuests({
         settlementId: def.id,
         settlementName: def.name,
         npcs,
         spawners: bundle.fauna.getSpawners(),
         persistedQuestIds,
-      }))
-      const huntersBrotherhoodQuest = buildHuntersBrotherhoodIntroductionQuest({
-        home: { id: def.id, name: def.name, npcs },
-        neighbors: neighborDefs.map((neighbor) => ({
-          id: neighbor.id,
-          name: neighbor.name,
-          npcs: npcsBySettlement.get(neighbor.id) ?? [],
-        })),
       })
-      if (huntersBrotherhoodQuest) opportunityQuestDefs.push(huntersBrotherhoodQuest)
+
+      opportunityQuestDefs.push(...hunterProfessionQuests)
+
+      const hasHunterIII = hunterProfessionQuests.some((quest) => {
+        const parsed = parseHunterProfessionQuestId(quest.id)
+        return parsed?.step === 3
+      })
+
+      if (hasHunterIII) {
+        const huntersBrotherhoodQuest = buildHuntersBrotherhoodIntroductionQuest({
+          home: { id: def.id, name: def.name, npcs },
+          neighbors: neighborDefs.map((neighbor) => ({
+            id: neighbor.id,
+            name: neighbor.name,
+            npcs: npcsBySettlement.get(neighbor.id) ?? [],
+          })),
+        })
+
+        if (huntersBrotherhoodQuest) {
+          opportunityQuestDefs.push(huntersBrotherhoodQuest)
+        }
+      }
+
       const loadedHome = bundle.settlementsManager.getLoaded().find((settlement) => settlement.id === def.id)
       const eveningQuest = buildGuardEveningDutyQuest({
         settlementId: def.id,
@@ -1464,6 +1482,7 @@ export async function createApp(
         hasCampfire: Boolean(loadedHome?.fire),
         persistedQuestIds,
       })
+
       if (eveningQuest) opportunityQuestDefs.push(eveningQuest)
       if (lostHunterBinding) {
         const homeNpcs = settlementOpportunityNpcsFromDef(def)
@@ -1481,6 +1500,7 @@ export async function createApp(
           ),
         ))
       }
+
       if (oldBonesBinding) {
         const homeNpcs = settlementOpportunityNpcsFromDef(def)
         const giver = homeNpcs.find((npc) => npc.id === oldBonesBinding.giverNpcId)
@@ -1497,6 +1517,7 @@ export async function createApp(
           ),
         ))
       }
+
       if (dungeonBanditBinding) {
         const homeNpcs = settlementOpportunityNpcsFromDef(def)
         const neighborNpcs = neighborDefs.flatMap((neighbor) => (
@@ -1517,6 +1538,7 @@ export async function createApp(
           ),
         ))
       }
+
       if (lostTreasureExpeditionBinding) {
         const homeNpcs = settlementOpportunityNpcsFromDef(def)
         const neighborNpcs = neighborDefs.flatMap((neighbor) => (
@@ -1537,10 +1559,12 @@ export async function createApp(
           ),
         ))
       }
+
       const homeGuard = selectGuardQuestGiver(npcs)
       migrateLegacyGuardSwordGift(guardProgress, homeGuard?.id)
     }
   }
+
   const elderCandidateDefs = []
   for (const cell of cellsWithinRadius(
     { gx: homeDef.gx, gz: homeDef.gz },
@@ -1550,19 +1574,23 @@ export async function createApp(
     const def = bundle.settlementsManager.peekDef(cell)
     if (def) elderCandidateDefs.push(def)
   }
+
   const elderSettlement = findLostTreasureChroniclesElderSettlement(elderCandidateDefs)
   if (elderSettlement) {
     const elderBinding = resolveLostTreasureChroniclesElderBinding(elderSettlement)
     if (elderBinding) opportunityQuestDefs.push(...buildLostTreasureChroniclesElderQuests(elderBinding))
   }
+
   const chronicleSearchBinding = getActiveLostTreasureChronicleSearchBinding()
   if (chronicleSearchBinding) {
     opportunityQuestDefs.push(...buildLostTreasureChronicleSearchQuests(chronicleSearchBinding))
   }
+
   const chronicleDecipheringBinding = getActiveLostTreasureChronicleDecipheringBinding()
   if (chronicleDecipheringBinding) {
     opportunityQuestDefs.push(buildLostTreasureChronicleDecipheringQuest(chronicleDecipheringBinding))
   }
+
   const homeGuardNpcId = selectGuardQuestGiver(npcsBySettlement.get(homeSettlementId) ?? [])?.id
   const questDefs = [...authoredQuestDefs, ...opportunityQuestDefs]
   const initialQuestState = initialSave?.quests
@@ -1585,6 +1613,7 @@ export async function createApp(
       if (context.requireItemInstanceId && !inventory.getInstance(context.requireItemInstanceId)) {
         return false
       }
+
       if (context.requireCarriedContainerId) {
         if (bearCaveBinding && context.requireCarriedContainerId === bearCaveBinding.casketId) {
           if (worldFlags.treasureMapBearCaveCasketConsumed) return false
@@ -1592,6 +1621,7 @@ export async function createApp(
         }
         if (bundle.placedContainers.carriedId() !== context.requireCarriedContainerId) return false
       }
+
       if (oldBonesBinding && questId === oldBonesBinding.questId) {
         const requiredId = context.requireItemInstanceId ?? oldBonesBinding.signetInstanceId
         const signet = inventory.getInstance(requiredId)
@@ -1607,6 +1637,7 @@ export async function createApp(
         if (!npcState || npcState.health.dead) return false
         return npcState.personalInventory.canAddInstance(signet)
       }
+
       if (dungeonBanditBinding && questId === dungeonBanditBinding.questId) {
         const marked = inventory.getInstance(dungeonBanditBinding.markedValuableInstanceId)
         if (marked?.kind !== DUNGEON_BANDIT_MARKED_VALUABLE_KIND) return false
@@ -1626,6 +1657,7 @@ export async function createApp(
         }
         return false
       }
+
       if (lostTreasureExpeditionBinding && questId === lostTreasureExpeditionBinding.questId) {
         const requiredId = context.requireItemInstanceId ?? lostTreasureExpeditionBinding.journalInstanceId
         const journal = inventory.getInstance(requiredId)
@@ -1641,6 +1673,7 @@ export async function createApp(
         if (!npcState || npcState.health.dead) return false
         return npcState.personalInventory.canAddInstance(journal)
       }
+
       if (suspiciousTransportCaveCache && questId === suspiciousTransportCaveCache.questId) {
         const requiredId = context.requireItemInstanceId ?? suspiciousTransportCaveCache.evidenceInstanceId
         const evidence = inventory.getInstance(requiredId)
@@ -1656,6 +1689,7 @@ export async function createApp(
         if (!npcState || npcState.health.dead) return false
         return npcState.personalInventory.canAddInstance(evidence)
       }
+
       return Boolean(context.requireItemInstanceId || context.requireCarriedContainerId)
     },
     onResolve(questId: string, outcomeId: string): void {

@@ -3066,7 +3066,7 @@ describe('QuestManager playtest reachability (plan quests-progression-018)', () 
       (kind, count) => granted.push({ kind, count }),
     )
     acceptOffer(qm, 'Anna')
-    expect(qm.onInteract('Anna')?.actions?.[0]?.label).toBe('Tak. Zebrałem trzy zioła — proszę.')
+    expect(qm.onInteract('Anna')?.actions?.[0]?.label).toBe('Tak. Zebrałem trzy rzadkie zioła — proszę.')
     expect(selectAction(qm.onInteract('Anna'))).toBe('Dziękuję, dokładnie tyle mi trzeba.')
     expect(inventory.count('herb')).toBe(0)
     expect(granted).toEqual([{ kind: 'coin', count: 8 }])
