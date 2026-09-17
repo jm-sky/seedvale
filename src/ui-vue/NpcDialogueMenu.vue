@@ -390,6 +390,14 @@ watch(() => state.open, (open) => {
         class="flex flex-col gap-2"
       >
         <button
+          v-if="state.canTrade"
+          type="button"
+          class="cursor-pointer rounded-md bg-white/10 px-3 py-2 text-left text-sm font-medium hover:bg-white/20"
+          @click="openTrade"
+        >
+          Handel
+        </button>
+        <button
           v-for="entry in reportShortcuts"
           :key="`report:${entry.questId}`"
           type="button"
@@ -413,14 +421,6 @@ watch(() => state.open, (open) => {
           @click="enterGroup('help')"
         >
           Sprawy i pomoc
-        </button>
-        <button
-          v-if="state.canTrade"
-          type="button"
-          class="cursor-pointer rounded-md bg-white/10 px-3 py-2 text-left text-sm font-medium hover:bg-white/20"
-          @click="openTrade"
-        >
-          Handel
         </button>
         <button
           type="button"
@@ -449,19 +449,19 @@ watch(() => state.open, (open) => {
         class="flex flex-col gap-2"
       >
         <button
-          type="button"
-          class="cursor-pointer rounded-md bg-white/5 px-3 py-2 text-left text-sm hover:bg-white/10"
-          @click="selectTopic('help')"
-        >
-          Może w czymś ci pomóc?
-        </button>
-        <button
           v-if="activeMatters.length > 0"
           type="button"
           class="cursor-pointer rounded-md bg-white/5 px-3 py-2 text-left text-sm hover:bg-white/10"
           @click="selectTopic('activeMatters')"
         >
           Aktywne sprawy
+        </button>
+        <button
+          type="button"
+          class="cursor-pointer rounded-md bg-white/5 px-3 py-2 text-left text-sm hover:bg-white/10"
+          @click="selectTopic('help')"
+        >
+          Może w czymś ci pomóc?
         </button>
         <button
           type="button"
