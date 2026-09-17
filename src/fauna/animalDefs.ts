@@ -76,6 +76,12 @@ export type AnimalDef = {
   modelHeight: number
   walkSpeed: number
   sprintSpeed: number
+  /** Optional ordinary local-wander walk baseline (plan fauna-038). Used only by
+   *  autonomous casual `wander()` around home — not flee/chase/lead/trip/needs
+   *  pursuit, not player Follow, and not mounted movement. Absent ⇒ exact legacy
+   *  `walkSpeed` behaviour. Species-specific tuning lives here; the movement
+   *  executor must not branch on `kind`. */
+  calmWalkSpeed?: number
   /** Predator-only: radius (m) within which it spots and chases the nearest prey.
    *  Meaningless for prey defs (their threat detection uses `fleeRange` instead). */
   detectRange: number
@@ -510,12 +516,12 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     color: 0x6b4423,
     scale: 1.3,
     modelHeight: 1.55,
-    // Plan fauna-008: raised above the pre-existing 2.6/6.0 so the mounted
-    // baseline clears `MOVE_SPEED`/`MOVE_SPEED * SPRINT_MULTIPLIER` (8/14.4)
-    // on its own, independent of the player's Riding skill — see
-    // `ridingSpeedMultiplier` in `PlayerSkills.ts`.
+    // Plan fauna-008: mounted walk/sprint below clear human MOVE_SPEED baselines
+    // on their own (see `ridingSpeedMultiplier`). Autonomous walk/sprint stay
+    // at 2.6/6.0; calmWalkSpeed (fauna-038) slows ordinary settlement wander only.
     walkSpeed: 2.6,
     sprintSpeed: 6.0,
+    calmWalkSpeed: 1.35,
     detectRange: 0,
     fleeRange: 10,
     playerNoticeRange: 0,

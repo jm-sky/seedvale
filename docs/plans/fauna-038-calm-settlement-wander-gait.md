@@ -1,7 +1,7 @@
 # Plan: Calm settlement wander gait
 
 **Created:** 2026-09-17
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 (implemented 2026-09-17 — browser checks are User-owned)
 **Type:** polish
 **Priority:** medium · **Effort:** S
 **Depends on:** none

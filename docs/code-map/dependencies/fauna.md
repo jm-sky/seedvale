@@ -45,6 +45,7 @@ Generated from TypeScript imports.
 - `fauna/animalStray.ts`
 - `fauna/animalUpdateCadence.ts`
 - `fauna/animalVariants.ts`
+- `fauna/animalWalkSpeed.ts`
 - `fauna/dogGuard.ts`
 - `fauna/faunaCombat.ts`
 - `fauna/faunaDecision.ts`
@@ -356,6 +357,8 @@ Generated from TypeScript imports.
 - `fauna/animalRoamingTrips.test.ts`
 - `fauna/animalStray.ts`
 - `fauna/animalVariants.test.ts`
+- `fauna/animalWalkSpeed.test.ts`
+- `fauna/animalWalkSpeed.ts`
 - `fauna/closedPredatorPressure.ts`
 - `fauna/corpseDecay.test.ts`
 - `fauna/dungeonResidents.test.ts`
@@ -675,9 +678,29 @@ Generated from TypeScript imports.
 
 - `fauna/AnimalAgent.ts`
 - `fauna/animalVariants.test.ts`
+- `fauna/animalWalkSpeed.test.ts`
 - `fauna/createFauna.test.ts`
 - `fauna/createFauna.ts`
 - `reputation/animalDeeds.ts`
+
+## `fauna/animalWalkSpeed.test.ts`
+
+**Imports**
+
+- `fauna/animalDefs.ts`
+- `fauna/animalVariants.ts`
+- `fauna/animalWalkSpeed.ts`
+
+## `fauna/animalWalkSpeed.ts`
+
+**Imports**
+
+- `fauna/animalDefs.ts`
+
+**Imported by**
+
+- `fauna/AnimalAgent.ts`
+- `fauna/animalWalkSpeed.test.ts`
 
 ## `fauna/bloodSplat.ts`
 

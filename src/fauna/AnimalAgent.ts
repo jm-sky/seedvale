@@ -106,6 +106,10 @@ import {
   type AnimalRole,
 } from './animalDefs'
 import {
+  calmWanderWalkBaseline,
+  resolveAutonomousWalkSpeed,
+} from './animalWalkSpeed'
+import {
   applySourceRelief,
   canAcceptHandFeed,
   dietItemReliefScale,
@@ -390,10 +394,9 @@ export const BURY_DURATION_SEC = 1.5
 /** Busy-channel duration for knife-harvesting `raw_meat` from a corpse —
  *  real-time (not a time-skip), same order of magnitude as bury/chop. */
 export const HARVEST_MEAT_DURATION_SEC = 4
-/** Prey wander speed at night vs. day (half speed — cautious/less active). */
-const NIGHT_PREY_WALK_MULT = 0.5
 /** Prey flee/sprint speed at night vs. day — smaller penalty than wander,
- *  since prey still needs to outrun predators, just not as well as by day. */
+ *  since prey still needs to outrun predators, just not as well as by day.
+ *  Night *walk* mult lives in `animalWalkSpeed.ts` (shared with calm wander). */
 const NIGHT_PREY_SPRINT_MULT = 0.9
 /** How far an animal will roam from its own spawn point — home-relative, not tied
  *  to any world/loaded-region bound, so fauna behaves the same near spawn or far
@@ -4073,12 +4076,24 @@ export class AnimalAgent {
 
   /** Prey move slower at night; predators are unaffected. Variant speed
    *  multiplies the species/night result (plan fauna-022) — not `def.walkSpeed`
-   *  at every call site. */
+   *  at every call site. Purposeful autonomous walking (flee approach, lead,
+   *  needs, trips, follow) — not ordinary local wander (see `calmWalkSpeedNow`). */
   private walkSpeedNow(): number {
-    const base = this.isNight && this.def.role === 'prey'
-      ? this.def.walkSpeed * NIGHT_PREY_WALK_MULT
-      : this.def.walkSpeed
-    return base * this.effective.speedMultiplier
+    return resolveAutonomousWalkSpeed(this.def.walkSpeed, {
+      isNight: this.isNight,
+      role: this.def.role,
+      speedMultiplier: this.effective.speedMultiplier,
+    })
+  }
+
+  /** Ordinary local wander only (plan fauna-038) — optional `calmWalkSpeed`
+   *  with the same night/variant modifiers as `walkSpeedNow()`. */
+  private calmWalkSpeedNow(): number {
+    return resolveAutonomousWalkSpeed(calmWanderWalkBaseline(this.def), {
+      isNight: this.isNight,
+      role: this.def.role,
+      speedMultiplier: this.effective.speedMultiplier,
+    })
   }
 
   private sprintSpeedNow(): number {
@@ -4905,7 +4920,7 @@ export class AnimalAgent {
         this.pickWanderTarget()
       }
     }
-    this.stepNavRescue(this.moveNav, this.target, this.walkSpeedNow(), dt, 'preferDry')
+    this.stepNavRescue(this.moveNav, this.target, this.calmWalkSpeedNow(), dt, 'preferDry')
   }
 
   /** `wander()`'s single trip entry point (plan fauna-016 §4) — continues an

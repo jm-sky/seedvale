@@ -4,31 +4,31 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/AnimalAgent.ts`
 
-- `AnimalAgent` — class — line 1123
+- `AnimalAgent` — class — line 1126
   - domain: fauna
   - system: animal-agent
   - role: Central per-animal behaviour integration point: predator/prey AI, needs, health, production (livestock) and riding (mounts).
   - uses: HealthState, StaminaState
   - simulation: tick
-- `AnimalAgentDebugInfo` — type — line 577
-- `AnimalAgentDeps` — type — line 927
-- `AnimalSaveState` — type — line 705
-- `AnimalUpdateContext` — type — line 991
-- `BURY_DURATION_SEC` — const — line 389
-- `canPredatorPursueIntoVillage` — function — line 785
-- `FAUNA_SHADOW_DISTANCE` — const — line 358
-- `FaunaAiBranch` — type — line 514
-- `FaunaNavRescueDebugInfo` — type — line 561
-- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 449
-- `FrenzyWolfCandidate` — type — line 862
-- `HARVEST_MEAT_DURATION_SEC` — const — line 392
-- `isWithinVillageRadius` — function — line 766
-- `NearbyNpcCandidate` — type — line 857
-- `pickNearestEligibleWolf` — function — line 871
-- `pickRabidTarget` — function — line 896
-- `RABIES_BITE_INFECTION_CHANCE` — const — line 376
-- `villageFleeBiasFalloff` — function — line 793
-- `VillageInfo` — type — line 760
+- `AnimalAgentDebugInfo` — type — line 580
+- `AnimalAgentDeps` — type — line 930
+- `AnimalSaveState` — type — line 708
+- `AnimalUpdateContext` — type — line 994
+- `BURY_DURATION_SEC` — const — line 393
+- `canPredatorPursueIntoVillage` — function — line 788
+- `FAUNA_SHADOW_DISTANCE` — const — line 362
+- `FaunaAiBranch` — type — line 517
+- `FaunaNavRescueDebugInfo` — type — line 564
+- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 452
+- `FrenzyWolfCandidate` — type — line 865
+- `HARVEST_MEAT_DURATION_SEC` — const — line 396
+- `isWithinVillageRadius` — function — line 769
+- `NearbyNpcCandidate` — type — line 860
+- `pickNearestEligibleWolf` — function — line 874
+- `pickRabidTarget` — function — line 899
+- `RABIES_BITE_INFECTION_CHANCE` — const — line 380
+- `villageFleeBiasFalloff` — function — line 796
+- `VillageInfo` — type — line 763
 
 ## `fauna/animalAreaBound.ts`
 
@@ -132,25 +132,25 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/animalDefs.ts`
 
-- `ANIMAL_DEFS` — const — line 346
+- `ANIMAL_DEFS` — const — line 352
 - `ANIMAL_LABELS` — const — line 49
-- `AnimalAffinityConfig` — type — line 169
+- `AnimalAffinityConfig` — type — line 175
 - `AnimalDef` — type — line 68
-- `AnimalDietConfig` — type — line 199
+- `AnimalDietConfig` — type — line 205
 - `AnimalKind` — type — line 27
 - `AnimalLifeStage` — type — line 22
 - `AnimalRole` — type — line 14
   - domain: fauna
   - role: Species taxonomy and per-kind tuning data for `AnimalAgent` — no runtime/agent state, no Three.js. Moved out of `AnimalAgent.ts` (plan fauna-017 step 1): 31% of that file was this module's data sitting above the class. Re-exported wholesale from `AnimalAgent.ts` via `export *`, so every existing importer of species types/`ANIMAL_DEFS` is unaffected.
 - `AnimalSociability` — type — line 18
-- `dietAcceptsItem` — function — line 324
-- `DraftConfig` — type — line 230
-- `LeadConfig` — type — line 224
-- `LivestockProductionConfig` — type — line 259
-- `LivestockProductKind` — type — line 246
-- `MountPointConfig` — type — line 237
-- `ScavengingConfig` — type — line 210
-- `WaterTripConfig` — type — line 178
+- `dietAcceptsItem` — function — line 330
+- `DraftConfig` — type — line 236
+- `LeadConfig` — type — line 230
+- `LivestockProductionConfig` — type — line 265
+- `LivestockProductKind` — type — line 252
+- `MountPointConfig` — type — line 243
+- `ScavengingConfig` — type — line 216
+- `WaterTripConfig` — type — line 184
 
 ## `fauna/animalDialogue.ts`
 
@@ -430,6 +430,14 @@ Generated from exported TypeScript symbols.
   - domain: fauna
 - `variantTintHex` — function — line 102
 - `wolfDenInitialFillVariant` — function — line 93
+  - domain: fauna
+
+## `fauna/animalWalkSpeed.ts`
+
+- `calmWanderWalkBaseline` — function — line 12
+  - domain: fauna
+- `NIGHT_PREY_WALK_MULT` — const — line 4
+- `resolveAutonomousWalkSpeed` — function — line 24
   - domain: fauna
 
 ## `fauna/bloodSplat.ts`

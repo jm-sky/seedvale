@@ -314,6 +314,7 @@ graph TD
   fauna_035["fauna-035 — Dismount Follow/Stay anchor semantics"]
   fauna_036["fauna-036 — Interruptible Carcass Feeding"]
   fauna_037["fauna-037 — Domestic livestock safe flee"]
+  fauna_038["fauna-038 — Calm settlement wander gait"]
   items_player_001["items-player-001 — Containers, Waterskins & Copper Items"]
   items_player_002["items-player-002 — Food provenance, freshness and storage"]
   items_player_003["items-player-003 — Player Physical Effort — Stamina & Vigor"]
