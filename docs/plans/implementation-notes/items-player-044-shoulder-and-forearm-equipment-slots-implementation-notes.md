@@ -93,16 +93,31 @@ Male_Ranger_Arms_Bracer
 Male_Noble_Arms_Guards
 ```
 
-Produce self-contained skinned runtime assets:
+The User has already manually prepared and exported the final GLBs. Treat these exact files as the runtime assets to wire, not as temporary source files:
 
 ```text
-male_leather_bracers.glb
-male_steel_bracers.glb
+public/models/characters/ubc/accessories/
+  male_leather_bracers.glb
+  male_steel_bracers.glb
 ```
 
-Use the same skeleton-remap/binding assumptions as current pauldron assets. No animation clips and no second mixer.
+Current accessory directory is expected to contain:
 
-If User-provided GLBs are already available when implementation starts, wire those through the same final paths rather than rebuilding equivalent geometry unnecessarily; still keep the preparation script/asset registry contract coherent.
+```text
+public/models/characters/ubc/accessories/
+├── male_knight_pauldron_round.glb
+├── male_knight_pauldron_spike.glb
+├── male_leather_bracers.glb
+├── male_leather_pauldron.glb
+├── male_ranger_pauldron.glb
+└── male_steel_bracers.glb
+```
+
+Important: do **not** regenerate or overwrite the two bracer GLBs unless the checked-in files are missing or invalid. The implementation task is to register and consume them through the existing UBC accessory runtime. If pipeline scripts maintain an explicit accessory allow-list/manifest, add these filenames there only to keep the contract coherent; do not replace the manually authored geometry with an automated source conversion.
+
+`male_steel_bracers.glb` intentionally may contain multiple mesh objects (the composed steel hand/forearm/leather-strip parts) inside one GLB. Runtime code must treat the GLB as one accessory asset and must not assume one GLB equals one `SkinnedMesh` node. Reuse the existing traversal/binding path for all skinned meshes in the asset.
+
+Use the same skeleton-remap/binding assumptions as current pauldron assets. No animation clips and no second mixer.
 
 ## UI propagation
 
@@ -134,7 +149,7 @@ Add coverage for:
 
 Also extend existing armor classification/catalog tests for both new kinds and presentation resolver tests for both GLBs.
 
-If the slot-aware attachment helper/controller has tests from `items-player-039`, expand them to hold two simultaneous slot visuals instead of creating a new bracer-specific test harness.
+If the slot-aware attachment helper/controller has tests from `items-player-039`, expand them to hold two simultaneous slot visuals instead of creating a new bracer-specific test harness. Add/retain a case where one accessory GLB contains multiple skinned mesh nodes so the steel-bracer export structure remains supported.
 
 ## Implementation order
 
@@ -142,8 +157,8 @@ If the slot-aware attachment helper/controller has tests from `items-player-039`
 2. Move all existing pauldron catalog entries to `shoulders`; keep item identity/stats unchanged.
 3. Add both bracer kinds to `ItemKind`, `ArmorKind`, defs/catalog/trade declarations.
 4. Add/extend specialist stock using existing economy declarations only.
-5. Prepare/register both GLBs through the existing UBC accessory pipeline and Asset Browser.
-6. Extend `playerEquipmentVisual.ts` and current slot-aware runtime presentation for `shoulders + forearms` coexistence.
+5. Register the already-existing `male_leather_bracers.glb` and `male_steel_bracers.glb` in the current accessory/Asset Browser declarations; do not rebuild them unnecessarily.
+6. Extend `playerEquipmentVisual.ts` and current slot-aware runtime presentation for `shoulders + forearms` coexistence, including multi-mesh accessory traversal.
 7. Run focused tests, typecheck/build; fix exhaustive slot assumptions surfaced by TypeScript.
 8. Leave all visual/clipping/browser checks to User.
 
@@ -155,6 +170,8 @@ If the slot-aware attachment helper/controller has tests from `items-player-039`
 - Do not change pauldron identity, quality or balance just because their slot is renamed.
 - Do not let asset/model names determine gameplay stats.
 - Do not hardcode transforms in `PlayerController`; use existing visual alignment metadata.
+- Do not regenerate/overwrite User-authored bracer GLBs unless they are missing or invalid.
+- Do not assume an accessory GLB contains exactly one mesh.
 - Do not run browser verification.
 - Do not run `pnpm docs:sync`; generated plan indexes/next IDs are workflow-owned.
 
