@@ -27,6 +27,10 @@ export type TargetedSkillQueryContext = {
   inventory: Inventory
   playerSkills: PlayerSkills
   startMedicalTreatment: (target: TreatableTarget) => void
+  /** Household -> settlement affiliation for Medicine's livestock `healer`
+   *  known-deed attribution (plan quests-progression-059) — undefined
+   *  `settlementId` when the household isn't resolvable. */
+  resolveHouseholdSettlementId?: (houseId: string) => string | undefined
 }
 
 export type TargetedSkillActionId = 'inspect-trap' | 'provide-medical-treatment' | 'repair-camp'
@@ -133,7 +137,7 @@ function queryMedicalTreatment(
   target: Interactable,
   context: TargetedSkillQueryContext,
 ): TargetedSkillAction | null {
-  const treatable = treatableFromInteractable(target)
+  const treatable = treatableFromInteractable(target, context.resolveHouseholdSettlementId)
   if (!treatable) return null
   const plan = resolveMedicalTreatmentPlan(
     treatable,
@@ -222,7 +226,7 @@ export function executeTargetedSkillAction(
     return { ok: true, title: view.title, line: view.line }
   }
   if (action.id === 'provide-medical-treatment') {
-    const treatable = treatableFromInteractable(target)
+    const treatable = treatableFromInteractable(target, context.resolveHouseholdSettlementId)
     if (!treatable || treatable.id !== action.targetId) return { ok: false, reason: 'invalid-target' }
     const plan = resolveMedicalTreatmentPlan(
       treatable,

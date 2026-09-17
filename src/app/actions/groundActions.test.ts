@@ -387,7 +387,7 @@ describe('cemetery grave social exposure (quests-progression-011)', () => {
     expect(applySocial).toHaveBeenCalledTimes(1)
   })
 
-  it('does not award a grave-disturbance badge', () => {
+  it('does not award a global grave-disturbance badge, but records the local known-deed for the served settlement (plan quests-progression-059)', () => {
     const { landmark, dig } = emptyCemeteryGraveWithRoll((roll) => roll < 0.5)
     const { badges, digAt } = setupHiddenFindDig({
       landmarks: [landmark],
@@ -396,8 +396,20 @@ describe('cemetery grave social exposure (quests-progression-011)', () => {
 
     digAt(dig.x, dig.z)
 
-    expect(badges.exportState()).toEqual({ earned: [], hiddenFindsFound: 0 })
     expect(badges.listEarned()).toHaveLength(0)
+    expect(badges.listSettlementEarned('anna-village').map((b) => b.id)).toEqual(['grave_robber'])
+  })
+
+  it('does not record a local grave-disturbance deed for a secret (unexposed) disturbance', () => {
+    const { landmark, dig } = cemeterySpotWithRoll((roll) => roll >= 0.5)
+    const { badges, digAt } = setupHiddenFindDig({
+      landmarks: [landmark],
+      timeOfDay: 0.5,
+    })
+
+    digAt(dig.x, dig.z)
+
+    expect(badges.listSettlementEarned('anna-village')).toHaveLength(0)
   })
 
   it('does not run grave exposure for a non-cemetery Hidden Find', () => {

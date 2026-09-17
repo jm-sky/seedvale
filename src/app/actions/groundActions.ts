@@ -222,6 +222,11 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
         reputation: { ...GRAVE_DISTURBANCE_EXPOSURE.reputation },
         renown: GRAVE_DISTURBANCE_EXPOSURE.renown,
       })
+      // Settlement Known Deeds (plan quests-progression-059) — same exposed
+      // event, same settlement id; a secret (unexposed) disturbance never
+      // reaches this branch and never adds local grave_robber progress.
+      const unlock = badges.recordExposedGraveDisturbance(consequenceSettlementId)
+      if (unlock) ctx.onSettlementBadgeUnlock?.(unlock)
     }
   }
 

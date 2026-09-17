@@ -1,10 +1,14 @@
 import { describe, expect, it, vi } from 'vitest'
+import type { NpcAgent } from '../ai/NpcAgent'
+import type { AnimalAgent } from '../fauna/AnimalAgent'
 import { Inventory } from '../items/Inventory'
 import { criticalInjuryFloor, seriousInjuryFloor } from '../shared/injurySeverity'
 import {
   BARE_HANDS_STABILIZE_BASE_HP,
   medicalTreatmentPromptLabel,
   resolveMedicalTreatmentPlan,
+  treatableFromLivestock,
+  treatableFromNpc,
   type TreatableTarget,
 } from './medicalTreatment'
 import { createPlayerSkills } from './PlayerSkills'
@@ -92,5 +96,58 @@ describe('resolveMedicalTreatmentPlan (plan items-player-046)', () => {
     const lowPlan = resolveMedicalTreatmentPlan(targetLow, inventory, low)
     const highPlan = resolveMedicalTreatmentPlan(targetHigh, inventory, high)
     expect(lowPlan?.requestedHpRestore).toBeLessThan(highPlan!.requestedHpRestore)
+  })
+})
+
+describe('settlement attribution for Known Deeds (plan quests-progression-059)', () => {
+  function fakeNpc(settlementId: string | undefined): NpcAgent {
+    return {
+      id: 'npc:1',
+      displayName: 'Test NPC',
+      health: { dead: false, maxHp: 100 },
+      physicalInjury: 10,
+      resolveInjuryRecovery: vi.fn(),
+      applyPhysicalInjuryTreatment: vi.fn(() => 5),
+      household: settlementId ? { settlementId } : null,
+    } as unknown as NpcAgent
+  }
+
+  function fakeLivestock(owner: { kind: 'household', houseId: string } | { kind: 'player' } | null): AnimalAgent {
+    return {
+      animalId: 'animal:1',
+      getDisplayName: () => 'Owca',
+      health: { dead: false, maxHp: 50 },
+      physicalInjury: 10,
+      getOwner: () => owner,
+      resolveInjuryRecoveryAt: vi.fn(),
+      applyPhysicalInjuryTreatment: vi.fn(() => 5),
+    } as unknown as AnimalAgent
+  }
+
+  it('resolves an NPC target settlement id from its household membership', () => {
+    expect(treatableFromNpc(fakeNpc('village-a'))?.settlementId).toBe('village-a')
+  })
+
+  it('leaves an unaffiliated NPC target with no settlement id', () => {
+    expect(treatableFromNpc(fakeNpc(undefined))?.settlementId).toBeUndefined()
+  })
+
+  it('resolves a household-owned livestock settlement id through the injected resolver', () => {
+    const resolve = vi.fn((houseId: string) => (houseId === 'house:a' ? 'village-a' : undefined))
+    const target = treatableFromLivestock(fakeLivestock({ kind: 'household', houseId: 'house:a' }), resolve)
+    expect(resolve).toHaveBeenCalledWith('house:a')
+    expect(target?.settlementId).toBe('village-a')
+  })
+
+  it('never resolves a settlement id for player-owned livestock, even with a resolver present', () => {
+    const resolve = vi.fn(() => 'village-a')
+    const target = treatableFromLivestock(fakeLivestock({ kind: 'player' }), resolve)
+    expect(resolve).not.toHaveBeenCalled()
+    expect(target?.settlementId).toBeUndefined()
+  })
+
+  it('leaves settlement id undefined when no resolver is provided', () => {
+    const target = treatableFromLivestock(fakeLivestock({ kind: 'household', houseId: 'house:a' }))
+    expect(target?.settlementId).toBeUndefined()
   })
 })

@@ -167,55 +167,51 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `M` · **Score:**  35  
    → **unlocks:** 0/0
 
-24. `quests-progression-059` — **Settlement Known Deeds & Reputation Badges**  
-  🟡 `M` · **Score:**  35  
-   → **unlocks:** 0/0
-
-25. `npc-048` — **Local threat assistance and guard response**  
+24. `npc-048` — **Local threat assistance and guard response**  
   🔴 `M` · **Score:**  31  
    → **unlocks:** 0/0
 
-26. `tools-015` — **Chatterbox local voice generation pipeline**  
+25. `tools-015` — **Chatterbox local voice generation pipeline**  
   🔴 `M` · **Score:**  31  
    → **unlocks:** 0/0
 
-27. `npc-049` — **NPC contextual life barks and local voice limiter**  
+26. `npc-049` — **NPC contextual life barks and local voice limiter**  
   🔴 `M` · **Score:**  29  
    → **unlocks:** 0/0
 
-28. `items-player-014` — **Rope-pullable resource transport**  
+27. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-29. `settlements-019` — **Settlement render submission budget**  
+28. `settlements-019` — **Settlement render submission budget**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-30. `tools-005` — **Seedvale Character Preparation Panel**  
+29. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-31. `world-terrain-038` — **Shadow caster/content budget v2**  
+30. `world-terrain-038` — **Shadow caster/content budget v2**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-32. `world-terrain-039` — **N8AO / post-process cost budget**  
+31. `world-terrain-039` — **N8AO / post-process cost budget**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-33. `world-terrain-040` — **Vegetation render budget v2**  
+32. `world-terrain-040` — **Vegetation render budget v2**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-34. `items-player-044` — **Shoulder and forearm equipment slots**  
+33. `items-player-044` — **Shoulder and forearm equipment slots**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-35. `world-terrain-041` — **Agent presentation render LOD**  
+34. `world-terrain-041` — **Agent presentation render LOD**  
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-36. `items-player-032` — **NPC player-storage resource and context rules**  
+35. `items-player-032` — **NPC player-storage resource and context rules**  
   🟡 `L` · **Score:**  20  
    → **unlocks:** 0/0
 

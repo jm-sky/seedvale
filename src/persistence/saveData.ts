@@ -1,4 +1,4 @@
-import type { BadgeId } from '../badges/badges'
+import type { BadgeId, SettlementBadgeId } from '../badges/badges'
 import type { WorldConfig } from '../config/worldConfig'
 import type { ProductionShortageRecord } from '../economy/productionShortage'
 import type { SettlementEconomySnapshot } from '../economy/settlementEconomy'
@@ -191,6 +191,17 @@ export type SaveMap = {
 export type SaveBadges = {
   earned: readonly BadgeId[]
   hiddenFindsFound: number
+  /** Settlement Known Deeds (plan quests-progression-059) — sparse, absent
+   *  means no local progress in any settlement. See
+   *  `badges/badges.ts`'s `SettlementBadgeProgress`. */
+  settlements?: Record<string, SaveSettlementBadgeProgress>
+}
+
+export type SaveSettlementBadgeProgress = {
+  earned: readonly SettlementBadgeId[]
+  animalCorpsesBuried: number
+  entitiesHealed: number
+  exposedGraveDisturbances: number
 }
 
 /** Local settlement reputation & renown (plan quests-progression-001) — see
@@ -680,7 +691,7 @@ export type SaveWorkContract =
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 48
+export const CURRENT_SAVE_VERSION = 49
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -1103,6 +1114,8 @@ function isTreasureChestMutationsField(value: unknown): value is SaveTreasureChe
 
 const BADGE_IDS: ReadonlySet<string> = new Set<BadgeId>(['relic_seeker', 'treasure_hunter'])
 
+const SETTLEMENT_BADGE_IDS: ReadonlySet<string> = new Set<SettlementBadgeId>(['caretaker', 'grave_robber', 'healer'])
+
 const REPUTATION_DIMENSIONS = ['trust', 'competence', 'benevolence', 'courage', 'integrity'] as const
 
 function isReputationField(value: unknown): value is Reputation {
@@ -1167,13 +1180,27 @@ function isSaveSocialNews(value: unknown): value is SaveSocialNews {
   return Array.isArray(v.events) && v.events.every(isSaveSocialNewsEvent)
 }
 
+function isSaveSettlementBadgeProgress(value: unknown): value is SaveSettlementBadgeProgress {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const p = value as Record<string, unknown>
+  return (
+    Array.isArray(p.earned) && p.earned.every((id) => typeof id === 'string' && SETTLEMENT_BADGE_IDS.has(id)) &&
+    typeof p.animalCorpsesBuried === 'number' &&
+    typeof p.entitiesHealed === 'number' &&
+    typeof p.exposedGraveDisturbances === 'number'
+  )
+}
+
 function isSaveBadges(value: unknown): value is SaveBadges {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false
   const b = value as Record<string, unknown>
-  return (
-    Array.isArray(b.earned) && b.earned.every((id) => typeof id === 'string' && BADGE_IDS.has(id)) &&
-    typeof b.hiddenFindsFound === 'number'
-  )
+  if (
+    !Array.isArray(b.earned) || !b.earned.every((id) => typeof id === 'string' && BADGE_IDS.has(id)) ||
+    typeof b.hiddenFindsFound !== 'number'
+  ) return false
+  if (b.settlements === undefined) return true
+  if (!b.settlements || typeof b.settlements !== 'object' || Array.isArray(b.settlements)) return false
+  return Object.values(b.settlements as Record<string, unknown>).every(isSaveSettlementBadgeProgress)
 }
 
 /** Validates one settlement's `{ stock, food }` snapshot (plan
@@ -3727,6 +3754,15 @@ function migrateSaveV47ToV48(data: unknown): unknown {
   return { ...v, version: 48 }
 }
 
+/** v48 → v49 (plan quests-progression-059): optional `badges.settlements` —
+ *  Settlement Known Deeds per-settlement counters/earned ids. Absent
+ *  restores no local progress in any settlement; global `badges.earned` /
+ *  `hiddenFindsFound` are untouched. */
+function migrateSaveV48ToV49(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  return { ...v, version: 49 }
+}
+
 function migrateSaveV37ToV38(data: unknown): unknown {
   const v = data as Record<string, unknown>
   const seq = { n: 0 }
@@ -3895,6 +3931,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   45: migrateSaveV45ToV46,
   46: migrateSaveV46ToV47,
   47: migrateSaveV47ToV48,
+  48: migrateSaveV48ToV49,
 }
 
 function detectStoredVersion(value: unknown): number | null {

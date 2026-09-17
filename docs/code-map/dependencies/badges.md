@@ -10,6 +10,10 @@ Generated from TypeScript imports.
 
 ## `badges/badges.ts`
 
+**Imports**
+
+- `reputation/ReputationManager.ts`
+
 **Imported by**
 
 - `app/actions/groundActions.test.ts`

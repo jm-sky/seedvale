@@ -59,6 +59,19 @@ function completeMedicalTreatment(
     return
   }
 
+  // Settlement Known Deeds (plan quests-progression-059) — only a real,
+  // settlement-affiliated treatment counts; self-treatment and player-owned
+  // livestock have no `settlementId` (see `medicalTreatment.ts`) and never
+  // fire this hook.
+  if (target.settlementId) {
+    ctx.onPlayerMedicalTreatmentCompleted?.({
+      targetId: target.id,
+      targetKind: target.kind,
+      settlementId: target.settlementId,
+      actualRestored,
+    })
+  }
+
   if (plan.mode === 'material' && plan.materialKind) {
     if (!inventory.remove(plan.materialKind, 1)) {
       toast.show(`Opatrzono: ${target.label}.`, 'pickup')

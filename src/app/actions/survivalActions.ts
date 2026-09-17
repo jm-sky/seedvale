@@ -187,6 +187,15 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
         if (!animal.isDead() || animal.readyToRemove()) return
         animal.bury()
         toast.show('Zwłoki zakopane.')
+        // Settlement Known Deeds (plan quests-progression-059) — facts only;
+        // settlement attribution and `BadgeManager.recordAnimalCorpseBuried`
+        // live at the composition root, not here (see `actionContext.ts`).
+        ctx.onPlayerAnimalCorpseBuried?.({
+          animalId: animal.animalId,
+          animalKind: animal.def.kind,
+          x: animal.mesh.position.x,
+          z: animal.mesh.position.z,
+        })
       } finally {
         animal.releaseCorpseHold()
       }

@@ -1,7 +1,7 @@
 # Plan: Settlement Known Deeds & Reputation Badges
 
 **Created:** 2026-09-17
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Depends on:** quests-progression-001, quests-progression-011, items-player-046

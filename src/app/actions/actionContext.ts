@@ -81,6 +81,32 @@ export type PlayerActionContext = {
     animalKind: import('../../fauna/AnimalAgent').AnimalKind
     lootKinds: readonly ItemKind[]
   }) => void
+  /** Player shovel-bury of an animal corpse completed (plan
+   *  quests-progression-059). Facts only — settlement attribution and
+   *  `BadgeManager.recordAnimalCorpseBuried` live at the composition root,
+   *  not in `survivalActions.ts`. */
+  onPlayerAnimalCorpseBuried?: (context: {
+    animalId: string
+    animalKind: import('../../fauna/AnimalAgent').AnimalKind
+    x: number
+    z: number
+  }) => void
+  /** Player Medicine treatment completed with real effect on a
+   *  settlement-affiliated NPC/livestock target (plan quests-progression-059).
+   *  Never fired for self-treatment or a no-op attempt — see
+   *  `medicalTreatmentActions.ts::completeMedicalTreatment`. */
+  onPlayerMedicalTreatmentCompleted?: (context: {
+    targetId: string
+    targetKind: import('../../player/medicalTreatment').TreatableTargetKind
+    settlementId: string
+    actualRestored: number
+  }) => void
+  /** A settlement Known Deed badge was newly earned (plan
+   *  quests-progression-059) — the single fan-out seam every deed producer
+   *  (`groundActions.ts`, and the two hooks above via `createApp.ts`) routes
+   *  through, so the toast/consequence/UI-refresh triple lives in exactly
+   *  one place. */
+  onSettlementBadgeUnlock?: (unlock: import('../../badges/badges').SettlementBadgeUnlock) => void
 }
 
 /** The standard "another blocking activity is already running" guard: a busy

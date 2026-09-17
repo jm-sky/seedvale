@@ -5,7 +5,7 @@ import type { Inventory } from '../items/Inventory'
 import type { ItemKind } from '../items/items'
 import type { PlayerController } from './PlayerController'
 import type { PlayerSkills } from './PlayerSkills'
-import { isHouseholdOwned, isPlayerOwned } from '../fauna/animalOwnership'
+import { deriveOwnerHouseId, isHouseholdOwned, isPlayerOwned } from '../fauna/animalOwnership'
 import { ITEM_CATALOG } from '../items/itemCatalog'
 import { ITEM_DEFS } from '../items/items'
 import {
@@ -49,6 +49,12 @@ export type TreatableTarget = {
   kind: TreatableTargetKind
   label: string
   resolveInjuryRecovery: (nowDays: number) => void
+  /** Settlement whose community would recognize this treatment as a known
+   *  deed (plan quests-progression-059) — undefined for self-treatment and
+   *  for an owner with no settlement affiliation (player-owned livestock).
+   *  Resolved from the target's own authoritative identity/ownership, never
+   *  from proximity or a display name. */
+  settlementId?: string
 }
 
 export type MedicalTreatmentPlan = {
@@ -151,17 +157,28 @@ export function treatableFromNpc(npc: NpcAgent): TreatableTarget | null {
     getMaxHp: () => npc.health.maxHp,
     resolveInjuryRecovery: (nowDays) => npc.resolveInjuryRecovery(nowDays),
     applyTreatment: (requested, nowDays) => npc.applyPhysicalInjuryTreatment(requested, nowDays),
+    settlementId: npc.household?.settlementId,
   }
 }
 
 /**
  * Livestock / owned domestic only — wild fauna (`owner === null`) is out of
  * scope for Medicine v1. Uses ownership, not a species allowlist.
+ *
+ * `resolveHouseholdSettlementId` resolves a household-owned animal's
+ * settlement affiliation (plan quests-progression-059) — injected from the
+ * interaction boundary rather than importing `SettlementsManager` into this
+ * player domain module. Player-owned livestock has no settlement social
+ * owner and always resolves `settlementId: undefined`.
  */
-export function treatableFromLivestock(animal: AnimalAgent): TreatableTarget | null {
+export function treatableFromLivestock(
+  animal: AnimalAgent,
+  resolveHouseholdSettlementId?: (houseId: string) => string | undefined,
+): TreatableTarget | null {
   if (animal.health.dead) return null
   const owner = animal.getOwner()
   if (!isPlayerOwned(owner) && !isHouseholdOwned(owner)) return null
+  const houseId = deriveOwnerHouseId(owner)
   return {
     id: animal.animalId,
     kind: 'livestock',
@@ -171,6 +188,7 @@ export function treatableFromLivestock(animal: AnimalAgent): TreatableTarget | n
     getMaxHp: () => animal.health.maxHp,
     resolveInjuryRecovery: (nowDays) => animal.resolveInjuryRecoveryAt(nowDays),
     applyTreatment: (requested, nowDays) => animal.applyPhysicalInjuryTreatment(requested, nowDays),
+    settlementId: houseId ? resolveHouseholdSettlementId?.(houseId) : undefined,
   }
 }
 
@@ -178,9 +196,12 @@ export function treatableFromLivestock(animal: AnimalAgent): TreatableTarget | n
  * Maps a world Interactable to a treatable target, or null when Medicine
  * cannot act on it (dead, wild fauna, wrong kind).
  */
-export function treatableFromInteractable(target: Interactable): TreatableTarget | null {
+export function treatableFromInteractable(
+  target: Interactable,
+  resolveHouseholdSettlementId?: (houseId: string) => string | undefined,
+): TreatableTarget | null {
   if (target.kind === 'npc') return treatableFromNpc(target.npc)
-  if (target.kind === 'animal') return treatableFromLivestock(target.animal)
+  if (target.kind === 'animal') return treatableFromLivestock(target.animal, resolveHouseholdSettlementId)
   return null
 }
 

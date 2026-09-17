@@ -12,6 +12,8 @@ function fakeTarget(overrides: Partial<{
   injury: number
   maxHp: number
   applyActual: number
+  kind: TreatableTarget['kind']
+  settlementId: string
 }> = {}): TreatableTarget & {
   injury: number
   applyCalls: number[]
@@ -26,7 +28,7 @@ function fakeTarget(overrides: Partial<{
   }
   return {
     id: 't1',
-    kind: 'self',
+    kind: overrides.kind ?? 'self',
     label: 'siebie',
     isAlive: () => state.alive,
     getPhysicalInjury: () => state.injury,
@@ -39,6 +41,7 @@ function fakeTarget(overrides: Partial<{
       state.injury = Math.max(0, state.injury - actual)
       return actual
     },
+    settlementId: overrides.settlementId,
     get injury() { return state.injury },
     set injury(v: number) { state.injury = v },
     get applyCalls() { return state.applyCalls },
@@ -51,6 +54,7 @@ function setup(inventoryCounts: Record<string, number> = {}) {
   const skills = createPlayerSkills()
   const toast = { show: vi.fn() }
   const busy = createBusyAction()
+  const onPlayerMedicalTreatmentCompleted = vi.fn()
   const ctx = {
     inventory,
     player: { skills },
@@ -62,6 +66,7 @@ function setup(inventoryCounts: Record<string, number> = {}) {
     dayNight: { elapsedDays: 0 },
     onInventoryChanged: vi.fn(),
     refreshInventoryScreen: vi.fn(),
+    onPlayerMedicalTreatmentCompleted,
   } as unknown as PlayerActionContext
   return {
     actions: createMedicalTreatmentActions(ctx),
@@ -70,6 +75,7 @@ function setup(inventoryCounts: Record<string, number> = {}) {
     toast,
     busy,
     ctx,
+    onPlayerMedicalTreatmentCompleted,
   }
 }
 
@@ -148,5 +154,58 @@ describe('createMedicalTreatmentActions (plan items-player-046)', () => {
     busy.tick(MEDICAL_TREATMENT_DURATION_SEC + 0.01)
     expect(target.applyCalls.length).toBe(1)
     expect(skills.medicine.xp).toBeGreaterThan(0)
+  })
+})
+
+describe('settlement Known Deeds hook (plan quests-progression-059)', () => {
+  it('fires for a successful NPC treatment with a resolved settlement id', () => {
+    const { actions, busy, onPlayerMedicalTreatmentCompleted } = setup({ bandage: 1 })
+    const target = fakeTarget({ injury: 40, kind: 'npc', settlementId: 'village-a' })
+    actions.startMedicalTreatment(target)
+    busy.tick(MEDICAL_TREATMENT_DURATION_SEC + 0.01)
+
+    expect(onPlayerMedicalTreatmentCompleted).toHaveBeenCalledTimes(1)
+    expect(onPlayerMedicalTreatmentCompleted).toHaveBeenCalledWith({
+      targetId: 't1',
+      targetKind: 'npc',
+      settlementId: 'village-a',
+      actualRestored: expect.any(Number),
+    })
+  })
+
+  it('fires for a successful household-livestock treatment with a resolved settlement id', () => {
+    const { actions, busy, onPlayerMedicalTreatmentCompleted } = setup({ bandage: 1 })
+    const target = fakeTarget({ injury: 40, kind: 'livestock', settlementId: 'village-a' })
+    actions.startMedicalTreatment(target)
+    busy.tick(MEDICAL_TREATMENT_DURATION_SEC + 0.01)
+
+    expect(onPlayerMedicalTreatmentCompleted).toHaveBeenCalledTimes(1)
+  })
+
+  it('never fires for self-treatment (no settlementId)', () => {
+    const { actions, busy, onPlayerMedicalTreatmentCompleted } = setup({ bandage: 1 })
+    const target = fakeTarget({ injury: 40, kind: 'self' })
+    actions.startMedicalTreatment(target)
+    busy.tick(MEDICAL_TREATMENT_DURATION_SEC + 0.01)
+
+    expect(onPlayerMedicalTreatmentCompleted).not.toHaveBeenCalled()
+  })
+
+  it('never fires for player-owned livestock (no settlement affiliation)', () => {
+    const { actions, busy, onPlayerMedicalTreatmentCompleted } = setup({ bandage: 1 })
+    const target = fakeTarget({ injury: 40, kind: 'livestock' })
+    actions.startMedicalTreatment(target)
+    busy.tick(MEDICAL_TREATMENT_DURATION_SEC + 0.01)
+
+    expect(onPlayerMedicalTreatmentCompleted).not.toHaveBeenCalled()
+  })
+
+  it('never fires on a zero-actual-restore no-op', () => {
+    const { actions, busy, onPlayerMedicalTreatmentCompleted } = setup({ bandage: 1 })
+    const target = fakeTarget({ injury: 40, kind: 'npc', settlementId: 'village-a', applyActual: 0 })
+    actions.startMedicalTreatment(target)
+    busy.tick(MEDICAL_TREATMENT_DURATION_SEC + 0.01)
+
+    expect(onPlayerMedicalTreatmentCompleted).not.toHaveBeenCalled()
   })
 })

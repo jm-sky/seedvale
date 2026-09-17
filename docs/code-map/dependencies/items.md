@@ -23,6 +23,7 @@ Generated from TypeScript imports.
 
 - `app/actions/actionContext.ts`
 - `app/actions/groundActions.test.ts`
+- `app/actions/survivalActions.test.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`
 - `app/interactables.ts`

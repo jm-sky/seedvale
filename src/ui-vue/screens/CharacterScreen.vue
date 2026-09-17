@@ -319,6 +319,23 @@ function onSelectSettlement(settlementId: string): void {
                 </span>
                 <span class="opacity-70">{{ ui.characterScreen.reputation.selected.renown }}</span>
               </div>
+              <div
+                v-if="ui.characterScreen.reputation.selected.settlementBadges.length > 0"
+                class="mt-2 flex flex-col gap-1.5 border-t border-white/10 pt-2"
+              >
+                <div class="text-sm">
+                  Znany tutaj z
+                </div>
+                <div
+                  v-for="badge in ui.characterScreen.reputation.selected.settlementBadges"
+                  :key="badge.id"
+                  class="text-xs"
+                  :title="badge.description"
+                >
+                  <span class="mr-1">{{ badge.icon }}</span>
+                  <span class="opacity-90">{{ badge.label }}</span>
+                </div>
+              </div>
             </template>
           </div>
           <div

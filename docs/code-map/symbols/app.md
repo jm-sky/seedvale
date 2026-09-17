@@ -11,8 +11,8 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/actionContext.ts`
 
-- `isActionBlocked` — function — line 88
-- `isChannelBusy` — function — line 95
+- `isActionBlocked` — function — line 114
+- `isChannelBusy` — function — line 121
 - `PlayerActionContext` — type — line 31
 
 ## `app/actions/actionContracts.ts`
@@ -95,11 +95,11 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/medicalTreatmentActions.ts`
 
-- `createMedicalTreatmentActions` — function — line 82
+- `createMedicalTreatmentActions` — function — line 95
 - `MedicalTreatmentActions` — type — line 23
   - domain: items-player
   - system: player-actions
-- `queryMedicalTreatmentAvailability` — function — line 108
+- `queryMedicalTreatmentAvailability` — function — line 121
 
 ## `app/actions/mountActions.ts`
 

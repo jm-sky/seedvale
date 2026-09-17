@@ -726,6 +726,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     inventory,
     playerSkills: player.skills,
     startMedicalTreatment: (target) => deps.startMedicalTreatment(target),
+    resolveHouseholdSettlementId: (houseId) => bundle.settlementsManager.getHousehold(houseId)?.settlementId,
   }
 
   const timer = new Timer()

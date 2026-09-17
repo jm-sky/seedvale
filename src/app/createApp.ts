@@ -19,7 +19,7 @@ import { createHouseDoorTracker } from '../audio/doorSounds'
 import { createFireAudio, playActionFireExtinguish, playActionFireIgnite } from '../audio/fireSounds'
 import { applyFootstepPackFromUrl } from '../audio/playerMoveSounds'
 import { createWeatherAudio } from '../audio/weatherSounds'
-import { BadgeManager } from '../badges/badges'
+import { BadgeManager, type SettlementBadgeUnlock } from '../badges/badges'
 import { saveAllDomains, savePlayer, saveWorld } from '../config/persistConfig'
 import {
   applyStoredPlayer,
@@ -2096,6 +2096,7 @@ export async function createApp(
             settlementName: selected.settlementName,
             reputation: reputation.getReputation(selected.settlementId),
             renown: reputation.getRenown(selected.settlementId),
+            settlementBadges: badges.listSettlementEarned(selected.settlementId),
           }
         : null,
     })
@@ -2192,6 +2193,17 @@ export async function createApp(
     syncPlayerAppearance()
   }
 
+  // Settlement Known Deeds unlock fan-out (plan quests-progression-059) — the
+  // single seam every deed producer's newly-earned local badge routes
+  // through: announce the toast, apply its optional one-shot consequence,
+  // and refresh the Character Screen's reputation + local-badge projection.
+  // Do not repeat this triple separately per producer.
+  const handleSettlementBadgeUnlock = (unlock: SettlementBadgeUnlock): void => {
+    toast.show(`Nowa odznaka: ${unlock.badge.icon} ${unlock.badge.label}`, 'info')
+    if (unlock.consequence) applySocialConsequence(reputation, unlock.consequence)
+    refreshCharacterReputation()
+  }
+
   const actionCtx: PlayerActionContext = {
     bundle,
     player,
@@ -2226,6 +2238,17 @@ export async function createApp(
     onPlayerAnimalHarvested: (context) => {
       questManager.onAnimalHarvested(context)
     },
+    onPlayerAnimalCorpseBuried: ({ x, z }) => {
+      const settlementId = findSettlementContainingPlayer(x, z, lookupSettlementCell)?.id
+      if (!settlementId) return
+      const unlock = badges.recordAnimalCorpseBuried(settlementId)
+      if (unlock) handleSettlementBadgeUnlock(unlock)
+    },
+    onPlayerMedicalTreatmentCompleted: ({ settlementId }) => {
+      const unlock = badges.recordSuccessfulTreatment(settlementId)
+      if (unlock) handleSettlementBadgeUnlock(unlock)
+    },
+    onSettlementBadgeUnlock: handleSettlementBadgeUnlock,
     onCampfireLit: () => {
       questManager.recheckSettlementLightObjectives()
       refreshGuardEveningPolicies()

@@ -6,7 +6,7 @@ import type { PlacementPreviewKind, PlacementPreviewUiView } from '../app/action
 import type { PlacementPreviewState as PlacementPreviewPresentation, PlacementRequirementView } from '../app/actions/placementRequirementView'
 import type { InspectionActionId, WorldInspectionView } from '../app/inspection/worldInspectionView'
 import type { PlayAt } from '../audio/createWorldAudio'
-import type { BadgeDef } from '../badges/badges'
+import type { BadgeDef, SettlementBadgeDef } from '../badges/badges'
 import type { QualityPreset } from '../config/qualityProfiles'
 import type { WorldConfig } from '../config/worldConfig'
 import type { InteractionConsequenceTone, InteractionGazePrompt } from '../interaction/interactionView'
@@ -603,6 +603,12 @@ export type CharacterReputationStandingView = {
   settlementName: string
   reputation: Reputation
   renown: number
+  /** Settlement Known Deeds earned in this settlement (plan
+   *  quests-progression-059) — refreshed at the same points as
+   *  `reputation`/`renown` above (screen open, selection change, badge
+   *  unlock); a not-yet-earned badge never appears here. Deliberately kept
+   *  separate from `CharacterScreenState.badges` (global achievements). */
+  settlementBadges: readonly SettlementBadgeDef[]
 }
 /** Local settlement reputation/renown for the Character Screen (plan
  *  ui-input-019) — known-settlement options plus one selected standing,

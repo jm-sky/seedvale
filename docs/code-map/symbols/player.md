@@ -58,14 +58,14 @@ Generated from exported TypeScript symbols.
   - domain: items-player
   - system: player-skills
 - `MEDICAL_TREATMENT_DURATION_SEC` — const — line 35
-- `medicalMaterialLabel` — function — line 188
-- `MedicalTreatmentPlan` — type — line 54
-- `medicalTreatmentPromptLabel` — function — line 126
-- `resolveMedicalTreatmentPlan` — function — line 69
-- `treatableFromInteractable` — function — line 181
-- `treatableFromLivestock` — function — line 161
-- `treatableFromNpc` — function — line 143
-- `treatableFromPlayer` — function — line 130
+- `medicalMaterialLabel` — function — line 209
+- `MedicalTreatmentPlan` — type — line 60
+- `medicalTreatmentPromptLabel` — function — line 132
+- `resolveMedicalTreatmentPlan` — function — line 75
+- `treatableFromInteractable` — function — line 199
+- `treatableFromLivestock` — function — line 174
+- `treatableFromNpc` — function — line 149
+- `treatableFromPlayer` — function — line 136
 - `TreatableTarget` — type — line 43
 - `TreatableTargetKind` — type — line 37
 

@@ -343,6 +343,8 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `ai/NpcAgent.ts`
+- `fauna/AnimalAgent.ts`
 - `items/Inventory.ts`
 - `player/PlayerSkills.ts`
 - `player/medicalTreatment.ts`

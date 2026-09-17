@@ -206,6 +206,7 @@ Generated from TypeScript imports.
 - `debug/npcInspector.ts`
 - `debug/npcTrace.ts`
 - `interaction/Interactable.ts`
+- `player/medicalTreatment.test.ts`
 - `player/medicalTreatment.ts`
 - `quests/QuestManager.ts`
 - `settlement/createSettlement.ts`

@@ -692,6 +692,7 @@ Generated from TypeScript imports.
 - `app/actions/survivalActions.ts`
 - `app/busyAction.ts`
 - `fauna/AnimalSpawner.ts`
+- `items/HeldTool.ts`
 - `items/Inventory.ts`
 - `items/foodSafety.ts`
 - `items/itemInstances.ts`

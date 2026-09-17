@@ -18,6 +18,7 @@ Generated from TypeScript imports.
 - `app/createApp.ts`
 - `app/inventoryWiring.ts`
 - `app/saveState.ts`
+- `badges/badges.ts`
 - `items/trade.test.ts`
 - `items/tradeCatalog.ts`
 - `persistence/saveData.ts`

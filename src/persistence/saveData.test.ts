@@ -1584,6 +1584,59 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
     expect(result.data.badges).toEqual({ earned: ['treasure_hunter'], hiddenFindsFound: 5 })
   })
 
+  it('migrates a v48 save with no badges.settlements to the current version with no local badge progress (plan quests-progression-059)', () => {
+    const result = loadStoredSave({ ...validSave, version: 48 })
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') return
+    expect(result.data.version).toBe(CURRENT_SAVE_VERSION)
+    expect(result.data.badges).toEqual({ earned: ['treasure_hunter'], hiddenFindsFound: 5 })
+  })
+
+  it('round-trips settlement Known Deeds badge progress and rejects a malformed entry (plan quests-progression-059)', () => {
+    const withSettlements = loadStoredSave({
+      ...validSave,
+      badges: {
+        earned: ['treasure_hunter'],
+        hiddenFindsFound: 5,
+        settlements: {
+          'settlement:a': {
+            earned: ['caretaker'],
+            animalCorpsesBuried: 5,
+            entitiesHealed: 2,
+            exposedGraveDisturbances: 0,
+          },
+        },
+      },
+    })
+    expect(withSettlements.status).toBe('ok')
+    if (withSettlements.status === 'ok') {
+      expect(withSettlements.data.badges.settlements).toEqual({
+        'settlement:a': {
+          earned: ['caretaker'],
+          animalCorpsesBuried: 5,
+          entitiesHealed: 2,
+          exposedGraveDisturbances: 0,
+        },
+      })
+    }
+
+    expect(loadStoredSave({
+      ...validSave,
+      badges: {
+        earned: ['treasure_hunter'],
+        hiddenFindsFound: 5,
+        settlements: {
+          'settlement:a': {
+            earned: ['not_a_settlement_badge'],
+            animalCorpsesBuried: 5,
+            entitiesHealed: 2,
+            exposedGraveDisturbances: 0,
+          },
+        },
+      },
+    })).toEqual({ status: 'invalid' })
+  })
+
   it('migrates v25 saves to v26 with an empty carts array (plan fauna-007)', () => {
     const { carts: _carts, ...v25Fields } = validSave
     const result = loadStoredSave({ ...v25Fields, version: 25 })

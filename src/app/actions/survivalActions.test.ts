@@ -5,6 +5,7 @@ import type { ItemKind } from '../../items/items'
 import type { VillageFire } from '../../settlement/VillageFire'
 import type { PlayerActionContext } from './actionContext'
 import { resolveRawMeatSafetyRisk } from '../../items/foodSafety'
+import { createHeldTool } from '../../items/HeldTool'
 import { Inventory } from '../../items/Inventory'
 import { createPlayerNeeds } from '../../player/PlayerNeeds'
 import { createPlayerSkills } from '../../player/PlayerSkills'
@@ -582,5 +583,90 @@ describe('consumeItem — raw-meat poisoning exposure (plan items-player-023)', 
     expect(needs.hunger.current).toBeGreaterThan(0)
     expect(ctx.player.temporaryConditions.conditions.poisoning).toBeUndefined()
     expect(ctx.player.unsafeFoodEventCount).toBe(safeIndex + 1)
+  })
+})
+
+describe('startBuryCorpse — settlement Known Deeds hook (plan quests-progression-059)', () => {
+  function fakeCorpseAnimal(x = 10, z = 20) {
+    let readyToRemove = false
+    return {
+      animalId: 'animal:test-sheep',
+      def: { kind: 'sheep' },
+      mesh: { position: { x, z } },
+      cleanupClaimantNpcId: () => null,
+      isDead: () => true,
+      readyToRemove: () => readyToRemove,
+      holdCorpse: vi.fn(),
+      releaseCorpseHold: vi.fn(),
+      bury: vi.fn(() => { readyToRemove = true }),
+    }
+  }
+
+  function buryCorpseSetup() {
+    const inventory = new Inventory({ shovel: 1 }, 100)
+    const heldTool = createHeldTool(inventory, 'shovel')
+    const toast = { show: vi.fn() }
+    const busy = createBusyAction()
+    const onPlayerAnimalCorpseBuried = vi.fn()
+    const ctx = {
+      bundle: {},
+      player: { skills: createPlayerSkills() },
+      inventory,
+      heldTool,
+      hud: {},
+      toast,
+      busy,
+      timeSkip: { isActive: () => false },
+      restCamp: { isActive: () => false },
+      dayNight: { elapsedDays: 0, dayLengthSec: 600 },
+      worldAudio: { playAt: vi.fn(), playOnce: vi.fn() },
+      onPlayerAnimalCorpseBuried,
+    } as unknown as PlayerActionContext
+
+    const actions = createSurvivalActions(ctx)
+    return { actions, busy, toast, onPlayerAnimalCorpseBuried }
+  }
+
+  it('fires the hook with the corpse facts only after a successful bury completion', () => {
+    const { actions, busy, onPlayerAnimalCorpseBuried } = buryCorpseSetup()
+    const animal = fakeCorpseAnimal(10, 20)
+
+    const result = actions.startBuryCorpse(animal as unknown as Parameters<typeof actions.startBuryCorpse>[0])
+    expect(result.ok).toBe(true)
+    expect(onPlayerAnimalCorpseBuried).not.toHaveBeenCalled()
+
+    busy.tick(100)
+
+    expect(animal.bury).toHaveBeenCalledTimes(1)
+    expect(onPlayerAnimalCorpseBuried).toHaveBeenCalledTimes(1)
+    expect(onPlayerAnimalCorpseBuried).toHaveBeenCalledWith({
+      animalId: 'animal:test-sheep',
+      animalKind: 'sheep',
+      x: 10,
+      z: 20,
+    })
+  })
+
+  it('does not fire the hook when the corpse became unavailable before completion (revalidation failure)', () => {
+    const { actions, busy, onPlayerAnimalCorpseBuried } = buryCorpseSetup()
+    const animal = fakeCorpseAnimal()
+    animal.isDead = () => false
+
+    actions.startBuryCorpse(animal as unknown as Parameters<typeof actions.startBuryCorpse>[0])
+    busy.tick(100)
+
+    expect(animal.bury).not.toHaveBeenCalled()
+    expect(onPlayerAnimalCorpseBuried).not.toHaveBeenCalled()
+  })
+
+  it('does not fire the hook on cancellation', () => {
+    const { actions, busy, onPlayerAnimalCorpseBuried } = buryCorpseSetup()
+    const animal = fakeCorpseAnimal()
+
+    actions.startBuryCorpse(animal as unknown as Parameters<typeof actions.startBuryCorpse>[0])
+    busy.cancel()
+
+    expect(animal.bury).not.toHaveBeenCalled()
+    expect(onPlayerAnimalCorpseBuried).not.toHaveBeenCalled()
   })
 })
