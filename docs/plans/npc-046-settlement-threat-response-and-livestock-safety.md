@@ -183,6 +183,38 @@ Shepherd shearing, deposit and flock-care actions must remain normal work and re
 
 Do not create persistent shepherd combat state.
 
+### Shepherd defensive loadout
+
+A shepherd is responsible for livestock protection and should not rely on the generic fallback `knife` as the only combat option.
+
+Every generated shepherd must receive:
+
+```text
+knife: 100%
+```
+
+The knife is both a normal utility tool and a last-resort melee weapon. It remains in the same personal-inventory/loadout path as other NPC belongings.
+
+In addition, each shepherd receives exactly one deterministic primary defensive weapon:
+
+```text
+spear:     45%
+pitchfork: 30%
+axe:       25%
+```
+
+Requirements:
+
+- selection is deterministic from stable NPC/world identity using an isolated RNG salt; it must not reroll when the settlement/NPC is reconstructed,
+- the selected weapon is a real personal inventory item and persists through the existing NPC inventory/save path,
+- `knife` is always present independently of the primary weapon,
+- `shears` remain a separate profession tool and do not count as the shepherd's primary defensive weapon,
+- do not grant `long_sword` to shepherds; that remains guard-specific equipment,
+- do not add shepherd-specific damage multipliers — combat capability comes from the selected real weapon + normal Strength/combat resolution,
+- preserve existing loadout idempotency: reconstructing an NPC must not duplicate the knife, primary weapon or shears.
+
+The weighted selection belongs in the central role/personal-loadout mechanism (`src/ai/npcLoadout.ts` or a small pure helper used by it), not in shepherd combat code.
+
 ## 5. Local alarm / assistance stimulus
 
 Add the smallest reusable **local threat assistance signal** needed for nearby NPC cooperation.
@@ -283,7 +315,7 @@ Likely implementation surface, subject to current-code verification:
 
 - `src/ai/NpcAgent.ts` — locomotion mode/run execution, threat interruption, guard/shepherd response wiring, animation selection.
 - `src/ai/npcAnimalThreat.ts` — reusable perception/scoring inputs and guard role bias if this remains the narrowest owner.
-- `src/ai/npcLoadout.ts` — expected unchanged unless guard equipment contract needs a small test/doc adjustment.
+- `src/ai/npcLoadout.ts` — shepherd knife + deterministic weighted defensive weapon + existing guard loadout tests.
 - `src/settlement/professionStaffing.ts` — only if candidate-quality selection can reuse already-available deterministic profile data without generation-cycle duplication.
 - `src/fauna/AnimalAgent.ts` — domestic flee destination preference while retaining existing sprint execution.
 - `src/fauna/animalDefs.ts` — expected no new run capability; existing `sprintSpeed` remains authoritative.
@@ -319,6 +351,9 @@ Automated tests should cover at minimum:
 - domestic livestock chooses a valid safe anchor only when it does not initially move toward the predator,
 - livestock without a safe anchor keeps existing away-from-threat flee behaviour,
 - shepherd detects predator committed to its owned livestock and interrupts ordinary work,
+- shepherd always has `knife`,
+- shepherd receives exactly one deterministic primary defensive weapon with `spear` 45% / `pitchfork` 30% / `axe` 25%,
+- shepherd reconstruction does not reroll or duplicate knife/weapon/shears,
 - healthy armed shepherd can defend through existing combat target/beginCombat path,
 - vulnerable shepherd flees/runs and produces a bounded local assistance signal,
 - ordinary NPC receiving an alarm still uses defend/flee arbitration rather than always fighting,
