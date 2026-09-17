@@ -232,4 +232,9 @@ Research/reviews:
 - [`Review 015 — Browser performance benchmark`](../reviews/2026-08-15--015--browser-performance-benchmark.md)
 - [`Program/material census`](./audits/2026-09-01--program-census.md)
 
+## Latest benchmark results
+
+- `docs/performance/results/2026-09-17--021--benchmark-settlement-heavy.md`
+- `docs/performance/results/2026-09-17--021--benchmark-stream.md`
+
 Historical benchmark results remain under `docs/performance/results/` and `docs/performance/trace-results/`. Treat them as dated evidence, not current-state declarations.
