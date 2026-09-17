@@ -80,6 +80,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `fauna-034-wildlife-day-night-rest-and-den-defense.md`                      | 🟡 | M      | ~~fauna-028~~                                                                                                                                                                                                                                                                              | -                                       |
 | 💡 `items-player-044-shoulder-and-forearm-equipment-slots.md`                  | 🟡 | M      | ~~items-player-039~~                                                                                                                                                                                                                                                                       | -                                       |
 | 💡 `npc-045-campfire-spoken-conversation-pairs.md`                             | 🔴 | S      | ~~npc-013~~, ~~npc-044~~                                                                                                                                                                                                                                                                   | -                                       |
+| ◼️ `ui-input-024-npc-dialogue-grouping-and-quest-priority.md`                  | 🔴 | M      | -                                                                                                                                                                                                                                                                                          | -                                       |
 
 ---
 
@@ -245,7 +246,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - settlements: `018`
 - settlements-npcs: `043`
 - tools: `016`
-- ui-input: `024`
+- ui-input: `025`
 - world: `031`
 - world-terrain: `038`
 
