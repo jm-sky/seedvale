@@ -5,6 +5,7 @@ import type { VillageIdentity, VillagePasturePlan } from './villagePlan'
 import { directionFromYaw, pointHitsCorridor, segmentHitsCorridor, yawToward } from '../math/segment'
 import { footprintOverlapsRiver } from '../terrain/riverNetwork'
 import { generateFamilies } from './families'
+import { fencePlacementColliders } from './settlementPalisade'
 import {
   pastureFencePlacements,
   pastureRadiusFor,
@@ -13,7 +14,6 @@ import {
 } from './villagePasture'
 import { PASTURE_ID, pasturePathId } from './villagePlan'
 import { pathPlansToCorridorData, planVillageLayout } from './villagePlanner'
-import { fencePlacementColliders } from './settlementPalisade'
 
 const flatHeight = (): number => 12
 const WATER = 0

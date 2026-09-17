@@ -2,10 +2,10 @@ import type { HeightSampler } from '../player/PlayerController'
 import type { RiverChannelSegment } from '../terrain/chunkHeightmap'
 import type { FamilyDef, VillageSize } from './families'
 import {
+  type CorridorSegment2D,
   pointHitsCorridor,
   segmentHitsCorridor,
   yawToward,
-  type CorridorSegment2D,
 } from '../math/segment'
 import { type PropPlacement } from '../render/instancedProps'
 import { footprintOverlapsRiver } from '../terrain/riverNetwork'

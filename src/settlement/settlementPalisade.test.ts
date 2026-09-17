@@ -4,9 +4,9 @@ import type { SettlementSite } from './findSettlementSite'
 import type { VillageEntrance, VillagePlan } from './villagePlan'
 import { colliderContainsPoint } from '../world/collision'
 import {
+  fencePlacementColliders,
   PALISADE_GATE_HALF_ANGLE,
   PALISADE_WALL_HALF_DEPTH,
-  fencePlacementColliders,
   resolveEntrancePalisadePlacements,
   resolveEntranceTorchPlacements,
   settlementPalisadeColliders,

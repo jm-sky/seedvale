@@ -1,7 +1,7 @@
 import type { HeightSampler } from '../player/PlayerController'
 import type { RiverChannelSegment } from '../terrain/chunkHeightmap'
 import type { VillageSize } from './families'
-import { pointHitsCorridor, segmentHitsCorridor, type CorridorSegment2D } from '../math/segment'
+import { type CorridorSegment2D, pointHitsCorridor, segmentHitsCorridor } from '../math/segment'
 import { type PropPlacement } from '../render/instancedProps'
 import { footprintOverlapsRiver } from '../terrain/riverNetwork'
 import { createSeededRandom } from '../world/parseSeed'
