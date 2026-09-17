@@ -9,6 +9,7 @@
 **Subdomains:** `domestication` `behavior`
 **Tags:** `horse` `riding` `follow` `stay` `dismount`
 **Roadmap:** `horse-and-riding.md`
+**Model:** `Sonnet`, `Composer`
 
 ## Cel
 
