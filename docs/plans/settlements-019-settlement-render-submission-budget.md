@@ -8,6 +8,7 @@
 **Domain:** `settlements`
 **Subdomains:** `buildings`
 **Tags:** `rendering` `instancing` `performance`
+**Model:** Sonnet, Composer
 
 ## Cel
 
