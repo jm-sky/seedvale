@@ -85,6 +85,7 @@ Generated from TypeScript imports.
 
 - `app/actions/gatheringActions.ts`
 - `app/actions/leadActions.ts`
+- `app/actions/mountActions.test.ts`
 - `app/actions/mountActions.ts`
 - `app/actions/survivalActions.ts`
 - `app/busyChannelDurations.test.ts`
@@ -336,6 +337,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/actions/mountActions.test.ts`
 - `fauna/AnimalAgent.test.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/animalAttraction.test.ts`

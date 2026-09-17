@@ -60,6 +60,7 @@ Generated from TypeScript imports.
 - `app/actions/householdResourceTransferActions.ts`
 - `app/actions/inspectionActions.ts`
 - `app/actions/leadActions.ts`
+- `app/actions/mountActions.test.ts`
 - `app/actions/mountActions.ts`
 - `app/actions/npcItemTransferActions.ts`
 - `app/actions/placementActions.ts`
@@ -380,6 +381,16 @@ Generated from TypeScript imports.
 - `app/createApp.ts`
 - `app/gameLoop.ts`
 
+## `app/actions/mountActions.test.ts`
+
+**Imports**
+
+- `app/actions/actionContext.ts`
+- `app/actions/mountActions.ts`
+- `fauna/AnimalAgent.ts`
+- `fauna/animalDefs.ts`
+- `terrain/waterSample.ts`
+
 ## `app/actions/mountActions.ts`
 
 **Imports**
@@ -397,6 +408,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/actions/mountActions.test.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`
 
