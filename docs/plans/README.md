@@ -95,6 +95,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `settlements-npcs-043-settlement-cultivation-hydration-rain-and-farmer-watering.md` | 🔴 | L      | ~~settlements-npcs-001~~, ~~settlements-npcs-002~~, ~~settlements-npcs-030~~                                                                                                                                                                                                               | quests-professions-and-world-consequences |
 | 💡 `world-031-authored-persistent-world-consequences.md`                       | 🔴 | M      | -                                                                                                                                                                                                                                                                                          | quests-professions-and-world-consequences |
 | 💡 `settlements-npcs-044-authored-outpost-occupants-and-construction-lifecycle.md` | 🔴 | L      | world-031                                                                                                                                                                                                                                                                                  | quests-professions-and-world-consequences |
+| ◼️ `npc-050-npc-initiated-player-follow-ups-and-proactive-dialogue.md`         | 🔴 | M      | ~~quests-progression-047~~, ~~world-030~~                                                                                                                                                                                                                                                  | -                                         |
 
 ---
 
@@ -209,7 +210,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - ai: `005`
 - fauna: `039`
 - items-player: `047`
-- npc: `050`
+- npc: `051`
 - persistence: `006`
 - quests-progression: `066`
 - settlements: `020`
