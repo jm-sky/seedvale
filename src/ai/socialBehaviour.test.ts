@@ -6,8 +6,8 @@ import {
   conversationAttemptCooldownSec,
   conversationDurationSec,
   conversationOutcome,
-  findConversationPartner,
   type ConversationVoiceCue,
+  findConversationPartner,
   type SocialCandidateView,
   type SocialParticipant,
 } from './socialBehaviour'

@@ -145,28 +145,28 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `M` · **Score:**  43  
    → **unlocks:** 0/0
 
-18. `npc-045` — **Campfire spoken conversation pairs**  
-  🔴 `S` · **Score:**  37  
-   → **unlocks:** 0/0
-
-19. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
+18. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
   🔴 `M` · **Score:**  35  
    → **unlocks:** 0/0
 
-20. `tools-015` — **Chatterbox local voice generation pipeline**  
+19. `tools-015` — **Chatterbox local voice generation pipeline**  
   🔴 `M` · **Score:**  31  
    → **unlocks:** 0/0
 
-21. `items-player-014` — **Rope-pullable resource transport**  
+20. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-22. `tools-005` — **Seedvale Character Preparation Panel**  
+21. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-23. `items-player-044` — **Shoulder and forearm equipment slots**  
+22. `items-player-044` — **Shoulder and forearm equipment slots**  
   🟡 `M` · **Score:**  25  
+   → **unlocks:** 0/0
+
+23. `npc-046` — **Settlement threat response and livestock safety**  
+  🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
 24. `items-player-032` — **NPC player-storage resource and context rules**  
@@ -373,6 +373,7 @@ graph TD
   npc_042["npc-042 — NPC voice and dialogue catalog infrastructure"]
   npc_044["npc-044 — NPC hierarchical voice resolver"]
   npc_045["npc-045 — Campfire spoken conversation pairs"]
+  npc_046["npc-046 — Settlement threat response and livestock safety"]
   persistence_001["persistence-001 — Full Simulation Persistence"]
   persistence_002["persistence-002 — save integrity guard"]
   persistence_003["persistence-003 — save schema versioning and future migrations"]

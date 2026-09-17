@@ -1,8 +1,8 @@
 import type { NpcRelationships } from '../settlement/npcRelationships'
 import type { NpcGender } from './characters'
-import { resolveCampfireTalk } from './campfireTalk'
 import type { BigFivePersonality } from './dialogue'
 import { gameHoursToRealSeconds } from '../world/timeConversion'
+import { resolveCampfireTalk } from './campfireTalk'
 
 /** Per-participant presentation cue for a Social Place conversation
  *  (plan npc-045). Selected once per pair in `advanceSocialPairing` —
