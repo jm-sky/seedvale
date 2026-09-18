@@ -454,6 +454,7 @@ Generated from TypeScript imports.
 
 - `settlement/gardenScale.test.ts`
 - `settlement/props.ts`
+- `settlement/settlementStructures.test.ts`
 - `settlement/settlementStructures.ts`
 - `settlement/villageClearing.ts`
 - `settlement/villagePlanner.test.ts`
@@ -1515,6 +1516,7 @@ Generated from TypeScript imports.
 - `settlement/decorProps.ts`
 - `settlement/props.ts`
 - `settlement/settlementPalisade.ts`
+- `settlement/settlementStructures.test.ts`
 - `settlement/settlementStructures.ts`
 - `settlement/storageVisuals.ts`
 - `world/caves/caveAdventureProps.ts`
@@ -2187,10 +2189,20 @@ Generated from TypeScript imports.
 - `settlement/createSettlement.ts`
 - `settlement/settlementSignposts.test.ts`
 
+## `settlement/settlementStructures.test.ts`
+
+**Imports**
+
+- `render/instancedProps.ts`
+- `settlement/gardenScale.ts`
+- `settlement/propUtils.ts`
+- `settlement/settlementStructures.ts`
+
 ## `settlement/settlementStructures.ts`
 
 **Imports**
 
+- `render/instancedProps.ts`
 - `settlement/gardenScale.ts`
 - `settlement/propSpecs.ts`
 - `settlement/propUtils.ts`
@@ -2199,6 +2211,7 @@ Generated from TypeScript imports.
 
 - `app/worldBundle.ts`
 - `settlement/props.ts`
+- `settlement/settlementStructures.test.ts`
 - `world/createPlayerTroughs.ts`
 - `world/playerWellProp.ts`
 

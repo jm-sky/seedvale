@@ -684,16 +684,16 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/props.ts`
 
-- `BlacksmithWorkplace` — type — line 343
-- `buildSettlementProps` — function — line 754
-- `disposeSettlementGroup` — function — line 2171
-- `SettlementHouseBed` — type — line 163
-- `SettlementHouseLandmark` — type — line 129
-- `SettlementLandmarks` — type — line 179
-- `SettlementLandPlot` — type — line 332
-- `SettlementStorageVisuals` — type — line 324
-- `SettlementTreeLandmark` — type — line 353
-- `SettlementWellLandmark` — type — line 170
+- `BlacksmithWorkplace` — type — line 350
+- `buildSettlementProps` — function — line 761
+- `disposeSettlementGroup` — function — line 2237
+- `SettlementHouseBed` — type — line 164
+- `SettlementHouseLandmark` — type — line 130
+- `SettlementLandmarks` — type — line 185
+- `SettlementLandPlot` — type — line 339
+- `SettlementStorageVisuals` — type — line 331
+- `SettlementTreeLandmark` — type — line 360
+- `SettlementWellLandmark` — type — line 171
 
 ## `settlement/propSpecs.ts`
 
@@ -1084,28 +1084,31 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/settlementStructures.ts`
 
-- `createAnvil` — function — line 266
-- `createBarrel` — function — line 102
-- `createCrate` — function — line 253
-- `createDock` — function — line 335
-- `createGarden` — function — line 403
-- `createGrindWorkbench` — function — line 292
-- `createHayBale` — function — line 126
-- `createHut` — function — line 12
-- `createRatNest` — function — line 207
-- `createSignpost` — function — line 361
-- `createStockpile` — function — line 317
-- `createTrough` — function — line 199
-- `createTroughVisual` — function — line 193
-- `createVillageNamepost` — function — line 382
-- `createWell` — function — line 39
-- `createWheatField` — function — line 472
-- `disableGardenPlantCastShadow` — function — line 440
+- `createAnvil` — function — line 267
+- `createBarrel` — function — line 103
+- `createCrate` — function — line 254
+- `createDock` — function — line 336
+- `createGarden` — function — line 404
+- `createGrindWorkbench` — function — line 293
+- `createHayBale` — function — line 127
+- `createHut` — function — line 13
+- `createRatNest` — function — line 208
+- `createSignpost` — function — line 362
+- `createStockpile` — function — line 318
+- `createTrough` — function — line 200
+- `createTroughVisual` — function — line 194
+- `createVillageNamepost` — function — line 383
+- `createWell` — function — line 40
+- `createWheatField` — function — line 506
+- `cropsBedPlacements` — function — line 473
+  - domain: settlements
+- `disableGardenPlantCastShadow` — function — line 441
   - domain: world-terrain
-- `layoutCropsGarden` — function — line 451
-- `preloadAnimalTroughVisual` — function — line 149
-- `TroughVisual` — type — line 139
-- `VILLAGE_NAMEPOST_BOARD_CENTER_Y` — const — line 380
+- `preloadAnimalTroughVisual` — function — line 150
+- `TroughVisual` — type — line 140
+- `VILLAGE_NAMEPOST_BOARD_CENTER_Y` — const — line 381
+- `wellPropPlacement` — function — line 459
+  - domain: settlements
 
 ## `settlement/settlementTerrain.ts`
 
