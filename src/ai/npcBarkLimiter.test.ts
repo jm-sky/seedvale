@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest'
+import type { NpcVoiceResolveInput } from './npcVoiceLines'
+import { configureNpcVoicePlayback } from '../audio/npcVoicePlayback'
 import { NpcBarkLimiter } from './npcBarkLimiter'
 import {
   NPC_OPTIONAL_BARK_MAX_PER_AREA,
   type NpcBarkIntent,
 } from './npcBarkPolicies'
 import { createRequestNpcBark, resolveNpcBarkVoiceUrl } from './npcBarkRequest'
-import { configureNpcVoicePlayback } from '../audio/npcVoicePlayback'
-import type { NpcVoiceResolveInput } from './npcVoiceLines'
 
-function npc(id: string, area = 'settlement-a'): { id: string; areaKey: string } & NpcVoiceResolveInput {
+function npc(id: string, area = 'settlement-a'): NpcVoiceResolveInput & { id: string; areaKey: string } {
   return {
     id,
     areaKey: area,

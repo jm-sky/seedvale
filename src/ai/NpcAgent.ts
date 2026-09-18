@@ -34,12 +34,11 @@ import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import type { WorldSpatialContext } from '../world/spatialContext'
 import type { WeatherState } from '../world/weather'
 import type { NpcBurialHooks } from './burialPressure'
-import type { NpcBarkIntent } from './npcBarkPolicies'
-import type { RequestNpcBark } from './npcBarkRequest'
-import { getSharedRequestNpcBark } from './npcBarkRequest'
 import type { GraveVisitCandidate, NpcGraveVisitHooks } from './graveVisitPressure'
 import type { HelperAssignment } from './helperAssignment'
 import type { ActionId, NpcPlannedAction, Phase } from './npcAction'
+import type { NpcBarkIntent } from './npcBarkPolicies'
+import type { RequestNpcBark } from './npcBarkRequest'
 import {
   disposeObject3D,
   loadGltfAnimated,
@@ -278,6 +277,7 @@ import {
 } from './npcAnimalThreat'
 import { resolveNpcAppearance } from './npcAppearance'
 import { type AssistanceRequestKind, type AssistanceResult, resolveNpcAssistance } from './npcAssistance'
+import { getSharedRequestNpcBark } from './npcBarkRequest'
 import {
   acceptNpcCaveHorizontalCandidate,
   npcActiveCaveId,
@@ -1711,7 +1711,7 @@ export class NpcAgent {
     this.personalInventory = npcState.personalInventory
     this.transportCargo = npcState.transportCargo
     if (!npcState.health.dead) {
-      seedInitialPersonalBelongingsIfNeeded(this.personalInventory, this.role, npcState)
+      seedInitialPersonalBelongingsIfNeeded(this.personalInventory, this.role, npcState, this.id)
       if (this.role === 'hunter') seedHunterStartingArrows(this.carried)
     }
     this.traits = character.traits

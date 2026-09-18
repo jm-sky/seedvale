@@ -1,7 +1,19 @@
 import { describe, expect, it } from 'vitest'
 import { Inventory } from '../items/Inventory'
 import { resolveNpcAmmoKind, resolveNpcMeleeWeapon, resolveNpcRangedWeapon } from './npcCombat'
-import { defaultWeaponForRole, ensureKnifeCarried, isNpcLoadoutBelonging, seedDefaultRoleWeapon, seedHunterStartingArrows, seedHunterSupplies, seedInitialPersonalBelongingsIfNeeded, seedShepherdShears } from './npcLoadout'
+import {
+  defaultWeaponForRole,
+  ensureKnifeCarried,
+  isNpcLoadoutBelonging,
+  seedDefaultRoleWeapon,
+  seedHunterStartingArrows,
+  seedHunterSupplies,
+  seedInitialPersonalBelongingsIfNeeded,
+  seedShepherdPrimaryWeapon,
+  seedShepherdShears,
+  selectShepherdPrimaryWeapon,
+  SHEPHERD_PRIMARY_WEAPON_KINDS,
+} from './npcLoadout'
 
 describe('defaultWeaponForRole', () => {
   it('maps roles to their default melee weapon', () => {
@@ -112,25 +124,32 @@ describe('isNpcLoadoutBelonging (plan npc-010)', () => {
     expect(isNpcLoadoutBelonging('shears', 'shepherd')).toBe(true)
     expect(isNpcLoadoutBelonging('shears', 'farmer')).toBe(false)
   })
+
+  it('treats a shepherd primary defensive weapon as a loadout belonging (plan npc-047)', () => {
+    expect(isNpcLoadoutBelonging('spear', 'shepherd')).toBe(true)
+    expect(isNpcLoadoutBelonging('pitchfork', 'shepherd')).toBe(true)
+    expect(isNpcLoadoutBelonging('axe', 'shepherd')).toBe(true)
+    expect(isNpcLoadoutBelonging('spear', 'farmer')).toBe(false)
+  })
 })
 
 describe('seedInitialPersonalBelongingsIfNeeded (plan settlements-npcs-026)', () => {
   it('seeds role belongings once on first creation and never reseeds', () => {
     const inventory = new Inventory()
     const state = { needsInitialPersonalLoadout: true }
-    seedInitialPersonalBelongingsIfNeeded(inventory, 'woodcutter', state)
+    seedInitialPersonalBelongingsIfNeeded(inventory, 'woodcutter', state, 'npc:1')
     expect(inventory.holdsAny('axe')).toBe(true)
     expect(inventory.holdsAny('knife')).toBe(true)
     expect(state.needsInitialPersonalLoadout).toBe(false)
     const axeCount = inventory.countInstances('axe')
-    seedInitialPersonalBelongingsIfNeeded(inventory, 'woodcutter', state)
+    seedInitialPersonalBelongingsIfNeeded(inventory, 'woodcutter', state, 'npc:1')
     expect(inventory.countInstances('axe')).toBe(axeCount)
   })
 
   it('does not seed a restored empty inventory (legacy save)', () => {
     const inventory = new Inventory()
     const state = { needsInitialPersonalLoadout: false }
-    seedInitialPersonalBelongingsIfNeeded(inventory, 'guard', state)
+    seedInitialPersonalBelongingsIfNeeded(inventory, 'guard', state, 'npc:1')
     expect(inventory.isEmpty()).toBe(true)
   })
 })
@@ -148,9 +167,60 @@ describe('seedShepherdShears (plan fauna-004)', () => {
   it('seeds shears with the initial personal loadout', () => {
     const inventory = new Inventory()
     const state = { needsInitialPersonalLoadout: true }
-    seedInitialPersonalBelongingsIfNeeded(inventory, 'shepherd', state)
+    seedInitialPersonalBelongingsIfNeeded(inventory, 'shepherd', state, 'npc:shepherd-1')
     expect(inventory.hasCapability('shearing')).toBe(true)
     expect(state.needsInitialPersonalLoadout).toBe(false)
+  })
+})
+
+describe('selectShepherdPrimaryWeapon / seedShepherdPrimaryWeapon (plan npc-047)', () => {
+  it('always picks one of the three weighted primary kinds', () => {
+    for (let i = 0; i < 50; i++) {
+      expect(SHEPHERD_PRIMARY_WEAPON_KINDS).toContain(selectShepherdPrimaryWeapon(`npc:${i}`))
+    }
+  })
+
+  it('is deterministic for the same npc id and varies across ids', () => {
+    expect(selectShepherdPrimaryWeapon('npc:stable-id')).toBe(selectShepherdPrimaryWeapon('npc:stable-id'))
+    const picks = new Set(Array.from({ length: 30 }, (_, i) => selectShepherdPrimaryWeapon(`npc:${i}`)))
+    expect(picks.size).toBeGreaterThan(1)
+  })
+
+  it('seeds exactly one primary weapon instance, independent of knife', () => {
+    const inventory = new Inventory()
+    seedShepherdPrimaryWeapon(inventory, 'npc:shepherd-2')
+    const carried = SHEPHERD_PRIMARY_WEAPON_KINDS.filter((kind) => inventory.holdsAny(kind))
+    expect(carried).toHaveLength(1)
+    expect(inventory.holdsAny('knife')).toBe(false)
+  })
+
+  it('is idempotent — does not duplicate or reroll the primary weapon', () => {
+    const inventory = new Inventory()
+    seedShepherdPrimaryWeapon(inventory, 'npc:shepherd-3')
+    const picked = SHEPHERD_PRIMARY_WEAPON_KINDS.find((kind) => inventory.holdsAny(kind))!
+    seedShepherdPrimaryWeapon(inventory, 'npc:shepherd-3')
+    expect(inventory.countInstances(picked)).toBe(1)
+    expect(SHEPHERD_PRIMARY_WEAPON_KINDS.filter((kind) => inventory.holdsAny(kind))).toHaveLength(1)
+  })
+
+  it('gives every newly generated shepherd a knife plus exactly one primary weapon', () => {
+    const inventory = new Inventory()
+    const state = { needsInitialPersonalLoadout: true }
+    seedInitialPersonalBelongingsIfNeeded(inventory, 'shepherd', state, 'npc:shepherd-4')
+    expect(inventory.holdsAny('knife')).toBe(true)
+    expect(SHEPHERD_PRIMARY_WEAPON_KINDS.filter((kind) => inventory.holdsAny(kind))).toHaveLength(1)
+  })
+
+  it('reconstruction does not reroll or duplicate knife/primary/shears', () => {
+    const inventory = new Inventory()
+    const state = { needsInitialPersonalLoadout: true }
+    seedInitialPersonalBelongingsIfNeeded(inventory, 'shepherd', state, 'npc:shepherd-5')
+    const picked = SHEPHERD_PRIMARY_WEAPON_KINDS.find((kind) => inventory.holdsAny(kind))!
+    // Reconstruction: `needsInitialPersonalLoadout` is already false, same as a real reload.
+    seedInitialPersonalBelongingsIfNeeded(inventory, 'shepherd', state, 'npc:shepherd-5')
+    expect(inventory.countInstances('knife')).toBe(1)
+    expect(inventory.countInstances(picked)).toBe(1)
+    expect(inventory.count('shears')).toBe(1)
   })
 })
 

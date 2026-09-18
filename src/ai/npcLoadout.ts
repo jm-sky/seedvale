@@ -1,4 +1,5 @@
 import type { Inventory } from '../items/Inventory'
+import type { WeaponMaintenanceKind } from '../items/itemInstances'
 import type { ItemKind } from '../items/items'
 import type { Role } from './characters'
 import { isWeaponMaintenanceKind } from '../items/itemInstances'
@@ -78,6 +79,54 @@ export function seedShepherdShears(inventory: Inventory): void {
   inventory.add('shears', 1)
 }
 
+/** Isolated from every other generation/loadout roll (plan npc-047) so
+ *  unrelated settlement content changes can't reroll a shepherd's weapon. */
+const SHEPHERD_PRIMARY_WEAPON_SALT = 'shepherd-defensive-loadout-v1'
+
+/** Same FNV-1a xor/mul idiom as `settlement/household.ts` and friends —
+ *  stable [0, 2^32) from a string, no shared RNG stream. */
+function hashString(value: string): number {
+  let h = 2166136261
+  for (let i = 0; i < value.length; i++) {
+    h ^= value.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  return h >>> 0
+}
+
+/** Weighted shepherd primary defensive weapon (plan npc-047 §5) — real melee
+ *  items distinct from the general-utility `knife`. */
+const SHEPHERD_PRIMARY_WEAPON_WEIGHTS: readonly { kind: WeaponMaintenanceKind, weight: number }[] = [
+  { kind: 'spear', weight: 45 },
+  { kind: 'pitchfork', weight: 30 },
+  { kind: 'axe', weight: 25 },
+]
+
+export const SHEPHERD_PRIMARY_WEAPON_KINDS: readonly ItemKind[] =
+  SHEPHERD_PRIMARY_WEAPON_WEIGHTS.map((entry) => entry.kind)
+
+/** Deterministic shepherd primary-weapon roll (plan npc-047 §5) — one stable
+ *  pick per `npcId`, isolated by `SHEPHERD_PRIMARY_WEAPON_SALT` so
+ *  reconstructing the same NPC always picks the same weapon. */
+export function selectShepherdPrimaryWeapon(npcId: string): WeaponMaintenanceKind {
+  const roll = hashString(`${npcId}:${SHEPHERD_PRIMARY_WEAPON_SALT}`) % 100
+  let acc = 0
+  for (const entry of SHEPHERD_PRIMARY_WEAPON_WEIGHTS) {
+    acc += entry.weight
+    if (roll < acc) return entry.kind
+  }
+  return SHEPHERD_PRIMARY_WEAPON_WEIGHTS[SHEPHERD_PRIMARY_WEAPON_WEIGHTS.length - 1].kind
+}
+
+/** Seeds a shepherd's one deterministic primary defensive weapon (plan
+ *  npc-047 §5), independent of `knife`/`shears`. Idempotent: a no-op once
+ *  any of the three weighted kinds is already carried, so reconstruction
+ *  never rerolls or duplicates it. */
+export function seedShepherdPrimaryWeapon(inventory: Inventory, npcId: string): void {
+  if (SHEPHERD_PRIMARY_WEAPON_KINDS.some((kind) => inventory.holdsAny(kind))) return
+  inventory.addInstance(createWeaponInstance(selectShepherdPrimaryWeapon(npcId)))
+}
+
 /**
  * Seeds role weapons/knife into authoritative personal inventory once, on
  * genuine first NPC-state creation (plan settlements-npcs-026). Snapshot
@@ -88,11 +137,15 @@ export function seedInitialPersonalBelongingsIfNeeded(
   inventory: Inventory,
   role: Role,
   state: { needsInitialPersonalLoadout: boolean },
+  npcId: string,
 ): void {
   if (!state.needsInitialPersonalLoadout) return
   seedDefaultRoleWeapon(inventory, role)
   if (role === 'hunter' || role === 'woodcutter') ensureKnifeCarried(inventory)
-  if (role === 'shepherd') seedShepherdShears(inventory)
+  if (role === 'shepherd') {
+    seedShepherdShears(inventory)
+    seedShepherdPrimaryWeapon(inventory, npcId)
+  }
   state.needsInitialPersonalLoadout = false
 }
 
@@ -103,6 +156,6 @@ export function seedInitialPersonalBelongingsIfNeeded(
  *  equipment, and the loadout helpers never tag ownership per item. */
 export function isNpcLoadoutBelonging(kind: ItemKind, role: Role): boolean {
   if (kind === defaultWeaponForRole(role)) return true
-  if (kind === 'shears' && role === 'shepherd') return true
+  if (role === 'shepherd' && (kind === 'shears' || SHEPHERD_PRIMARY_WEAPON_KINDS.includes(kind))) return true
   return kind === 'knife' && (role === 'woodcutter' || role === 'hunter')
 }

@@ -163,36 +163,36 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `L` · **Score:**  44  
    → **unlocks:** 0/0
 
-23. `npc-047` — **Shepherd livestock threat response**  
-  🔴 `M` · **Score:**  43  
-   → **unlocks:** 1/1
-
-24. `settlements-npcs-044` — **Authored Outpost Occupants & Construction Lifecycle**  
+23. `settlements-npcs-044` — **Authored Outpost Occupants & Construction Lifecycle**  
   🔴 `L` · **Score:**  40  
    → **unlocks:** 1/1
 
-25. `npc-050` — **NPC-initiated player follow-ups and proactive dialogue**  
+24. `npc-050` — **NPC-initiated player follow-ups and proactive dialogue**  
   🔴 `M` · **Score:**  39  
    → **unlocks:** 0/0
 
-26. `quests-progression-058` — **Injured dog discovery thread**  
+25. `quests-progression-058` — **Injured dog discovery thread**  
   🟡 `M` · **Score:**  37  
    → **unlocks:** 0/0
 
-27. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
+26. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
   🔴 `M` · **Score:**  35  
    → **unlocks:** 0/0
 
-28. `npc-053` — **NPC profession-aware weapon choice and armor use**  
+27. `npc-053` — **NPC profession-aware weapon choice and armor use**  
   🟡 `M` · **Score:**  35  
    → **unlocks:** 1/1
 
-29. `settlements-npcs-049` — **Merchant wealth tiers and travel party profile**  
+28. `settlements-npcs-049` — **Merchant wealth tiers and travel party profile**  
   🔴 `L` · **Score:**  70  
    → **unlocks:** 0/0
 
-30. `npc-048` — **Local threat assistance and guard response**  
+29. `npc-048` — **Local threat assistance and guard response**  
   🔴 `M` · **Score:**  31  
+   → **unlocks:** 0/0
+
+30. `fauna-039` — **Animal saddlebags and persistent pack inventory**  
+  🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
 31. `items-player-014` — **Rope-pullable resource transport**  
@@ -242,9 +242,6 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
 - [`items-player-032-npc-player-storage-resource-and-context-rules.md`](items-player-032-npc-player-storage-resource-and-context-rules.md)  
   is blocked by:
   - [`items-player-028-npc-player-storage-access-policies.md`](items-player-028-npc-player-storage-access-policies.md)
-- [`npc-048-local-threat-assistance-and-guard-response.md`](npc-048-local-threat-assistance-and-guard-response.md)  
-  is blocked by:
-  - [`npc-047-shepherd-livestock-threat-response.md`](npc-047-shepherd-livestock-threat-response.md)
 - [`quests-progression-010-abandoned-gold-mine-colony.md`](quests-progression-010-abandoned-gold-mine-colony.md)  
   is blocked by:
   - [`settlements-003-colony-bootstrap.md`](settlements-003-colony-bootstrap.md)
@@ -375,6 +372,7 @@ graph TD
   fauna_036["fauna-036 — Interruptible Carcass Feeding"]
   fauna_037["fauna-037 — Domestic livestock safe flee"]
   fauna_038["fauna-038 — Calm settlement wander gait"]
+  fauna_039["fauna-039 — Animal saddlebags and persistent pack inventory"]
   items_player_001["items-player-001 — Containers, Waterskins & Copper Items"]
   items_player_002["items-player-002 — Food provenance, freshness and storage"]
   items_player_003["items-player-003 — Player Physical Effort — Stamina & Vigor"]

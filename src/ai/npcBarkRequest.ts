@@ -7,8 +7,8 @@
  * @domain npc
  */
 
-import { playNpcVoiceAt } from '../audio/npcVoicePlayback'
 import type { WorldSoundPosition } from '../audio/createWorldAudio'
+import { playNpcVoiceAt } from '../audio/npcVoicePlayback'
 import { type NpcBarkLimiter, type NpcBarkRejectReason } from './npcBarkLimiter'
 import { isNpcBarkIntent, type NpcBarkIntent } from './npcBarkPolicies'
 import {

@@ -1,7 +1,7 @@
 # Plan: Shepherd livestock threat response
 
 **Created:** 2026-09-17
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — implemented 2026-09-18 (`vitest` npcLoadout + npcAnimalThreat + shepherdFlock + npcTradeAvailability, `type-check`). Browser/manual gameplay verification not performed — belongs to the User.
 **Type:** feature
 **Priority:** high · **Effort:** M
 **Depends on:** ~~npc-046~~, ~~fauna-037~~
@@ -10,6 +10,7 @@
 **Tags:** `shepherd` `livestock` `predators` `combat` `loadout`
 **Roadmap:** -
 **Model:** Sonnet, Composer
+**Implemented at:** 2026-09-18 12:30
 
 ## Goal
 
