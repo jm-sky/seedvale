@@ -1505,6 +1505,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `assets/loadGltf.ts`
+- `perf/sceneCensus.ts`
 
 **Imported by**
 

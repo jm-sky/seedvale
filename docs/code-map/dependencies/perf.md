@@ -363,6 +363,7 @@ Generated from TypeScript imports.
 - `perf/report.ts`
 - `perf/sceneCensus.test.ts`
 - `perf/types.ts`
+- `settlement/propUtils.ts`
 
 ## `perf/types.ts`
 

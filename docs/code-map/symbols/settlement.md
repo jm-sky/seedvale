@@ -685,8 +685,8 @@ Generated from exported TypeScript symbols.
 ## `settlement/props.ts`
 
 - `BlacksmithWorkplace` — type — line 342
-- `buildSettlementProps` — function — line 752
-- `disposeSettlementGroup` — function — line 2135
+- `buildSettlementProps` — function — line 753
+- `disposeSettlementGroup` — function — line 2158
 - `SettlementHouseBed` — type — line 162
 - `SettlementHouseLandmark` — type — line 128
 - `SettlementLandmarks` — type — line 178
@@ -757,17 +757,19 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/propUtils.ts`
 
-- `applyTerrainTilt` — function — line 65
-- `cloneProp` — function — line 154
-- `clonePropWithYaw` — function — line 168
-- `loadPropOrFallback` — function — line 119
-- `loadPropTemplates` — function — line 143
-- `LocalTerrainSample` — type — line 38
-- `placeOnGround` — function — line 87
-- `rotateOffsetY` — function — line 81
-- `sampleLocalTerrain` — function — line 45
-- `TerrainSampler` — type — line 29
-- `tintPropMaterials` — function — line 10
+- `applyTerrainTilt` — function — line 69
+- `cloneProp` — function — line 172
+- `clonePropWithYaw` — function — line 186
+- `loadPropOrFallback` — function — line 137
+- `loadPropTemplates` — function — line 161
+- `LocalTerrainSample` — type — line 42
+- `placeOnGround` — function — line 91
+- `rotateOffsetY` — function — line 85
+- `sampleLocalTerrain` — function — line 49
+- `tagSettlementShadowKind` — function — line 129
+  - domain: world-terrain
+- `TerrainSampler` — type — line 33
+- `tintPropMaterials` — function — line 14
 
 ## `settlement/ratInfestation.ts`
 

@@ -142,23 +142,32 @@ Generated from exported TypeScript symbols.
 ## `perf/report.ts`
 
 - `buildReport` — function — line 18
-- `formatReport` — function — line 143
+- `formatReport` — function — line 145
 
 ## `perf/sceneCensus.ts`
 
 - `BucketStats` — type — line 20
-- `censusScene` — function — line 100
-- `censusShadowCasters` — function — line 116
+- `censusScene` — function — line 217
+- `censusSettlementShadowCasters` — function — line 249
   - domain: world-terrain
-- `censusTotals` — function — line 126
-- `classifyObject` — function — line 42
-- `emptyCensus` — function — line 36
-- `hideBuckets` — function — line 140
-- `restoreVisibility` — function — line 153
+- `censusShadowCasters` — function — line 233
+  - domain: world-terrain
+- `censusTotals` — function — line 260
+- `classifyObject` — function — line 153
+- `classifySettlementContent` — function — line 141
+  - domain: world-terrain
+- `emptyCensus` — function — line 57
+- `emptySettlementShadowCensus` — function — line 63
+- `hideBuckets` — function — line 274
+- `restoreVisibility` — function — line 287
 - `SCENE_BUCKETS` — const — line 5
 - `SceneBucket` — type — line 18
 - `SceneCensus` — type — line 28
-- `VisibilityRestore` — type — line 30
+- `SETTLEMENT_CONTENT_KINDS` — const — line 32
+- `SETTLEMENT_SHADOW_KIND_USERDATA` — const — line 49
+- `SettlementContentKind` — type — line 44
+- `SettlementShadowCensus` — type — line 46
+- `VisibilityRestore` — type — line 51
 
 ## `perf/types.ts`
 
