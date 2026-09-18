@@ -1403,14 +1403,6 @@ export function createChunkManager(
     grass.setDebugVisible(detailedGrassDebugVisible, fillerGrassDebugVisible)
   }
 
-  /** Same prefix-`count` curve as grass, scaled to `loadRadius` because
-   *  instanced vegetation/rocks live on every loaded chunk (unlike grass,
-   *  which has its own smaller radius). Recovers the triangle-count
-   *  regression from losing per-object frustum culling (plan 087 faza 7 / R3). */
-  function vegetationLodForDistance(dist: number): number {
-    return densityLodFraction(dist, config.loadRadius, lodScale)
-  }
-
   /** Toggles `record`'s terrain mesh / non-instanced vegetation extras /
    *  procedural environment props between the default layer and
    *  `REFLECTION_DISTANT_LAYER` (plan 144 S) — chunk-level, not per-frame:
@@ -1427,10 +1419,15 @@ export function createChunkManager(
     vegetationRegionBatcher.syncReflectionVisibility(record.coord, visible)
   }
 
+  /** Reports the chunk's raw distance/radius/quality inputs to the region
+   *  batcher, which resolves each contributing `VegetationKind`'s own
+   *  effective fraction (world-terrain-040 Stage 1 per-kind policy) — see
+   *  `vegetationRegionBatcher.syncLod`/`vegetationLodFraction`. Grass keeps
+   *  its own single shared curve (`grassLodForDistance`) since it isn't
+   *  routed through per-kind policy. */
   function syncInstancedLodForRecord(record: ChunkRecord, playerChunk: ChunkCoord): void {
     const dist = chebyshevDistance(record.coord, playerChunk)
-    const frac = vegetationLodForDistance(dist)
-    vegetationRegionBatcher.syncLod(record.coord, frac)
+    vegetationRegionBatcher.syncLod(record.coord, dist, config.loadRadius, lodScale)
     syncReflectionForRecord(record, dist)
   }
 

@@ -1,7 +1,7 @@
 # Plan: Vegetation render budget v2
 
 **Created:** 2026-09-17
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 (Stage 1 implemented 2026-09-18 — user benchmark/browser verification pending; Stage 2/3 not started)
 **Type:** optimization
 **Priority:** high · **Effort:** M
 **Depends on:** -

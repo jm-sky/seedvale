@@ -54,6 +54,10 @@ Format: `- [ ] YYYY-MM-DD — opis (plan/plik, jeśli istotne)`
 
 - [ ] 2026-09-18 — Campfire social seating: add a bench / explicit seat anchors near settlement campfires so existing NPC seated presentation can use `Sitting_Idle_Loop` / `Sitting_Talking_Loop` without inventing fake sitting positions. Reuse settlement place/social state rather than adding an animation-only seating system; discovered while scoping `npc-055`.
 
+## Reflections
+
+- [ ] 2026-09-18 — `vegetationRegionBatcher.ts`'s `anyReflectionVisible()` has a fallback bug: unlike `maxFraction()`, it doesn't track whether any chunk actually contributed, so the trailing `return true` fires even when every contributing chunk explicitly reported `visible: false`. In practice this means a region+kind group is never actually switched to `REFLECTION_DISTANT_LAYER` once at least one chunk has synced any reflection-visibility value — discovered while adding world-terrain-040 Stage 1 tests, out of scope for that plan (reflection policy is explicitly untouched). Fix mirrors `maxFraction()`'s `any` tracking.
+
 ## Off-screen simulation
 
 - [ ] 2026-09-11 — off-screen `TransportOrder.execution` nie przesuwa potrzeb/vigoru/injury carrier NPC w czasie podróży. To ten sam brak co dla innych unloaded NPC, ale staje się istotny dla generic long-distance travel (`settlements-npcs-028` / `npc-029`). Naturalny seam: stanowy survival catch-up obok `resolveOffscreenTransportArrivals`, reuse istniejących `tickNeeds` / `tickVigorForSimulatedStep` / injury recovery helpers.
