@@ -9,6 +9,7 @@
 **Subdomains:** `household` `logistics`
 **Tags:** `pasture` `well` `trough` `water` `livestock`
 **Roadmap:** -
+**Model:** Sonnet, Composer
 
 ## Cel
 
