@@ -649,7 +649,7 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/vegetationRegionBatcher.ts`
 
-- `createVegetationRegionBatcher` — function — line 183
+- `createVegetationRegionBatcher` — function — line 188
 - `REGION_CHUNKS` — const — line 100
 - `VegetationKind` — type — line 10
 - `VegetationLodClass` — type — line 41

@@ -1336,6 +1336,7 @@ Generated from TypeScript imports.
 - `render/instancedProps.ts`
 - `terrain/distanceLod.ts`
 - `terrain/vegetationRegionBatcher.ts`
+- `world/waterMirror.ts`
 
 ## `terrain/vegetationRegionBatcher.ts`
 

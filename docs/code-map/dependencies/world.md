@@ -4479,6 +4479,7 @@ Generated from TypeScript imports.
 - `fauna/AnimalAgent.ts`
 - `terrain/chunkManager.ts`
 - `terrain/grass.ts`
+- `terrain/vegetationRegionBatcher.test.ts`
 - `terrain/vegetationRegionBatcher.ts`
 - `ui/agentStatusLabel.ts`
 - `world/caves/caveUndergroundPoolPresentation.ts`
