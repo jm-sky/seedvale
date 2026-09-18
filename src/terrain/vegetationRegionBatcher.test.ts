@@ -1,12 +1,24 @@
-import { BoxGeometry, Mesh, MeshStandardMaterial, Scene } from 'three'
+import { BoxGeometry, Layers, Mesh, MeshStandardMaterial, Scene } from 'three'
 import { describe, expect, it } from 'vitest'
 import type { PropPlacement } from '../render/instancedProps'
+import { REFLECTION_DISTANT_LAYER } from '../world/waterMirror'
 import { DENSITY_LOD_FLOOR, densityLodFraction } from './distanceLod'
 import {
   createVegetationRegionBatcher,
   type VegetationKind,
   vegetationLodFraction,
 } from './vegetationRegionBatcher'
+
+/** Expected `Object3D.layers.mask` for a group entirely on `layer`, computed
+ *  via `THREE.Layers` rather than hardcoded bit-shift arithmetic. */
+function maskForLayer(layer: number): number {
+  const layers = new Layers()
+  layers.set(layer)
+  return layers.mask
+}
+
+const LAYER_0_MASK = maskForLayer(0)
+const REFLECTION_DISTANT_MASK = maskForLayer(REFLECTION_DISTANT_LAYER)
 
 const ALL_KINDS: readonly VegetationKind[] = [
   'tree-living',
@@ -41,6 +53,12 @@ function bucketOf(scene: Scene, name: string): CountMesh {
   if (!group) throw new Error(`region group ${name} not found in scene`)
   const bucket = group.children[0] as unknown as CountMesh
   return bucket
+}
+
+function groupOf(scene: Scene, name: string): Scene['children'][number] {
+  const group = scene.children.find((c) => c.name === name)
+  if (!group) throw new Error(`region group ${name} not found in scene`)
+  return group
 }
 
 describe('vegetationRegionBatcher', () => {
@@ -179,13 +197,81 @@ describe('vegetationRegionBatcher', () => {
     batcher.setChunkPlacements({ cx: 0, cz: 0 }, 'fern', templates, [placement('a')])
     batcher.syncReflectionVisibility({ cx: 0, cz: 0 }, false)
 
-    const group = scene.children.find((c) => c.name === 'chunk-vegetation-region-0,0|fern')!
-    const layerMaskAfterReflectionSync = group.layers.mask
+    const group = groupOf(scene, 'chunk-vegetation-region-0,0|fern')
+    expect(group.layers.mask).toBe(REFLECTION_DISTANT_MASK)
 
     // Changing distance-based LOD must not touch reflection layer assignment,
-    // whatever `syncReflectionVisibility` last resolved it to.
+    // whatever `syncReflectionVisibility` last resolved it to (req. #5).
     batcher.syncLod({ cx: 0, cz: 0 }, 2, 3, 1)
-    expect(group.layers.mask).toBe(layerMaskAfterReflectionSync)
+    expect(group.layers.mask).toBe(REFLECTION_DISTANT_MASK)
+  })
+
+  it('a single chunk reporting false moves its region group to REFLECTION_DISTANT_LAYER', () => {
+    const scene = new Scene()
+    const batcher = createVegetationRegionBatcher(scene, 3)
+    const templates = [template()]
+
+    batcher.setChunkPlacements({ cx: 0, cz: 0 }, 'bush', templates, [placement('a')])
+    const group = groupOf(scene, 'chunk-vegetation-region-0,0|bush')
+    // No chunk has reported reflection visibility yet — conservative default.
+    expect(group.layers.mask).toBe(LAYER_0_MASK)
+
+    batcher.syncReflectionVisibility({ cx: 0, cz: 0 }, false)
+    expect(group.layers.mask).toBe(REFLECTION_DISTANT_MASK)
+  })
+
+  it('two chunks in the same region+kind: any true keeps layer 0, all false moves to REFLECTION_DISTANT_LAYER', () => {
+    const scene = new Scene()
+    const batcher = createVegetationRegionBatcher(scene, 3)
+    const templates = [template()]
+
+    batcher.setChunkPlacements({ cx: 0, cz: 0 }, 'bush', templates, [placement('a')])
+    batcher.setChunkPlacements({ cx: 1, cz: 0 }, 'bush', templates, [placement('b')])
+    const group = groupOf(scene, 'chunk-vegetation-region-0,0|bush')
+
+    batcher.syncReflectionVisibility({ cx: 0, cz: 0 }, false)
+    batcher.syncReflectionVisibility({ cx: 1, cz: 0 }, true)
+    expect(group.layers.mask).toBe(LAYER_0_MASK)
+
+    batcher.syncReflectionVisibility({ cx: 1, cz: 0 }, false)
+    expect(group.layers.mask).toBe(REFLECTION_DISTANT_MASK)
+  })
+
+  it('a chunk reporting true again after all-false brings the region back to layer 0', () => {
+    const scene = new Scene()
+    const batcher = createVegetationRegionBatcher(scene, 3)
+    const templates = [template()]
+
+    batcher.setChunkPlacements({ cx: 0, cz: 0 }, 'bush', templates, [placement('a')])
+    batcher.setChunkPlacements({ cx: 1, cz: 0 }, 'bush', templates, [placement('b')])
+    const group = groupOf(scene, 'chunk-vegetation-region-0,0|bush')
+
+    batcher.syncReflectionVisibility({ cx: 0, cz: 0 }, false)
+    batcher.syncReflectionVisibility({ cx: 1, cz: 0 }, false)
+    expect(group.layers.mask).toBe(REFLECTION_DISTANT_MASK)
+
+    batcher.syncReflectionVisibility({ cx: 1, cz: 0 }, true)
+    expect(group.layers.mask).toBe(LAYER_0_MASK)
+  })
+
+  it('rebuild (e.g. a sibling chunk load) preserves an all-false reflection state', () => {
+    const scene = new Scene()
+    const batcher = createVegetationRegionBatcher(scene, 3)
+    const templates = [template()]
+
+    batcher.setChunkPlacements({ cx: 0, cz: 0 }, 'bush', templates, [placement('a')])
+    batcher.setChunkPlacements({ cx: 1, cz: 0 }, 'bush', templates, [placement('b')])
+    batcher.syncReflectionVisibility({ cx: 0, cz: 0 }, false)
+    batcher.syncReflectionVisibility({ cx: 1, cz: 0 }, false)
+    expect(groupOf(scene, 'chunk-vegetation-region-0,0|bush').layers.mask).toBe(REFLECTION_DISTANT_MASK)
+
+    // Refreshing an already-contributing chunk's placements (e.g. a content
+    // refresh, not a new sibling joining) triggers `rebuild()`, which disposes
+    // and re-creates the group — the new group must still reflect the
+    // already-stored per-chunk reflection state for both contributing chunks.
+    batcher.setChunkPlacements({ cx: 0, cz: 0 }, 'bush', templates, [placement('a'), placement('a2')])
+    const rebuiltGroup = groupOf(scene, 'chunk-vegetation-region-0,0|bush')
+    expect(rebuiltGroup.layers.mask).toBe(REFLECTION_DISTANT_MASK)
   })
 
   it('dispose removes every group from the scene', () => {

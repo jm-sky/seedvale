@@ -170,14 +170,19 @@ function maxFraction(rec: RegionKindRecord): number {
   return any ? frac : 1
 }
 
-/** Default `true` (mirror-visible) before any chunk has reported a distance
- *  — same "assume visible until told otherwise" convention as `maxFraction`
- *  defaulting to 1. */
+/** Default `true` (mirror-visible) before any chunk has reported a value, and
+ *  for an empty record — same "assume visible until told otherwise"
+ *  convention as `maxFraction` defaulting to 1. Unlike the old buggy version,
+ *  tracks whether any chunk actually contributed (mirrors `maxFraction`'s
+ *  `any`), so the region only goes reflection-hidden once every contributing
+ *  chunk has explicitly reported `false`. */
 function anyReflectionVisible(rec: RegionKindRecord): boolean {
+  let any = false
   for (const ck of rec.chunks.keys()) {
+    any = true
     if (rec.chunkReflectionVisible.get(ck) ?? true) return true
   }
-  return true
+  return !any
 }
 
 export function createVegetationRegionBatcher(
