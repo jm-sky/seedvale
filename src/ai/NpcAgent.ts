@@ -224,7 +224,6 @@ import {
 import { resolveBurialPressure } from './burialPressure'
 import {
   type CharacterDef,
-  genderForName,
   type NpcGender,
   type Role,
   type Trait,
@@ -425,14 +424,11 @@ import {
 } from './npcVigor'
 import {
   FRIENDLY_TALK_SOUND_VOLUME,
-  NPC_GREETING_SOUND_URLS,
-  NPC_HMM_VOICE_URLS,
-  NPC_QUEST_COMPLETE_SOUND_URLS,
-  NPC_REACTION_SOUND_URLS,
-  type NpcVoiceActor,
-  pickNpcFriendlyTalkSound,
+  type NpcVoiceProfileId,
+  type NpcVoiceSemanticIntent,
   REACTION_SOUND_VOLUME,
-  voiceActorForIndex,
+  resolveNpcVoiceLine,
+  voiceProfileIdFor,
 } from './npcVoiceLines'
 import {
   DEFAULT_ESCORT_EVALUATION_CONTEXT,
@@ -535,7 +531,6 @@ const ANIMAL_THREAT_REACTION_INTERVAL_SEC = 1.5
 const NPC_FLEE_DISTANCE = 8
 
 export type { NpcGender }
-export { genderForName }
 export type { ActionId, NpcPlannedAction, Phase } from './npcAction'
 
 export { NPC_MODEL_URLS } from './npcAppearance'
@@ -1151,9 +1146,10 @@ export class NpcAgent {
    */
   readonly id: string
   readonly gender: NpcGender
-  /** Deterministic voice actor from the Super Dialogue Audio Pack — one consistent
-   *  voice per NPC across greeting/farewell/confirmation/hmm clips (see `voiceActorForIndex`). */
-  readonly voiceActor: NpcVoiceActor
+  /** Deterministic generated-voice presentation identity (plan npc-056) —
+   *  who/how this NPC sounds, resolved from gender + role (see
+   *  `voiceProfileIdFor`), independent of any per-NPC construction order. */
+  readonly voiceProfileId: NpcVoiceProfileId
   readonly role: Role
   readonly traits: readonly Trait[]
   readonly personality: CharacterDef['personality']
@@ -1732,7 +1728,7 @@ export class NpcAgent {
     this.name = character.name
     this.displayName = character.lastName ? `${character.name} ${character.lastName}` : character.name
     this.gender = character.gender
-    this.voiceActor = voiceActorForIndex(this.gender, treeIndex)
+    this.voiceProfileId = voiceProfileIdFor(this.gender, character.role)
     this.role = character.role
     this.vendorMarker = npcVendorMarker(this.role)
     this.personalInventory = npcState.personalInventory
@@ -6603,8 +6599,9 @@ export class NpcAgent {
     this.conversationPartnerId = partnerId
     this.onConversationEarlyExit = onEarlyExit
     this.pendingConversationVoiceCue = null
-    // Structured campfire exchange (plan npc-045) takes priority over the
-    // legacy friendly-talk murmur fallback. Empty fallback pools → silence.
+    // Structured campfire exchange (plan npc-045) is the only conversation
+    // voice cue now (plan npc-056 removed the empty generic friendly-talk
+    // fallback) — same-gender/non-campfire conversations stay silent.
     if (voiceCue) {
       if (voiceCue.delaySec <= 0) {
         this.playAt(voiceCue.url, this.mesh.position, FRIENDLY_TALK_SOUND_VOLUME)
@@ -6614,9 +6611,6 @@ export class NpcAgent {
           playAtSim: this.simClock + voiceCue.delaySec,
         }
       }
-    } else {
-      const talkUrl = pickNpcFriendlyTalkSound(this.gender)
-      if (talkUrl) this.playAt(talkUrl, this.mesh.position, FRIENDLY_TALK_SOUND_VOLUME)
     }
     this.startAction({
       kind: 'conversation',
@@ -6736,7 +6730,7 @@ export class NpcAgent {
         gender: this.gender,
         role: this.role,
         age: this.age,
-        voiceActor: this.voiceActor,
+        voiceProfileId: this.voiceProfileId,
       },
       position: this.mesh.position,
       areaKey,
@@ -6746,17 +6740,18 @@ export class NpcAgent {
     })
   }
 
-  /** Reuses existing voice pools per tier (plan 117 §3) — no new audio
-   *  assets: `warm` borrows the greeting pool ("Hej!"), `enthusiastic`
-   *  borrows the quest-complete/cheer pool ("Brawo!"). Cancelable when a
-   *  `playAtCancelable` seam is available so dialogue open can cut the clip. */
+  /** Semantic reaction mapping (plan npc-056 — replaces the old actor-pool
+   *  reuse from plan 117 §3): `normal` → `attention`, `warm`/`enthusiastic` →
+   *  `greeting`. No dedicated "enthusiastic" clip category exists yet, so
+   *  both share `greeting` rather than restoring a parallel audio pool.
+   *  Cancelable when a `playAtCancelable` seam is available so dialogue open
+   *  can cut the clip. */
   private playReactionSound(tier: ReactionTier): void {
-    const pool = tier === 'warm'
-      ? NPC_GREETING_SOUND_URLS[this.voiceActor]
-      : tier === 'enthusiastic'
-        ? NPC_QUEST_COMPLETE_SOUND_URLS[this.gender]
-        : [...NPC_REACTION_SOUND_URLS[this.gender], ...NPC_HMM_VOICE_URLS[this.voiceActor]]
-    const url = pool[Math.floor(Math.random() * pool.length)]
+    const intent: NpcVoiceSemanticIntent = tier === 'normal' ? 'attention' : 'greeting'
+    const url = resolveNpcVoiceLine(
+      { id: this.id, gender: this.gender, role: this.role, age: this.age, voiceProfileId: this.voiceProfileId },
+      intent,
+    )
     if (!url) return
     this.stopPlayerReactionVoice()
     const cancelable = this.playAtCancelableOverride ?? sharedPlayerReactionPlayAtCancelable

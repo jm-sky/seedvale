@@ -20,7 +20,6 @@ Generated from TypeScript imports.
 
 **Imports**
 
-- `ai/NpcAgent.ts`
 - `ai/npcVoiceLines.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/AnimalSpawner.ts`

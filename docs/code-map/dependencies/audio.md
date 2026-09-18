@@ -228,6 +228,7 @@ Generated from TypeScript imports.
 
 - `ai/npcBarkLimiter.test.ts`
 - `ai/npcBarkRequest.ts`
+- `app/createApp.ts`
 - `ui-vue/store.ts`
 
 ## `audio/playerMoveSounds.test.ts`

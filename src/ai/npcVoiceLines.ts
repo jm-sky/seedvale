@@ -2,159 +2,44 @@ import type { NpcGender, Role } from './characters'
 import { lifeStageForAge } from '../settlement/npcPhysicalProfile'
 
 /**
- * NPC voice-line pool selection (plan 202 / npc-044) — assigns each NPC one of
- * the 5 recorded voice actors in the Super Dialogue Audio Pack v1
- * (public/sounds/README.md) and picks lines from the greeting/farewell/
- * confirmation/reaction/quest-complete categories. Plan npc-044 adds a
- * hierarchical generated-asset resolver (`resolveNpcVoiceLine`) with legacy
- * Super Dialogue pools as final fallback. Pure data + pure selection
- * functions, no dependency on `NpcAgent`'s runtime/FSM state —
- * `NpcAgent` only reads the pools/pickers below (`voiceActorForIndex` at
- * construction, `playReactionSound()` per-reaction) and owns none of this
- * itself.
+ * NPC semantic voice resolution (plan npc-044, legacy-free since plan
+ * npc-056) — resolves a spoken bark URL from semantic intent + NPC identity
+ * against the static generated Fish Audio manifest only. Pure data + pure
+ * selection functions, no dependency on `NpcAgent`'s runtime/FSM state —
+ * `NpcAgent` only reads `resolveNpcVoiceLine` (per-reaction, per-bark) and
+ * owns none of this itself. Missing coverage is presentation-only silence,
+ * never a fallback pack and never a simulation change.
  */
 
-/** One of the 5 recorded voice actors — assigned deterministically per NPC
- *  (`voiceActorForIndex`), the same way `npcAppearance`'s `modelUrlFor` picks a
- *  body model, so each NPC keeps one consistent voice all session instead
- *  of a random one per line. */
-export type NpcVoiceActor = 'alex' | 'ian' | 'sean' | 'karen' | 'meghan'
-
-const NPC_VOICE_ACTORS: Record<NpcGender, readonly NpcVoiceActor[]> = {
-  male: ['alex', 'ian', 'sean'],
-  female: ['karen', 'meghan'],
-}
-
-export function voiceActorForIndex(gender: NpcGender, treeIndex: number): NpcVoiceActor {
-  const pool = NPC_VOICE_ACTORS[gender]
-  return pool[treeIndex % pool.length]!
-}
-
-function genderForVoiceActor(actor: NpcVoiceActor): NpcGender {
-  return NPC_VOICE_ACTORS.male.includes(actor) ? 'male' : 'female'
-}
-
-const ALL_VOICE_ACTORS: readonly NpcVoiceActor[] = ['alex', 'ian', 'sean', 'karen', 'meghan']
-
-/** Builds `/sounds/{gender}-{slug}-{actor}-{NN}.ogg` pools for a Super Dialogue
- *  Audio Pack v1 category, one array per voice actor. Sources/licenses:
- *  public/sounds/README.md. */
-function voiceLinePool(slug: string, count: number): Record<NpcVoiceActor, readonly string[]> {
-  const pool = {} as Record<NpcVoiceActor, readonly string[]>
-  for (const actor of ALL_VOICE_ACTORS) {
-    const gender = genderForVoiceActor(actor)
-    pool[actor] = Array.from(
-      { length: count },
-      (_, i) => `/sounds/${gender}-${slug}-${actor}-${String(i + 1).padStart(2, '0')}.ogg`,
-    )
-  }
-  return pool
-}
-
-/** Flattens a category's per-actor files into one array per gender — for pools
- *  (like quest-complete, below) that are only ever picked by gender, not by
- *  the giver's specific voice actor. */
-function voiceLinePoolByGender(slug: string, count: number): Record<NpcGender, readonly string[]> {
-  const byActor = voiceLinePool(slug, count)
-  return {
-    male: NPC_VOICE_ACTORS.male.flatMap((actor) => byActor[actor]),
-    female: NPC_VOICE_ACTORS.female.flatMap((actor) => byActor[actor]),
-  }
-}
-
-/** "Hmm/Huh?/Wow!" clips (Miscellaneous category) — extra per-actor variety
- *  merged into `NPC_REACTION_SOUND_URLS` picks in `NpcAgent.playReactionSound()`. */
-export const NPC_HMM_VOICE_URLS = voiceLinePool('hmm', 3)
-
-/** "Hello/Hey/Welcome/Greetings" clips (Greeting category) — played when a
- *  dialogue panel opens with this NPC. */
-export const NPC_GREETING_SOUND_URLS = voiceLinePool('greeting', 4)
-
-/** "Goodbye/Take care/Farewell/Good luck" clips (Farewell category) — played
- *  when a dialogue panel closes without accepting an offer. */
-export const NPC_FAREWELL_SOUND_URLS = voiceLinePool('farewell', 4)
-
-/** "Yes/You got it/On my way/Alright" clips (Confirmation category) — played
- *  when the player accepts this NPC's dialogue offer. */
-export const NPC_CONFIRMATION_SOUND_URLS = voiceLinePool('confirmation', 4)
-
-function pickVoiceLine(pool: Record<NpcVoiceActor, readonly string[]>, actor: NpcVoiceActor): string | undefined {
-  const lines = pool[actor]
-  return lines[Math.floor(Math.random() * lines.length)]
-}
-
-/** Random greeting line for this NPC's assigned voice actor — call when a
- *  dialogue panel opens with them. */
-export function pickNpcGreetingSound(actor: NpcVoiceActor): string | undefined {
-  return pickVoiceLine(NPC_GREETING_SOUND_URLS, actor)
-}
-
-/** Random farewell line — call when a dialogue panel closes without accepting
- *  an offer. */
-export function pickNpcFarewellSound(actor: NpcVoiceActor): string | undefined {
-  return pickVoiceLine(NPC_FAREWELL_SOUND_URLS, actor)
-}
-
-/** Random confirmation line — call when the player accepts this NPC's
- *  dialogue offer. */
-export function pickNpcConfirmationSound(actor: NpcVoiceActor): string | undefined {
-  return pickVoiceLine(NPC_CONFIRMATION_SOUND_URLS, actor)
-}
-
-/** Short reaction clips played once when an NPC enters `lookAtPlayer` — one pool
- *  per gender. Sources/licenses: public/sounds/README.md. */
-export const NPC_REACTION_SOUND_URLS: Record<NpcGender, readonly string[]> = {
-  male: ['/sounds/male-hmm-01.m4a', '/sounds/male-hmm-02.ogg'],
-  female: ['/sounds/female-hmm-01.ogg', '/sounds/female-hmm-02.ogg'],
-}
-
-/** Short "thank you" clips played once a quest is turned in — one pool per
- *  gender, keyed by the giver's gender (only the name is known at that call
- *  site — see `QuestManager.playQuestCompleteSound` — so this can't be keyed
- *  by voice actor). Sources/licenses: public/sounds/README.md. */
-const NPC_THANK_YOU_VOICE_URLS = voiceLinePoolByGender('thank-you', 4)
-
-export const NPC_QUEST_COMPLETE_SOUND_URLS: Record<NpcGender, readonly string[]> = {
-  male: ['/sounds/male-thank-you-01.mp3', '/sounds/male-thank-you-02.ogg', ...NPC_THANK_YOU_VOICE_URLS.male],
-  female: ['/sounds/female-thank-you-01.mp3', ...NPC_THANK_YOU_VOICE_URLS.female],
-}
-
-/** Quiet enough to stay under dialogue/ambient, audible enough to register —
- *  `NpcAgent.playReactionSound()`'s playback volume. */
-export const REACTION_SOUND_VOLUME = 0.5
-
 /**
- * Short, non-verbal "friendly talk" murmur played when a Social Place
- * `conversation` actually begins (plan settlements-npcs-004 §3) — a
- * consequence of the existing `conversation` action, not a random ambient
- * NPC-proximity sound. Deliberately **not** the Super Dialogue Audio Pack's
- * spoken lines above: distinct short, wordless chatter clips.
+ * Deterministic presentation identity for "who/how this NPC sounds" —
+ * separate from the semantic line intent ("what is being spoken"). Not
+ * personality, profession state or quest state, and never persisted:
+ * derived fresh from stable NPC identity + compatible presentation
+ * attributes (role/gender/age) every time. A scope may resolve to only one
+ * profile today; the type stays a plain id so a future scope can carry more
+ * than one without reintroducing pack-specific fields into `NpcAgent`.
  *
- * These clips don't exist in `public/sounds/` yet (manual asset addition —
- * see `docs/assets/SOUNDS.md`); the pools stay empty until then, so
- * `pickNpcFriendlyTalkSound` returns `undefined` and playback is a silent
- * no-op — same "gap in the lookup, no fetch attempted" shape as
- * `audio/animalSounds.ts`'s `ANIMAL_SOUND_URLS`. Once added, fill the arrays
- * below with the real filenames (suggested convention:
- * `/sounds/npc-talk-{gender}-{NN}.ogg`, split by gender only — no per-actor
- * pool, per the plan's "opcjonalnie rozdzielony na pule męskie/żeńskie").
+ * @domain npc
  */
-export const NPC_FRIENDLY_TALK_SOUND_URLS: Record<NpcGender, readonly string[]> = {
-  male: [],
-  female: [],
-}
+export type NpcVoiceProfileId = string
 
-/** Quieter than a reaction sound — background chatter, not a foregrounded cue. */
-export const FRIENDLY_TALK_SOUND_VOLUME = 0.65
-
-export function pickNpcFriendlyTalkSound(gender: NpcGender): string | undefined {
-  const pool = NPC_FRIENDLY_TALK_SOUND_URLS[gender]
-  return pool[Math.floor(Math.random() * pool.length)]
+/**
+ * Deterministic voice-profile selector — replaces the old per-NPC actor
+ * assignment (`voiceActorForIndex`). Pure function of gender + role, so it
+ * never depends on tree/array order or construction-time randomness, and
+ * stays stable across reload/rebuild for the same NPC.
+ *
+ * @domain npc
+ */
+export function voiceProfileIdFor(gender: NpcGender, role: Role): NpcVoiceProfileId {
+  return `${voiceScopeForRole(role)}:${gender}`
 }
 
 /**
- * Semantic voice events resolved by `resolveNpcVoiceLine` (npc-044 dialogue
- * + npc-049 contextual life/world barks). Bark intents are presentation-only.
+ * Semantic voice events resolved by `resolveNpcVoiceLine` (npc-044 dialogue,
+ * npc-049 contextual life/world barks, quests-progression quest voice).
+ * Bark intents are presentation-only.
  */
 export type NpcVoiceSemanticIntent =
   | 'greeting'
@@ -192,7 +77,7 @@ export type NpcVoiceResolveInput = {
   gender: NpcGender
   role: Role
   age: number
-  voiceActor: NpcVoiceActor
+  voiceProfileId: NpcVoiceProfileId
 }
 
 /**
@@ -217,6 +102,16 @@ export function voiceAgeBandForAge(age: number): NpcVoiceAgeBand | null {
 export function voiceScopeForRole(role: Role): string {
   return role === 'trader' ? 'merchant' : role
 }
+
+/** Quiet enough to stay under dialogue/ambient, audible enough to register —
+ *  `NpcAgent.playReactionSound()`'s playback volume. */
+export const REACTION_SOUND_VOLUME = 0.5
+
+/** Quieter than a reaction sound — background chatter, not a foregrounded cue.
+ *  Still used by `NpcAgent.beginConversation()`'s campfire voice cue
+ *  (plan npc-045) even though the old empty friendly-talk fallback pool is
+ *  gone (plan npc-056). */
+export const FRIENDLY_TALK_SOUND_VOLUME = 0.65
 
 /**
  * Static generated-voice registry (npc-044). Keys are
@@ -253,6 +148,9 @@ const GENERATED_VOICE_MANIFEST: Readonly<Record<string, readonly string[]>> = {
   ],
   'merchant:female:thanks': [
     '/sounds/voices/merchant_female_thanks_01.mp3',
+  ],
+  'merchant:female:attention': [
+    '/sounds/voices/merchant_female_attention_01.mp3',
   ],
 
   'guard:male:greeting': [
@@ -407,29 +305,11 @@ export function buildNpcVoiceLookupKeys(
   return keys
 }
 
-function pickLegacyVoiceLine(
-  intent: NpcVoiceSemanticIntent,
-  actor: NpcVoiceActor,
-): string | undefined {
-  switch (intent) {
-    case 'confirmation':
-      return pickNpcConfirmationSound(actor)
-
-    case 'farewell':
-      return pickNpcFarewellSound(actor)
-
-    case 'greeting':
-      return pickNpcGreetingSound(actor)
-
-    default:
-      return undefined
-  }
-}
-
 /**
  * Resolve a spoken NPC bark URL from semantic intent + NPC identity.
- * Hierarchy: NPC-specific → profession(+age) → general(+age) → legacy
- * Super Dialogue actor pool (greeting/farewell/confirmation only) → undefined.
+ * Hierarchy: NPC-specific → profession(+age) → general(+age) → undefined.
+ * No legacy Super Dialogue fallback — missing generated coverage is
+ * presentation-only silence.
  *
  * @domain npc
  */
@@ -450,5 +330,5 @@ export function resolveNpcVoiceLineWithManifest(
     const hit = pickFromUrlPool(manifest[key])
     if (hit) return hit
   }
-  return pickLegacyVoiceLine(intent, npc.voiceActor)
+  return undefined
 }

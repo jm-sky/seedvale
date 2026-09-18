@@ -1,3 +1,4 @@
+import type { NpcVoiceSemanticIntent } from '../ai/npcVoiceLines'
 import type { AnimalKind } from '../fauna/AnimalAgent'
 import type { SpawnerType } from '../fauna/AnimalSpawner'
 import type { Inventory } from '../items/Inventory'
@@ -9,8 +10,6 @@ import type {
   WorldQuestSourceLookup,
   WorldQuestSourceStatus,
 } from './opportunities/worldQuestOpportunityTypes'
-import { genderForName } from '../ai/NpcAgent'
-import { NPC_QUEST_COMPLETE_SOUND_URLS } from '../ai/npcVoiceLines'
 import { LIVESTOCK_KINDS } from '../settlement/livestock'
 import { formatWorldDayClock } from '../world/dayNight'
 import { gameHoursToGameDays } from '../world/timeConversion'
@@ -371,6 +370,17 @@ const NO_PHYSICAL_OUTCOME: QuestPhysicalOutcomeResolver = {
   onResolve: () => {},
 }
 
+/**
+ * Quest-owned subset of `NpcVoiceSemanticIntent` (plan npc-056) — the only
+ * intents a quest voice moment may request through `playQuestVoice`.
+ *
+ * @domain quests-progression
+ */
+export type QuestVoiceIntent = Extract<
+  NpcVoiceSemanticIntent,
+  'quest_offer' | 'quest_accepted' | 'quest_declined' | 'quest_complete'
+>
+
 export type QuestLifecycleHooks = {
   onStageAdvanced?: (questId: string, clearedStageIndex: number) => void
   /**
@@ -386,6 +396,13 @@ export type QuestLifecycleHooks = {
   transferItemCount?: (kind: ItemKind, count: number, npcId: NpcId) => boolean
   /** Consume the matching carried container (plan quests-progression-029). */
   discardCarriedContainer?: (containerId: string) => boolean
+  /**
+   * Requests a semantic quest voice line for the real giver/target `NpcId`
+   * (plan npc-056) — `QuestManager` never resolves an audio URL or imports
+   * `NpcAgent` itself. The composition root looks up the current NPC voice
+   * presentation and plays it through the shared spatial NPC voice seam.
+   */
+  playQuestVoice?: (npcId: NpcId, intent: QuestVoiceIntent) => void
 }
 
 /**
@@ -437,8 +454,6 @@ const NO_SETTLEMENT_LIGHT: SettlementLightLookup = {
   getSnapshot: () => ({ torchLit: {}, campfireLit: false, status: 'unavailable' }),
 }
 
-/** Same headroom as NPC reaction clips (NpcAgent.ts) — a one-shot "thank you", not a focal cue. */
-const QUEST_COMPLETE_SOUND_VOLUME = 0.35
 /** Used when a failed stage has no `failLine` of its own. */
 const QUEST_FAILED_FALLBACK_LINE = 'To się już nie uda.'
 /** Shown for an `abandoned` entry in the quest log when no other result text applies. */
@@ -530,7 +545,6 @@ export class QuestManager {
   /** Runtime-only feed dedupe per active counted feed stage (plan
    *  quests-progression-020) — not persisted across save/load. */
   private readonly feedContributionIds = new Map<string, Set<string>>()
-  private readonly playSound: (url: string, volume?: number) => void
   private readonly grantItem: QuestItemGrant
   private readonly resolveAnimalTarget: AnimalTargetResolver
   private readonly applyDangerousTrait: DangerousTraitApplier
@@ -559,7 +573,12 @@ export class QuestManager {
 
   constructor(
     defs: readonly QuestDef[],
-    playSound: (url: string, volume?: number) => void = () => {},
+    // Unread since plan npc-056 moved quest-complete voice onto the injected
+    // `lifecycleHooks.playQuestVoice` seam below. Kept as a positional
+    // parameter (underscore-prefixed, not removed) so every other
+    // constructor argument — and the ~100 existing call sites — keeps its
+    // position; no QuestManager behavior calls it anymore.
+    _playSound: (url: string, volume?: number) => void = () => {},
     inventory: Inventory,
     initial?: QuestManagerInitial,
     grantItem: QuestItemGrant = () => {},
@@ -582,7 +601,6 @@ export class QuestManager {
   ) {
     validateQuestDefinitions(defs)
     this.defs = defs
-    this.playSound = playSound
     this.inventory = inventory
     this.grantItem = grantItem
     this.resolveAnimalTarget = resolveAnimalTarget
@@ -1710,13 +1728,11 @@ export class QuestManager {
     this.relations.set(npcId, this.getRelation(npcId) + amount)
   }
 
-  /** Plays a "thank you" clip matching the giver's gender, or a random one if
-   *  the name falls outside the placeholder NPC pool. */
-  private playQuestCompleteSound(giverName: string): void {
-    const gender = genderForName(giverName) ?? (Math.random() < 0.5 ? 'male' : 'female')
-    const pool = NPC_QUEST_COMPLETE_SOUND_URLS[gender]
-    const url = pool[Math.floor(Math.random() * pool.length)]
-    if (url) this.playSound(url, QUEST_COMPLETE_SOUND_VOLUME)
+  /** Requests the `quest_complete` voice line for the real giver `NpcId`
+   *  through the injected voice hook — no gender guessing from the giver's
+   *  display name (plan npc-056). A no-op when nothing is wired. */
+  private playQuestCompleteSound(giverNpcId: NpcId): void {
+    this.lifecycleHooks.playQuestVoice?.(giverNpcId, 'quest_complete')
   }
 
   /** Plan 199 — invalidates or rebinds any `active` wild-fauna
@@ -1851,7 +1867,7 @@ export class QuestManager {
       for (const item of outcome.reward.items) this.grantItem(item.kind, item.count)
     }
     this.applyConsequences(def, outcome.consequences)
-    if (outcome.state === 'complete') this.playQuestCompleteSound(def.giverName)
+    if (outcome.state === 'complete') this.playQuestCompleteSound(def.giver.npcId)
     return outcome
   }
 

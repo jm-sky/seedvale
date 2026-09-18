@@ -1297,6 +1297,7 @@ Generated from TypeScript imports.
 - `app/actions/npcItemTransfer.ts`
 - `app/actions/workContractPayment.test.ts`
 - `app/actions/workContractPayment.ts`
+- `app/createApp.ts`
 - `app/worldBundle.ts`
 - `items/foreignProperty.ts`
 - `persistence/saveData.ts`

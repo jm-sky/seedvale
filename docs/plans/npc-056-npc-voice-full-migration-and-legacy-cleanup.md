@@ -1,7 +1,7 @@
 # Plan: NPC voice full migration and legacy cleanup
 
 **Created:** 2026-09-18
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** high · **Effort:** M
 **Depends on:** npc-044, npc-049
 **Domain:** `npc`

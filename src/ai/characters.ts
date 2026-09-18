@@ -56,14 +56,6 @@ export const RESERVED_CHARACTERS: readonly CharacterDef[] = RESERVED_SEEDS.map((
   personality: personalityForIndex(i),
 }))
 
-/** Gender for one of the 4 reserved quest-critical names, or null otherwise —
- *  procedurally generated family members (everyone else) have no fixed
- *  gender to look up here; callers already fall back when this returns null
- *  (e.g. `QuestManager.ts`). */
-export function genderForName(name: string): NpcGender | null {
-  return RESERVED_CHARACTERS.find((c) => c.name === name)?.gender ?? null
-}
-
 /** Deterministic role/traits/personality for a procedurally generated family
  *  member — replaces the old `characterForIndex(treeIndex % 8)` fixed-roster
  *  lookup. `name` isn't produced here: callers already have one (from

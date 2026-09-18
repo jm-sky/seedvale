@@ -14,7 +14,7 @@ function npc(partial: Partial<NpcVoiceResolveInput> = {}): NpcVoiceResolveInput 
     gender: 'male',
     role: 'farmer',
     age: 30,
-    voiceActor: 'alex',
+    voiceProfileId: 'general:male',
     ...partial,
   }
 }
@@ -121,7 +121,7 @@ describe('resolveNpcVoiceLineWithManifest hierarchy', () => {
     for (let i = 0; i < 40; i++) {
       const url = resolveNpcVoiceLineWithManifest(
         hierarchyManifest,
-        npc({ id: 'kasia', gender: 'female', role: 'trader', age: 35, voiceActor: 'karen' }),
+        npc({ id: 'kasia', gender: 'female', role: 'trader', age: 35, voiceProfileId: 'merchant:female' }),
         'greeting',
       )
       if (url) urls.add(url)
@@ -129,24 +129,21 @@ describe('resolveNpcVoiceLineWithManifest hierarchy', () => {
     expect([...urls].sort()).toEqual(['/m1', '/m2', '/m3'])
   })
 
-  it('returns only the generated URL when the manifest matches (no legacy dual result)', () => {
+  it('returns the generated URL when the manifest matches', () => {
     const url = resolveNpcVoiceLineWithManifest(
       { 'general:male:greeting': ['/generated-only'] },
-      npc({ voiceActor: 'sean' }),
+      npc(),
       'greeting',
     )
     expect(url).toBe('/generated-only')
-    expect(url).not.toMatch(/sean|male-greeting/)
   })
 
-  it('uses legacy voiceActor fallback when the generated manifest has no match', () => {
-    const url = resolveNpcVoiceLineWithManifest({}, npc({ voiceActor: 'sean' }), 'greeting')
-    expect(url).toMatch(/^\/sounds\/male-greeting-sean-\d{2}\.ogg$/)
-  })
-
-  it('returns undefined when neither generated nor legacy assets exist', () => {
+  it('returns undefined with no legacy fallback when the generated manifest has no match', () => {
     expect(
-      resolveNpcVoiceLineWithManifest({}, npc({ voiceActor: 'sean' }), 'quest_declined'),
+      resolveNpcVoiceLineWithManifest({}, npc(), 'greeting'),
+    ).toBeUndefined()
+    expect(
+      resolveNpcVoiceLineWithManifest({}, npc(), 'quest_declined'),
     ).toBeUndefined()
   })
 })
@@ -154,7 +151,7 @@ describe('resolveNpcVoiceLineWithManifest hierarchy', () => {
 describe('resolveNpcVoiceLine production manifest', () => {
   it('resolves merchant female greeting to the merchant-specific generated pool', () => {
     const url = resolveNpcVoiceLine(
-      npc({ gender: 'female', role: 'trader', age: 35, voiceActor: 'karen' }),
+      npc({ gender: 'female', role: 'trader', age: 35, voiceProfileId: 'merchant:female' }),
       'greeting',
     )
     expect(url).toMatch(/^\/sounds\/voices\/merchant_female_greeting_0[1-3]\.mp3$/)
@@ -178,7 +175,7 @@ describe('resolveNpcVoiceLine production manifest', () => {
   it('resolves merchant female confirmation via agree filename', () => {
     expect(
       resolveNpcVoiceLine(
-        npc({ gender: 'female', role: 'trader', age: 35, voiceActor: 'karen' }),
+        npc({ gender: 'female', role: 'trader', age: 35, voiceProfileId: 'merchant:female' }),
         'confirmation',
       ),
     ).toBe('/sounds/voices/merchant_female_agree_01.mp3')
@@ -222,7 +219,7 @@ describe('resolveNpcVoiceLine production manifest', () => {
 
   it('falls female exhausted back to general female when no profession clip exists', () => {
     expect(
-      resolveNpcVoiceLine(npc({ gender: 'female', role: 'farmer', age: 40, voiceActor: 'karen' }), 'exhausted'),
+      resolveNpcVoiceLine(npc({ gender: 'female', role: 'farmer', age: 40, voiceProfileId: 'general:female' }), 'exhausted'),
     ).toBe('/sounds/voices/general_female_exhausted_01.mp3')
   })
 })

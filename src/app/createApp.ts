@@ -2,6 +2,7 @@ import type { Role } from '../ai/characters'
 import type { PlayerSocialLookup } from '../ai/reactionChance'
 import type { AnimalAgent } from '../fauna/AnimalAgent'
 import type { SaveData, SaveTerrainModification } from '../persistence/saveData'
+import type { NpcId } from '../settlement/npcState'
 import type { TerrainModification } from '../terrain/chunkManager'
 import type { ResourceDepletionState } from '../terrain/depositMining'
 import type { RenewableWorldItemOverrides } from '../terrain/renewableWorldItems'
@@ -14,6 +15,7 @@ import { NpcBarkLimiter } from '../ai/npcBarkLimiter'
 import { configureRequestNpcBark, createRequestNpcBark } from '../ai/npcBarkRequest'
 import { configureRequestNpcInitiatedDialogue } from '../ai/npcInitiatedDialogueRequest'
 import { armNpcPlayerFollowUp } from '../ai/npcPlayerFollowUp'
+import { resolveNpcVoiceLine } from '../ai/npcVoiceLines'
 import { NEUTRAL_PLAYER_SOCIAL_STATE } from '../ai/reactionChance'
 import { playAnimalCombatDeath } from '../audio/actionSounds'
 import { playNegativeConsequence } from '../audio/consequenceSounds'
@@ -21,6 +23,7 @@ import { createAmbientAudio } from '../audio/createAmbientAudio'
 import { createWorldAudio } from '../audio/createWorldAudio'
 import { createHouseDoorTracker } from '../audio/doorSounds'
 import { createFireAudio, playActionFireExtinguish, playActionFireIgnite } from '../audio/fireSounds'
+import { playNpcVoiceAt } from '../audio/npcVoicePlayback'
 import { applyFootstepPackFromUrl } from '../audio/playerMoveSounds'
 import { createWeatherAudio } from '../audio/weatherSounds'
 import { BadgeManager, type SettlementBadgeUnlock } from '../badges/badges'
@@ -196,7 +199,7 @@ import {
   buildWorldDrivenSettlementQuests,
   opportunityNpcsFromSettlement,
 } from '../quests/opportunities/worldQuestMaterialization'
-import { QuestManager } from '../quests/QuestManager'
+import { QuestManager, type QuestVoiceIntent } from '../quests/QuestManager'
 import { bindDarkForestTreasureQuest, bindExactCaveQuests, bindTreasureMapBearCaveQuest, buildDarkForestTreasureQuest, buildHorseAcquisitionQuest, buildLandmarkQuests, buildTreasureMapBearCaveQuest, QUESTS, questStageObjectiveSlots } from '../quests/quests'
 import {
   isSuspiciousTransportCacheLooted,
@@ -1841,6 +1844,19 @@ export async function createApp(
         .filter((agent) => agent.def.role === 'predator' && !agent.isDead())
         .map((agent) => ({ x: agent.mesh.position.x, z: agent.mesh.position.z }))
       animal.startLivestockStray({ predators })
+    },
+    // Narrow injected NPC voice identity/playback seam (plan npc-056) —
+    // `QuestManager` only requests a semantic intent for a stable `NpcId`;
+    // this composition-root hook finds the currently loaded NpcAgent (if
+    // any) and plays through the same shared spatial voice seam dialogue
+    // barks use. Not loaded (settlement offscreen) → silent no-op.
+    playQuestVoice: (npcId: NpcId, intent: QuestVoiceIntent) => {
+      for (const settlement of bundle.settlementsManager.getLoaded()) {
+        const npc = settlement.npcs.find((candidate) => candidate.id === npcId)
+        if (!npc) continue
+        playNpcVoiceAt(npc.mesh.position, resolveNpcVoiceLine(npc, intent))
+        return
+      }
     },
   }
 

@@ -179,43 +179,47 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `M` · **Score:**  35  
    → **unlocks:** 0/0
 
-27. `npc-054` — **NPC desired gifts, gift acceptance and relationship rewards**  
+27. `npc-055` — **Semantic profession and activity animation coverage**  
+  🔴 `L` · **Score:**  32  
+   → **unlocks:** 0/0
+
+28. `npc-054` — **NPC desired gifts, gift acceptance and relationship rewards**  
   🔴 `L` · **Score:**  30  
    → **unlocks:** 0/0
 
-28. `items-player-014` — **Rope-pullable resource transport**  
+29. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-29. `tools-005` — **Seedvale Character Preparation Panel**  
+30. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-30. `world-terrain-039` — **N8AO / post-process cost budget**  
+31. `world-terrain-039` — **N8AO / post-process cost budget**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-31. `world-terrain-040` — **Vegetation render budget v2**  
+32. `world-terrain-040` — **Vegetation render budget v2**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-32. `items-player-044` — **Shoulder and forearm equipment slots**  
+33. `items-player-044` — **Shoulder and forearm equipment slots**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-33. `world-terrain-041` — **Agent presentation render LOD**  
+34. `world-terrain-041` — **Agent presentation render LOD**  
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-34. `settlements-npcs-046` — **Pasture Well & Trough Local Water Use**  
+35. `settlements-npcs-046` — **Pasture Well & Trough Local Water Use**  
   🟡 `S` · **Score:**  21  
    → **unlocks:** 0/0
 
-35. `items-player-032` — **NPC player-storage resource and context rules**  
+36. `items-player-032` — **NPC player-storage resource and context rules**  
   🟡 `L` · **Score:**  20  
    → **unlocks:** 0/0
 
-36. `quests-progression-061` — **Builder — Complete an Unfinished Palisade Segment**  
+37. `quests-progression-061` — **Builder — Complete an Unfinished Palisade Segment**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
@@ -450,6 +454,8 @@ graph TD
   npc_052["npc-052 — Contextual Elder Social Titles"]
   npc_053["npc-053 — NPC profession-aware weapon choice and armor use"]
   npc_054["npc-054 — NPC desired gifts, gift acceptance and relationship rewards"]
+  npc_055["npc-055 — Semantic profession and activity animation coverage"]
+  npc_056["npc-056 — NPC voice full migration and legacy cleanup"]
   persistence_001["persistence-001 — Full Simulation Persistence"]
   persistence_002["persistence-002 — save integrity guard"]
   persistence_003["persistence-003 — save schema versioning and future migrations"]
@@ -606,7 +612,6 @@ graph TD
   tools_012["tools-012 — Draft plans README automatic sync"]
   tools_013["tools-013 — NPC decision verification and scenario tooling"]
   tools_014["tools-014 — Player-owned horse debug controls"]
-  tools_015["tools-015 — Chatterbox local voice generation pipeline"]
   tools_016["tools-016 — Heavy settlement performance benchmark"]
   ui_input_001["ui-input-001 — Developer Debug API"]
   ui_input_002["ui-input-002 — UI/UX Interaction and Action System Polish"]
@@ -862,6 +867,7 @@ graph TD
   items_player_034 --> items_player_036
   items_player_034 --> npc_039
   items_player_035 --> items_player_038
+  items_player_035 --> npc_055
   items_player_036 --> items_player_037
   items_player_036 --> items_player_039
   items_player_036 --> npc_039
@@ -929,15 +935,16 @@ graph TD
   npc_033 --> npc_035
   npc_034 --> npc_035
   npc_039 --> npc_040
+  npc_039 --> npc_055
   npc_040 --> npc_012
   npc_041 --> npc_042
-  npc_041 --> tools_015
-  npc_042 --> tools_015
   npc_044 --> npc_045
   npc_044 --> npc_049
+  npc_044 --> npc_056
   npc_046 --> npc_047
   npc_046 --> npc_048
   npc_047 --> npc_048
+  npc_049 --> npc_056
   npc_053 --> npc_054
   npc_053 --> settlements_npcs_049
   npc_053 --> settlements_npcs_050

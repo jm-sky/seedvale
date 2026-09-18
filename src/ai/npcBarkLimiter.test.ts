@@ -15,7 +15,7 @@ function npc(id: string, area = 'settlement-a'): NpcVoiceResolveInput & { id: st
     gender: 'male',
     role: 'farmer',
     age: 40,
-    voiceActor: 'alex',
+    voiceProfileId: 'general:male',
   }
 }
 
@@ -140,14 +140,14 @@ describe('NpcBarkLimiter', () => {
 describe('resolveNpcBarkVoiceUrl', () => {
   it('resolves livestock_danger for shepherd and falls back to danger_alert otherwise', () => {
     const shepherd = resolveNpcBarkVoiceUrl(
-      { id: 's', gender: 'male', role: 'shepherd', age: 40, voiceActor: 'alex' },
+      { id: 's', gender: 'male', role: 'shepherd', age: 40, voiceProfileId: 'shepherd:male' },
       'livestock_danger',
     )
     expect(shepherd?.url).toBe('/sounds/voices/shepherd_male_livestock_danger_01.mp3')
     expect(shepherd?.resolvedIntent).toBe('livestock_danger')
 
     const farmer = resolveNpcBarkVoiceUrl(
-      { id: 'f', gender: 'male', role: 'farmer', age: 40, voiceActor: 'alex' },
+      { id: 'f', gender: 'male', role: 'farmer', age: 40, voiceProfileId: 'general:male' },
       'livestock_danger',
     )
     expect(farmer?.url).toBe('/sounds/voices/general_male_danger_alert_01.mp3')
@@ -163,7 +163,7 @@ describe('createRequestNpcBark', () => {
     const request = createRequestNpcBark(limiter)
     const femaleHungry = npc('f1')
     femaleHungry.gender = 'female'
-    femaleHungry.voiceActor = 'karen'
+    femaleHungry.voiceProfileId = 'general:female'
     // No general_female_hungry asset — should no-op without admitting
     const decision = request({
       npc: femaleHungry,

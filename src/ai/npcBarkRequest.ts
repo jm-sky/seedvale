@@ -18,7 +18,7 @@ import {
 } from './npcVoiceLines'
 
 export type NpcBarkRequest = {
-  npc: Pick<NpcVoiceResolveInput, 'id' | 'gender' | 'role' | 'age' | 'voiceActor'>
+  npc: Pick<NpcVoiceResolveInput, 'id' | 'gender' | 'role' | 'age' | 'voiceProfileId'>
   position: WorldSoundPosition
   areaKey: string
   intent: NpcBarkIntent

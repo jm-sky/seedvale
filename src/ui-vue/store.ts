@@ -1094,8 +1094,9 @@ export function resolveNpcDialogueHelp(): void {
 }
 /** Invoke one authored quest dialogue action and replace the shown NPC line.
  *  No automatic voice bark — `QuestDialogAction` is an arbitrary player choice
- *  (including quest turn-in, which already plays legacy quest-complete audio
- *  via `QuestManager`). Confirmation belongs on `acceptNpcDialogueOffer`. */
+ *  (including quest turn-in, which already plays `quest_complete` via
+ *  `QuestManager`'s injected voice hook). `quest_accepted` belongs on
+ *  `acceptNpcDialogueOffer`. */
 export function selectNpcDialogueHelpAction(index: number): void {
   const state = ui.npcDialogueMenu
   const action = state.helpResult?.actions?.[index]
@@ -1159,7 +1160,7 @@ export function acceptNpcDialogueOffer(): void {
   if (!state.open || !state.helpResult?.offer) return
   const npc = state.npc as NpcAgent | null
   state.helpResult.offer.onAccept()
-  playNpcVoice(npc, npc ? resolveNpcVoiceLine(npc, 'confirmation') : undefined)
+  playNpcVoice(npc, npc ? resolveNpcVoiceLine(npc, 'quest_accepted') : undefined)
   resetNpcDialogueMenu()
 }
 export function isNpcDialogueMenuOpen(): boolean { return ui.npcDialogueMenu.open }

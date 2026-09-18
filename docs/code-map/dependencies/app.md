@@ -917,6 +917,7 @@ Generated from TypeScript imports.
 - `ai/npcBarkRequest.ts`
 - `ai/npcInitiatedDialogueRequest.ts`
 - `ai/npcPlayerFollowUp.ts`
+- `ai/npcVoiceLines.ts`
 - `ai/reactionChance.ts`
 - `app/actions/actionContext.ts`
 - `app/actions/containerActions.ts`
@@ -955,6 +956,7 @@ Generated from TypeScript imports.
 - `audio/createWorldAudio.ts`
 - `audio/doorSounds.ts`
 - `audio/fireSounds.ts`
+- `audio/npcVoicePlayback.ts`
 - `audio/playerMoveSounds.ts`
 - `audio/weatherSounds.ts`
 - `badges/badges.ts`
@@ -1041,6 +1043,7 @@ Generated from TypeScript imports.
 - `settlement/livestock.ts`
 - `settlement/lostTreasureChroniclesElderResident.ts`
 - `settlement/npcIdentity.ts`
+- `settlement/npcState.ts`
 - `settlement/settlementGenerator.ts`
 - `settlement/villagePlanDebug.ts`
 - `shared/StaminaState.ts`

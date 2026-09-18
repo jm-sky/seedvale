@@ -212,7 +212,6 @@ Generated from TypeScript imports.
 - `interaction/Interactable.ts`
 - `player/medicalTreatment.test.ts`
 - `player/medicalTreatment.ts`
-- `quests/QuestManager.ts`
 - `settlement/createSettlement.ts`
 - `ui-vue/lib/drawMinimap.ts`
 - `ui-vue/npcDialogueOpen.test.ts`
@@ -1454,6 +1453,7 @@ Generated from TypeScript imports.
 - `ai/npcBarkPolicies.ts`
 - `ai/npcBarkRequest.ts`
 - `ai/npcVoiceLines.test.ts`
+- `app/createApp.ts`
 - `quests/QuestManager.ts`
 - `ui-vue/store.ts`
 

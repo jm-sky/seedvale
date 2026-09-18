@@ -37,8 +37,7 @@ Generated from exported TypeScript symbols.
 ## `ai/characters.ts`
 
 - `CharacterDef` — type — line 21
-- `characterForSeed` — function — line 72
-- `genderForName` — function — line 63
+- `characterForSeed` — function — line 64
 - `NpcGender` — type — line 5
 - `RESERVED_CHARACTERS` — const — line 54
 - `Role` — type — line 13
@@ -181,25 +180,25 @@ Generated from exported TypeScript symbols.
 
 ## `ai/NpcAgent.ts`
 
-- `classifyPendingActivity` — function — line 753
-- `configureNpcPlayerReactionAudio` — function — line 1001
-- `CurrentActivity` — type — line 554
-- `CurrentActivityKind` — type — line 547
-- `HUNT_RESUPPLY_ARROW_TARGET` — const — line 870
-- `NPC_HEIGHT` — const — line 486
-- `NPC_SHADOW_DISTANCE` — const — line 491
-- `NpcAgent` — class — line 1140
+- `classifyPendingActivity` — function — line 748
+- `configureNpcPlayerReactionAudio` — function — line 996
+- `CurrentActivity` — type — line 549
+- `CurrentActivityKind` — type — line 542
+- `HUNT_RESUPPLY_ARROW_TARGET` — const — line 865
+- `NPC_HEIGHT` — const — line 482
+- `NPC_SHADOW_DISTANCE` — const — line 487
+- `NpcAgent` — class — line 1135
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcAgentDeps` — type — line 1018
-- `NpcInspectionSnapshot` — type — line 569
-- `NpcWhy` — type — line 728
-- `projectNpcWhy` — function — line 795
-- `promoteChainKind` — function — line 745
+- `NpcAgentDeps` — type — line 1013
+- `NpcInspectionSnapshot` — type — line 564
+- `NpcWhy` — type — line 723
+- `projectNpcWhy` — function — line 790
+- `promoteChainKind` — function — line 740
 
 ## `ai/npcAnimalThreat.ts`
 
@@ -665,32 +664,23 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcVoiceLines.ts`
 
-- `buildNpcVoiceLookupKeys` — function — line 396
-- `FRIENDLY_TALK_SOUND_VOLUME` — const — line 148
-- `NPC_CONFIRMATION_SOUND_URLS` — const — line 79
-- `NPC_FAREWELL_SOUND_URLS` — const — line 75
-- `NPC_FRIENDLY_TALK_SOUND_URLS` — const — line 142
-- `NPC_GREETING_SOUND_URLS` — const — line 71
-- `NPC_HMM_VOICE_URLS` — const — line 67
-- `NPC_QUEST_COMPLETE_SOUND_URLS` — const — line 117
-- `NPC_REACTION_SOUND_URLS` — const — line 106
-- `NpcVoiceActor` — type — line 21
-- `NpcVoiceAgeBand` — type — line 187
+- `buildNpcVoiceLookupKeys` — function — line 294
+- `FRIENDLY_TALK_SOUND_VOLUME` — const — line 114
+- `NpcVoiceAgeBand` — type — line 72
   - domain: npc
-- `NpcVoiceResolveInput` — type — line 190
-- `NpcVoiceSemanticIntent` — type — line 159
-- `pickNpcConfirmationSound` — function — line 100
-- `pickNpcFarewellSound` — function — line 94
-- `pickNpcFriendlyTalkSound` — function — line 150
-- `pickNpcGreetingSound` — function — line 88
-- `REACTION_SOUND_VOLUME` — const — line 124
-- `resolveNpcVoiceLine` — function — line 436
+- `NpcVoiceProfileId` — type — line 25
   - domain: npc
-- `resolveNpcVoiceLineWithManifest` — function — line 444
-- `voiceActorForIndex` — function — line 28
-- `voiceAgeBandForAge` — function — line 204
+- `NpcVoiceResolveInput` — type — line 75
+- `NpcVoiceSemanticIntent` — type — line 44
+- `REACTION_SOUND_VOLUME` — const — line 108
+- `resolveNpcVoiceLine` — function — line 316
   - domain: npc
-- `voiceScopeForRole` — function — line 217
+- `resolveNpcVoiceLineWithManifest` — function — line 324
+- `voiceAgeBandForAge` — function — line 89
+  - domain: npc
+- `voiceProfileIdFor` — function — line 35
+  - domain: npc
+- `voiceScopeForRole` — function — line 102
 
 ## `ai/npcWorkContract.ts`
 

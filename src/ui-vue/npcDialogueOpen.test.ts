@@ -98,7 +98,7 @@ function stubNpc(
     preparePaymentRequest: () => paymentClaim,
     pendingVoluntaryJoinProposal: () => null,
     pendingPlayerFollowUp: () => extras.followUp ?? null,
-    voiceActor: 'alex',
+    voiceProfileId: 'general:male',
     mesh: { position: { x: 0, y: 0, z: 0 } },
     stopPlayerReactionVoice: () => {},
   } as NpcAgent

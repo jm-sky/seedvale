@@ -7,52 +7,29 @@ stereo) — converted from the original WAV recordings for the perf review
 upstream download name (still WAV/whatever the source provided), kept for
 attribution/provenance — it does **not** describe what's in `public/sounds/`
 today. The pre-conversion WAVs are recoverable from git history/the
-`audio-glb-originals-2026-08-12` tag, not kept in the tree. `male-hmm-01.m4a`,
-`male-thank-you-01.mp3` and `female-thank-you-01.mp3` were already lossy-compressed
-and were left as-is.
+`audio-glb-originals-2026-08-12` tag, not kept in the tree.
 
 Backlog status: [`docs/assets/SOUNDS.md`](../../docs/assets/SOUNDS.md). Staging
 candidates still under review: [`_temp/Sounds/README.md`](../../_temp/Sounds/README.md).
 
 ## NPC
 
-| filename         | oryginal filename | source url | notes |
-|------------------|-------------------|------------|-------|
-| female-hmm-01.ogg    | 266292__montblanccandies__hmm-2.wav |  https://freesound.org/ | - |
-| female-hmm-02.ogg    | 170768__esperar__hmm-question.wav | https://freesound.org/people/esperar/sounds/170768/ | - |
-| male-hmm-01.m4a      | 592839__elcharrua__hmm-2-sos-paranormal.m4a | https://freesound.org/ ? | - |
-| male-hmm-02.ogg      | 519112__trimono__approving-hm.wav | https://freesound.org/people/trimono/sounds/519112/ | - |
-| male-thank-you-01.mp3 | 579675__kain0025__ey-thank-you.mp3 | https://freesound.org/people/Kain0025/sounds/579675/ | Cheerful |
-| male-thank-you-02.ogg | 429036__theuncertainman__thank-you-npc-british-male.wav | https://freesound.org/  | generic |
-| female-thank-you-01.mp3       | 624079__djhamsammich__thank-you-anne.mp3 | https://freesound.org/ | Simple, short |
+### NPC voice lines — Super Dialogue Audio Pack v1 (plan 116; removed by plan npc-056)
 
-### NPC voice lines — Super Dialogue Audio Pack v1 (plan 116)
-
-95 clips, curated from `Super Dialogue Audio Pack V1` by **Dillon Becker**
-(dillonbecker.com) — **CC BY 4.0**, attribution + license link required (see
-`## License notes` below; this is the first CC-BY, non-CC0 source in this
-folder). Original pack (WAV, staged, not kept in the tree beyond git history):
-`_temp/Sounds/Super Dialogue Audio Pack v1/`.
-
-Naming: `{gender}-{slug}-{actor}-{NN}.ogg`. Actor = one of the 5 recorded voice
-actors, assigned deterministically per NPC (`voiceActorForIndex` in
-`src/ai/NpcAgent.ts`, same pattern as the body-model pool) so each NPC keeps
-one consistent voice: male → `alex` (Alex Brodie) / `ian` (Ian Lampert) /
-`sean` (Sean Lenhart); female → `karen` (Karen Cenon) / `meghan` (Meghan
-Christian). `NN` is our curated sequence, not the pack's original line number
-— mapping back to the pack's `Reference Sheet.pdf` below. Each row ×5 actors.
-
-| slug (our category) | NN | pack category | pack line # | transcript | used for |
-|---|---|---|---|---|---|
-| greeting | 01–04 | Greeting | 1, 3, 6, 7 | Hello / Hey / Welcome / Greetings | `NPC_GREETING_SOUND_URLS` — dialogue panel opens (`openNpcDialogueMenu`, `src/ui-vue/store.ts`) |
-| farewell | 01–04 | Farewell | 1, 6, 8, 9 | Goodbye / Take care / Farewell / Good luck | `NPC_FAREWELL_SOUND_URLS` — dialogue panel closes without accepting (`closeNpcDialogueMenu`) |
-| confirmation | 01–04 | Confirmation | 3, 4, 5, 9 | Yes / You got it / On my way / Alright | `NPC_CONFIRMATION_SOUND_URLS` — player accepts the NPC's offer (`acceptNpcDialogueOffer`) |
-| thank-you | 01–04 | Completion | 1, 2, 3, 4 | All done / Finished / Complete / Ready | merged into `NPC_QUEST_COMPLETE_SOUND_URLS` (`src/ai/NpcAgent.ts`) — extra variety for quest turn-in |
-| hmm | 01–03 | Miscellaneous | 2, 3, 10 | Hmm… / Huh? / Wow! | merged into `NPC_REACTION_SOUND_URLS` picks in `playReactionSound()` — extra variety for the `lookAtPlayer` reaction |
+The Super Dialogue Audio Pack v1 actor-keyed greeting/farewell/confirmation/
+hmm/thank-you clips (`{gender}-{slug}-{actor}-{NN}.ogg`, 5 actors: `alex` /
+`ian` / `sean` / `karen` / `meghan`) and the older gender-only reaction/
+thank-you pool (`male-hmm-01/02`, `female-hmm-01/02`, `male-thank-you-01/02`,
+`female-thank-you-01`) were fully removed from `public/sounds/` by plan
+npc-056 — they are no longer wired anywhere and are not a runtime fallback.
+The pre-conversion WAVs remain recoverable from git history/the
+`audio-glb-originals-2026-08-12` tag if ever needed for reference. Fish
+Audio generated barks under `voices/` (below) are the only NPC voice source
+now.
 
 ### NPC generated voice barks — `voices/` (plan npc-044)
 
-English spoken barks resolved by `resolveNpcVoiceLine` in `src/ai/npcVoiceLines.ts`. Flat directory `public/sounds/voices/` (do not nest under `public/sounds/npc/` for this batch). Super Dialogue packs above remain the legacy fallback for greeting/farewell/confirmation when no generated clip matches.
+English spoken barks resolved by `resolveNpcVoiceLine` in `src/ai/npcVoiceLines.ts`. Flat directory `public/sounds/voices/` (do not nest under `public/sounds/npc/` for this batch). Missing generated coverage resolves to silence (plan npc-056) — there is no legacy fallback pack.
 
 Naming: `<scope>_<gender>_[<age>]_<semantic-keyword>_<variant>.{wav,mp3}` or `npc_<npc-id>_<semantic-keyword>_<variant>.{wav,mp3}`. Simulation role `trader` → scope `merchant`. Semantic intent `confirmation` may map to filename keyword `agree`.
 
@@ -63,11 +40,13 @@ Naming: `<scope>_<gender>_[<age>]_<semantic-keyword>_<variant>.{wav,mp3}` or `np
 | `merchant_female_greeting_01.wav` … `_03.wav` | wired — merchant female greeting variants |
 | `merchant_female_farewell_01.wav` | wired — merchant female farewell |
 | `merchant_female_agree_01.wav` | wired — merchant female confirmation (`agree` filename) |
-| `merchant_female_thanks_01.wav` | in repo — not wired (no call-site in npc-044) |
+| `merchant_female_thanks_01.wav` | in repo — not wired (no call-site) |
+| `merchant_female_attention_01.mp3` | wired — merchant female `normal`-tier player-reaction (`attention`, plan npc-056) |
 | `guard_male_greeting_01.mp3` … `_02.mp3` | wired — guard male greeting |
 | `guard_male_farewell_01.mp3` | wired — guard male farewell |
 | `guard_male_quest_declined_01.mp3` … `_02.mp3` | wired — guard male quest decline |
-| `guard_male_attention_01.mp3` / `guard_male_refusal_01.mp3` / `guard_male_thanks_01.mp3` … `_02.mp3` | in repo — not wired |
+| `guard_male_attention_01.mp3` | wired — guard male `normal`-tier player-reaction (`attention`, plan npc-056) |
+| `guard_male_refusal_01.mp3` / `guard_male_thanks_01.mp3` … `_02.mp3` | in repo — not wired |
 | `voices/references/` | reference material for generation — not runtime clips |
 
 Provenance/licensing for generated clips: record when known; do not invent attribution here.
@@ -218,7 +197,7 @@ falls back to grass. See `docs/assets/SOUNDS.md` S01.
 
 | Source | License posture |
 |--------|-----------------|
-| Super Dialogue Audio Pack V1 — Dillon Becker (dillonbecker.com) | **CC BY 4.0** — attribution required. Credit: "Super Dialogue Audio Pack V1 by Dillon Becker (dillonbecker.com), licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/legalcode)." First non-CC0 source in this folder — every prior entry above is CC0 or promo/eval-only; if the game gets a public release, this credit needs to appear somewhere player-visible (no in-game credits screen exists yet — open item, not solved by plan 116). |
+| Super Dialogue Audio Pack V1 — Dillon Becker (dillonbecker.com) | **Removed from the tree by plan npc-056** — no longer shipped, so the CC BY 4.0 attribution requirement no longer applies. Kept here as a historical record only: it was the first CC-BY, non-CC0 source in this folder while it shipped. |
 
 ## License notes (2026-08-15 batch)
 

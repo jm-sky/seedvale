@@ -61,7 +61,7 @@ async function createTestNpc(playAtCancelable: PlayAtCancelable): Promise<NpcAge
       character: {
         name: 'Jan',
         gender: 'male',
-        role: 'farmer',
+        role: 'guard',
         personality: {
           openness: 0.5,
           conscientiousness: 0.5,
@@ -141,7 +141,7 @@ describe('NpcAgent player reaction voice', () => {
         character: {
           name: 'Ola',
           gender: 'female',
-          role: 'farmer',
+          role: 'trader',
           personality: {
             openness: 0.5,
             conscientiousness: 0.5,

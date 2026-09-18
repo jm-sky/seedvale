@@ -21,7 +21,7 @@ function stubNpc(overrides: Partial<NpcAgent> & Pick<NpcAgent, 'id' | 'displayNa
     gender: 'male',
     role: 'farmer',
     age: 40,
-    voiceActor: 'alex',
+    voiceProfileId: 'general:male',
     getDialogueLine: () => 'hello',
     preparePaymentRequest: () => null,
     pendingVoluntaryJoinProposal: () => null,
@@ -59,7 +59,7 @@ describe('NPC dialogue voice intents', () => {
     )
   })
 
-  it('acceptNpcDialogueOffer plays confirmation', () => {
+  it('acceptNpcDialogueOffer plays quest_accepted', () => {
     const playAt = vi.fn()
     configureNpcVoiceSounds(playAt)
     const onAccept = vi.fn()
@@ -75,7 +75,7 @@ describe('NPC dialogue voice intents', () => {
 
     expect(onAccept).toHaveBeenCalledTimes(1)
     expect(playAt).toHaveBeenCalledTimes(1)
-    expect(playAt.mock.calls[0]![0]).toMatch(/agree|confirmation/)
+    expect(playAt.mock.calls[0]![0]).toMatch(/quest_accepted/)
   })
 
   it('selectNpcDialogueHelpAction runs onSelect and does not play confirmation', () => {
@@ -97,9 +97,9 @@ describe('NPC dialogue voice intents', () => {
     expect(playAt).not.toHaveBeenCalled()
   })
 
-  it('quest turn-in via help action does not add a store confirmation bark on top of QuestManager complete sound', () => {
+  it('quest turn-in via help action plays quest_complete via the injected NPC voice hook, not a store bark', () => {
     const playAt = vi.fn()
-    const playSound = vi.fn()
+    const playQuestVoice = vi.fn()
     configureNpcVoiceSounds(playAt)
 
     const qm = new QuestManager(
@@ -126,8 +126,25 @@ describe('NPC dialogue voice intents', () => {
           consequences: { relations: [{ npc: { npcId: 'anna-1' }, delta: 1 }] },
         }],
       }],
-      playSound,
+      undefined, // playSound
       new Inventory(),
+      undefined, // initial
+      undefined, // grantItem
+      undefined, // resolveAnimalTarget
+      undefined, // applyDangerousTrait
+      undefined, // applySocialConsequence
+      undefined, // socialAvailability
+      undefined, // settlementRatInfestation
+      undefined, // transferAnimalOwnership
+      undefined, // canReserveHorseReward
+      undefined, // spawnPointDestruction
+      undefined, // worldProgress
+      undefined, // worldQuestSource
+      undefined, // lostLivestockSource
+      undefined, // worldTime
+      undefined, // settlementLight
+      undefined, // physicalOutcome
+      { playQuestVoice }, // lifecycleHooks
     )
     qm.onInteract('anna-1')?.offer?.onAccept()
     // Advance talk_to_npc via Piotr so the quest is reportable.
@@ -137,14 +154,13 @@ describe('NPC dialogue voice intents', () => {
     const npc = stubNpc({ id: 'anna-1', displayName: 'Anna', gender: 'female', role: 'farmer' })
     openNpcDialogueMenu(npc, stubSettlement, qm, 12)
     playAt.mockClear()
-    playSound.mockClear()
 
     resolveNpcDialogueHelp()
     expect(ui.npcDialogueMenu.helpResult?.actions?.[0]?.label).toBe('Yes.')
     selectNpcDialogueHelpAction(0)
 
-    expect(playSound).toHaveBeenCalledTimes(1)
-    expect(playSound.mock.calls[0]![0]).toMatch(/thank-you|thank_you|male-thank|female-thank/)
+    expect(playQuestVoice).toHaveBeenCalledTimes(1)
+    expect(playQuestVoice).toHaveBeenCalledWith('anna-1', 'quest_complete')
     expect(playAt).not.toHaveBeenCalled()
   })
 })
