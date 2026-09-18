@@ -2,145 +2,168 @@
 
 ## Current architecture to preserve
 
-The benchmark evidence is strong, but the current `settlement` scene bucket is too coarse to identify the real source of ~1900 settlement submissions. Do **not** start by changing rendering paths. First add a bounded settlement-specific census and use `settlement-heavy` to select the target.
+Aktualna decyzja dla tego planu jest dwuetapowa:
+
+1. najpierw wykonać bezpieczny, statycznie uzasadniony batching **wells + gardens/crops**,
+2. dopiero po benchmarku użytkownika dodać szczegółowy census pozostałych main-pass sources, jeśli settlement nadal jest istotnym kosztem.
+
+Nie rozszerzać pierwszego etapu na trees, storage goods, torches/campfires ani houses.
 
 Relevant existing seams:
 
-- `src/perf/sceneCensus.ts`
-  - `censusScene()` already traverses the scene once after benchmark collection and estimates meshes / draw calls / triangles.
-  - `classifyObject()` collapses everything below the settlement root into one `settlement` bucket.
-  - Reuse its counting conventions; do not create a live per-frame profiler.
-- `src/perf/benchmark.ts`
-  - calls `censusScene(host.isolation.scene)` after the measured run, outside the steady-state sample.
-  - This is the correct lifecycle for a more detailed settlement census as well.
 - `src/settlement/props.ts::buildSettlementProps()`
   - owns the settlement root (`group.name = 'settlement'`) and most placement/materialization paths.
-  - already uses `buildInstancedProps()` for several repeated prop classes, including plaza cobbles and existing settlement prop batches.
+  - already uses `buildInstancedProps()` for several repeated prop classes.
 - `src/render/instancedProps.ts::buildInstancedProps()`
   - generic repeated-prop path using shared geometry/material and deterministic placement data.
-  - preserves `castShadow` / `receiveShadow`, supports keyed removal, LOD count changes and safe disposal of instance buffers.
+  - flattens a prepared template once, creates one `InstancedMesh` per primitive/species bucket, preserves `castShadow` / `receiveShadow`, and owns only instance buffers.
 - `src/settlement/houseBuilder.ts`
-  - `instantiateStatics()` already batches repeated static parts inside a house.
-  - `createHouseStaticBatch()` then ingests per-house static `InstancedMesh` content and merges identical geometry+material into settlement-owned buckets.
-  - interactive doors remain outside the static batch by design.
+  - house statics are already settlement-wide batchable through `createHouseStaticBatch()`; do not duplicate this path.
+- `src/settlement/settlementStructures.ts::layoutCropsGarden()`
+  - currently clones the complete prepared crops template once per bed.
+- current wells in `props.ts`
+  - one prepared `wellTemplate`, then `clone(true)` for central / household / pasture placement.
 
-Do not create another settlement renderer or another house batching layer before measuring what remains outside these paths.
+## Stage 1 target A — wells
 
-## Diagnostic seam
+Known facts from current code and the completed `world-terrain-038` recon:
 
-Preferred shape: add a **benchmark-only settlement submission census** next to `sceneCensus.ts` (or as a small extension if it stays clean), invoked from `benchmark.ts` after the measured run.
+- `well.glb` has 5 render primitives.
+- Central, household and pasture wells reuse one template but are materialized as individual `clone(true)` object trees.
+- Household wells intentionally have no shadow casting after `world-terrain-038`; central/pasture wells still cast.
+- Interaction/collider/queue state is conceptually separate from rendering, but the current code still passes `well.prop` into `buildWellInteractionQueueConfig()`.
 
-The census should report at least:
+Implementation direction:
 
-- house static batch (`house-static-batch:*`),
-- house interactive/dynamic meshes,
-- settlement forest/living trees,
-- already-instanced repeated props,
-- fences / pasture / paddock / palisade content,
-- storage / market / workplace props,
-- torches / campfires / effects,
-- landmarks / one-off structures,
-- unclassified settlement remainder.
+- represent settlement well render placement as data, not one live render clone per well;
+- reuse `buildInstancedProps()` if its existing placement contract is sufficient;
+- if shadow policy requires it, use separate instanced groups for:
+  - central/pasture (casting),
+  - household (non-casting);
+- preserve exact ground placement, yaw, scale and asset-template transform;
+- preserve stable gameplay landmark positions, queue IDs, colliders and drink interaction.
 
-For every category report the same useful dimensions as `sceneCensus`: mesh count, instanced mesh count, rendered instances, estimated draw calls and triangles.
+Before removing the individual render clone, inspect the exact `buildWellInteractionQueueConfig()` contract. If it uses the object only to derive footprint/transform, replace that dependency with explicit world data rather than keeping a fake invisible render object. Do not move gameplay authority into `InstancedMesh`.
 
-Classification should prefer stable ownership/name/userData already produced at creation time. If a high-volume path has no reliable identifier, add one small diagnostic name/userData tag at its creation seam rather than re-deriving meaning from geometry or world transforms.
+## Stage 1 target B — gardens / crops beds
 
-Keep this census one-shot/post-run. No persistent traversal in `gameLoop`.
+Known facts:
 
-## Important finding: settlement trees are not equivalent to ordinary decorative props
+- `crops.glb` is prepared once.
+- `layoutCropsGarden(template, beds)` currently does `template.clone(true)` per bed.
+- The template has 6 render primitives.
+- `disableGardenPlantCastShadow()` mutates the prepared template once: plant meshes do not cast; Dirt stays as the caster.
+- cultivation anchors are separate gameplay data.
 
-`src/settlement/props.ts` defines `SettlementTreeLandmark` with a live `mesh` reference. `SettlementLandmarks.trees` explicitly documents that mesh as the live prop used for stump swaps.
+Implementation direction:
 
-`src/world/treeHarvest.ts::applyHarvestVisual()` mutates that contract directly:
+- replace clone-per-bed materialization with placement data feeding the same instanced-prop seam;
+- preserve exact spacing from `GARDEN_BED_W` / `GARDEN_BED_GAP`;
+- preserve the parent garden/world rotation, scale and ground placement;
+- preserve primitive-level shadow flags inherited from the prepared template;
+- do not change cultivation anchors or settlement layout semantics.
 
-```text
-opts.landmark.mesh = applyTreeStageVisual(opts.landmark.mesh, stage)
-```
+If local bed offsets cannot be expressed without reconstructing transforms incorrectly, prefer a small general extension of `PropPlacement` / `buildInstancedProps()` over adding a garden-specific renderer. The extension must remain generic and create-time only.
 
-`groundActions.ts` and NPC work paths also resolve settlement trees by stable `TreeId` through `landmarks.trees`.
+## Shared batching guardrails
 
-Therefore:
+Do not introduce `InstancedWellsManager`, `InstancedGardensManager` or a second settlement renderer.
 
-- do not simply replace settlement living trees with `InstancedMesh` as the first optimization;
-- first let the census prove whether they dominate submissions;
-- if they are the dominant category, reuse the **chunk living-tree precedent** from archived plan 087 (`InstancedPropGroup.removeByKey(treeId)` + authoritative per-tree state), but treat that as the higher-complexity branch of this plan because the current settlement landmark contract exposes a live mesh;
-- preserve `TreeId`, tree lifecycle, harvest/stump transitions and NPC/player work eligibility. Rendering must adapt to those systems, not become a second authority.
+Prefer one of:
 
-If another static category can remove hundreds of submissions without touching this contract, prefer that first.
+- direct reuse of `buildInstancedProps()`,
+- a minimal generic extension to that seam if required by local placement/shadow semantics.
 
-## House batching guardrails
+Keep:
 
-`createHouseStaticBatch()` already performs the intended settlement-wide merge:
+- settlement ownership and unload lifecycle,
+- shared cached geometry/material ownership,
+- disposal limited to instance buffers,
+- no per-frame traversal or transform synchronization,
+- no reconstruction from already-created clones when source placement data is available.
 
-- key is geometry UUID + material UUID(s),
-- matrices are transformed into world space during `ingest()`,
-- original per-house static `InstancedMesh` buffers are disposed,
-- one settlement-owned `InstancedMesh` per bucket is created at `commit()`,
-- doors/interactives stay separate.
+Add JSDoc to any important new generic assembly/batching function; use `@domain settlements` where it improves preflight discovery.
 
-Do not duplicate this with a generic `buildInstancedProps()` pass over completed house meshes. If the census says houses still dominate, first determine **which content is outside `staticGroup`** and why. Good candidates are static content that is currently classified as interactive/dynamic only for historical reasons; true doors, stateful storage visuals, lamps/lights and animated parts must remain separate.
+## Explicitly out of Stage 1
 
-Do not batch by reading final mesh transforms when source placement/assembly data already exists.
+### Settlement trees
 
-## Existing repeated-prop path
+`SettlementTreeLandmark` exposes a live `mesh` reference and `treeHarvest.ts` swaps that visual during lifecycle transitions. Do not touch in this stage.
 
-For ordinary static repeated props, prefer `buildInstancedProps()` rather than adding a new batch implementation. It already:
+### Food storage representatives
 
-- flattens prepared templates once,
-- shares geometry/material,
-- creates one bucket per `(speciesIndex, primitiveIndex)`,
-- preserves instance matrices and culling bounds,
-- owns/disposes only the instance buffers,
-- supports stable keyed removal when needed.
+`storageVisuals.ts` has dynamic per-kind pools and visibility driven by inventory state. It may be expensive, but it needs evidence and a separate design after the first benchmark.
 
-Use this only where all instances have compatible material/shadow semantics and no unique animation or mutable per-instance material state.
+### Torches / campfires
 
-## Suggested implementation order
+They include light/VFX/controller state. Not part of static landmark batching.
 
-1. Add settlement-specific census + tests for classification/counting.
-2. Run `settlement-heavy` manually (user) and capture the new category breakdown.
-3. Choose **one** dominant batchable category or at most a tightly-related set sharing the same rendering seam.
-4. Extend the existing assembly/placement path for that category.
-5. Add focused tests proving:
-   - renderable/draw-count reduction at assembly level,
-   - transforms preserved,
-   - interactive/stateful objects remain separate,
-   - disposal does not free shared cached geometry/material.
-6. Stop and benchmark before attempting a second category.
+### Already-batched categories
 
-The plan's “1–3 categories” is a ceiling, not a requirement. One category removing hundreds of submissions is preferable to several speculative changes.
+Do not spend time on:
 
-## Candidate priority after census
+- house statics,
+- fences/palisades,
+- barrels,
+- troughs,
+- hay,
+- settlement bushes,
+- plaza cobbles.
 
-Use this ordering only after measured counts are available:
+These already use instancing/static batching seams.
 
-1. static repeated props/fences/decorations already represented by placement arrays,
-2. static house content accidentally left outside settlement-wide `HouseStaticBatch`,
-3. other repeated static landmarks/workplace/storage shells where interaction is anchored separately from the render mesh,
-4. settlement living trees only if they are a dominant measured source and the simpler categories cannot deliver the required reduction.
+## Stage 1 implementation order
 
-Avoid batching torches/fire/light controllers, animated doors, stateful storage-stage meshes or unique interactive visuals unless their existing controller clearly separates state from the static render shell.
+1. Trace all well creation call sites and `well.prop` consumers.
+2. Convert wells to settlement-owned instanced rendering while preserving gameplay contracts.
+3. Convert crops bed clones to settlement-owned instanced rendering.
+4. Add focused tests:
+   - expected number of InstancedMesh buckets for repeated placements,
+   - transforms/spacing preserved,
+   - household well shadow semantics differ correctly from central/pasture,
+   - cultivation anchors unchanged,
+   - well interaction/queue config no longer depends on a unique render clone if that refactor is needed,
+   - disposal does not dispose shared geometry/material.
+5. Run relevant automated checks: focused tests, type-check, lint, test/build as appropriate.
+6. Stop. Do not implement diagnostics or another category in the same pass.
+7. User performs browser benchmark/manual verification.
+
+## Stage 2 — diagnostics only after user benchmark
+
+If the post-Stage-1 benchmark still shows a material settlement main-pass cost, add a benchmark-only settlement submission census next to `sceneCensus.ts`, invoked after measured collection from `benchmark.ts`.
+
+Reuse existing counting semantics and current settlement classification tags. Keep it one-shot/post-run, never per-frame.
+
+The census should distinguish enough categories to choose the next target, especially:
+
+- house static vs interactive,
+- living trees/decor,
+- storage goods,
+- remaining landmarks/workplaces,
+- torches/fire/effects,
+- unclassified remainder.
+
+Only after measured counts should the plan consider another production category.
 
 ## Tests / verification contract
 
-AI implementation checks:
+AI agent for Stage 1:
 
-- unit tests for the new census,
-- existing `houseBuilder.test.ts` / relevant prop tests,
-- focused tests for any new batching seam,
+- focused unit/assembly tests for wells and gardens,
+- existing relevant settlement/render tests,
 - type-check/lint/test/build,
 - no browser verification.
 
-User verification after each production optimization:
+User after Stage 1:
 
-- `?benchmark=settlement-heavy`,
-- compare detailed settlement census, total draw calls, `RENDER`, FPS avg and frame p95,
-- visually inspect a large settlement,
-- specifically exercise any category whose render path changed (doors/interactions, harvestable trees, storage stages, fences etc.).
+- run `?benchmark=settlement-heavy`,
+- compare total draw calls, settlement census, `RENDER`, FPS avg and frame p95,
+- inspect central/household/pasture wells,
+- verify drink/queue interaction,
+- inspect S/M/L gardens and cultivation interactions.
 
 ## Success / stop rule
 
-Keep production changes only when the detailed census identifies a large batchable source and the implementation removes a meaningful number of settlement submissions without widening ownership or breaking interactions.
+Stage 1 succeeds when wells and crops beds no longer materialize one full render object tree per repeated placement, while gameplay contracts and visuals remain equivalent.
 
-If the detailed census shows that most of the ~1900 settlement submissions are genuinely dynamic/interactive content, stop after diagnostics and feed that evidence into a separate presentation/LOD decision rather than forcing unsafe instancing here.
+After that, stop production work. Continue with diagnostic Stage 2 only if the user's benchmark shows settlement main-pass cost remains worth pursuing.
