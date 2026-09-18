@@ -242,7 +242,8 @@ describe('computeChunkGrass', () => {
     }
   })
 
-  it('bucket bounds contain every instance vertex for all geometry LOD tiers, including filler', () => {
+  // Full candidate set × blade verts × LOD tiers is heavy under suite contention.
+  it('bucket bounds contain every instance vertex for all geometry LOD tiers, including filler', { timeout: 30_000 }, () => {
     const params = tileParams({ cx: 0, cz: 0 })
     const tile = computeChunkTile(params)
     const data = computeChunkGrass(

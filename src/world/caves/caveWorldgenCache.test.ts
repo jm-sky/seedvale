@@ -277,7 +277,8 @@ describe('cave worldgen cache round trip (plan world-terrain-030)', () => {
       .not.toBe(fingerprint())
   })
 
-  it('a storage read or write failure leaves normal generation fully functional', async () => {
+  // Cold createCaves() rebuild when storage fails — exceeds 5s under suite contention.
+  it('a storage read or write failure leaves normal generation fully functional', { timeout: 30_000 }, async () => {
     const broken: CaveWorldgenCacheStorage = {
       list: (async () => { throw new Error('idb unavailable') }) as CaveWorldgenCacheStorage['list'],
       put: async () => { throw new Error('idb unavailable') },

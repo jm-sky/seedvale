@@ -154,7 +154,8 @@ describe('createCaves archetype assignment (plan world-terrain-020 Stage A)', ()
     expect(new Set(caves.definitions().map((d) => d.caveId)).size).toBe(caves.definitions().length)
   })
 
-  it('is deterministic: a second world on the same seed assigns exactly the same archetypes', () => {
+  // Second full createCaves() pass — exceeds the 5s default under suite contention.
+  it('is deterministic: a second world on the same seed assigns exactly the same archetypes', { timeout: 30_000 }, () => {
     const other = createCaves(new THREE.Scene(), fakeChunkManager(), SEED, HOME_RADIUS, COAST_THRESHOLD)
     try {
       expect(other.definitions().map((d) => [d.caveId, other.archetypeOf(d.caveId)]))

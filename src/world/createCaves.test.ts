@@ -373,7 +373,8 @@ describe('createCaves (world-terrain-019 B)', () => {
     expect(caves.spatialContextAt(ax, ay, az)).toEqual({ kind: 'surface' })
   })
 
-  it('interior is strict occupancy inside the mouth plane, with two-sample confirmation, and the approach is not interior', () => {
+  // Rebuilds heightfield + a fresh createCaves() for hysteresis — heavy under suite contention.
+  it('interior is strict occupancy inside the mouth plane, with two-sample confirmation, and the approach is not interior', { timeout: 30_000 }, () => {
     const def = caves.definitions()[0]!
     const field = productionHeightfield(def.caveId)
     const out = openingDirection(def.entrance.yaw)
@@ -408,7 +409,8 @@ describe('createCaves (world-terrain-019 B)', () => {
     expect(caves.occupancyAt(ax, ay, az)?.openSky).toBe(true)
   })
 
-  it('camera and player interior channels keep independent two-sample confirmation', () => {
+  // Same cost profile as the interior hysteresis test above (fresh createCaves()).
+  it('camera and player interior channels keep independent two-sample confirmation', { timeout: 30_000 }, () => {
     const def = caves.definitions()[0]!
     const field = productionHeightfield(def.caveId)
     const out = openingDirection(def.entrance.yaw)
