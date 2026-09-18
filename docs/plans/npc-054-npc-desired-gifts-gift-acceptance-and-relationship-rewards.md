@@ -7,6 +7,7 @@
 **Domain:** `npc`
 **Type:** `feature`
 **Roadmap:** `quests-travelling-merchant-journeys.md`
+**Model:** Opus, Sonnet
 
 ## Goal
 
