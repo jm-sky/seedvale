@@ -1283,6 +1283,7 @@ Generated from TypeScript imports.
 - `shared/VigorState.ts`
 - `shared/enduranceStamina.ts`
 - `shared/temporaryConditions.ts`
+- `world/transportCapacity.ts`
 
 **Imported by**
 

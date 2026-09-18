@@ -25,6 +25,7 @@ import {
   type TemporaryConditionsState,
 } from '../shared/temporaryConditions'
 import { createVigorState, type VigorState } from '../shared/VigorState'
+import { BASE_TRANSPORT_CARGO_MAX_WEIGHT_KG } from '../world/transportCapacity'
 import { cloneMerchantJourney, type MerchantJourneyState } from './merchantJourney'
 import {
   cloneNpcPostDeath,
@@ -51,12 +52,13 @@ export type NpcGraveVisitRecord = {
 export const MAX_HP = 100
 export const MAX_STAMINA = 100
 
-/** Transport cargo capacity (plan settlements-npcs-019) — matches
- *  `NpcAgent`'s pre-019 `NPC_CARRY_MAX_WEIGHT`, the cap a Trader's cargo
- *  already lived under before it moved off transient `carried`. Kept here
- *  (not imported from `NpcAgent.ts`, a heavy runtime module) since only
- *  construction/restore in this file needs it. */
-const TRANSPORT_CARGO_MAX_WEIGHT = 5
+/** Transport cargo capacity (plan settlements-npcs-019, baseline raised by
+ *  settlements-npcs-047) — the no-pack-animal capacity every carrier starts
+ *  with. Sourced from the shared transport-capacity resolver so a future
+ *  real pack-animal assignment (plan settlements-npcs-048) can recompute
+ *  this same `Inventory`'s limit via `setBaseMaxWeight()` without a second
+ *  constant. */
+const TRANSPORT_CARGO_MAX_WEIGHT = BASE_TRANSPORT_CARGO_MAX_WEIGHT_KG
 
 /** Merchant shop goods are not carried on a person — no weight/gabarite cap. */
 const MERCHANT_STOCK_MAX_WEIGHT = Infinity

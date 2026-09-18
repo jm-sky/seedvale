@@ -536,3 +536,36 @@ describe('Inventory.applyRecipe (settlements-npcs-003)', () => {
     expect(batches[1]?.count).toBe(1)
   })
 })
+
+describe('Inventory.setBaseMaxWeight (plan settlements-npcs-047)', () => {
+  it('raises capacity in place without swapping object identity, contents unchanged', () => {
+    const inv = new Inventory({ carrot: 5 }, 10)
+    inv.setBaseMaxWeight(40)
+    expect(inv.maxWeight).toBe(40)
+    expect(inv.count('carrot')).toBe(5)
+  })
+
+  it('lowering below current carried weight preserves existing contents', () => {
+    const inv = new Inventory({ stone: 8 }, 10)
+    inv.setBaseMaxWeight(5)
+    expect(inv.maxWeight).toBe(5)
+    expect(inv.count('stone')).toBe(8)
+  })
+
+  it('an overweight inventory rejects further weight-increasing additions', () => {
+    const inv = new Inventory({ stone: 8 }, 10)
+    inv.setBaseMaxWeight(5)
+    expect(inv.canAdd('stone', 1)).toBe(false)
+    expect(inv.add('stone', 1)).toBe(false)
+    expect(inv.count('stone')).toBe(8)
+  })
+
+  it('removals still work while overweight, and additions resume once back under the limit', () => {
+    const inv = new Inventory({ stone: 8 }, 10)
+    inv.setBaseMaxWeight(5)
+    expect(inv.remove('stone', 4)).toBe(true)
+    expect(inv.count('stone')).toBe(4)
+    expect(inv.add('stone', 1)).toBe(true)
+    expect(inv.count('stone')).toBe(5)
+  })
+})

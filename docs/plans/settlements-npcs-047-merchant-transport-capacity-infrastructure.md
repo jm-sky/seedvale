@@ -1,7 +1,7 @@
 # Plan: Merchant transport capacity infrastructure
 
 **Created:** 2026-09-18
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** medium · **Effort:** S/M
 **Depends on:** settlements-npcs-038, fauna-007, fauna-020
 **Domain:** `settlements-npcs`

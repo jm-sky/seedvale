@@ -4218,6 +4218,24 @@ Generated from TypeScript imports.
 - `app/gameLoop.ts`
 - `app/modalState.ts`
 
+## `world/transportCapacity.test.ts`
+
+**Imports**
+
+- `fauna/animalDefs.ts`
+- `world/transportCapacity.ts`
+
+## `world/transportCapacity.ts`
+
+**Imports**
+
+- `fauna/animalDefs.ts`
+
+**Imported by**
+
+- `settlement/npcState.ts`
+- `world/transportCapacity.test.ts`
+
 ## `world/transportOffscreen.test.ts`
 
 **Imports**

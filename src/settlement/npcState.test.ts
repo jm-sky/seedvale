@@ -373,6 +373,22 @@ describe('NpcAuthoritativeState transportCargo (plan settlements-npcs-019)', () 
     const state = registry.getOrCreate('0_0:npc:0', 0)
     expect(state.transportCargo.isEmpty()).toBe(true)
   })
+
+  it('gives fresh cargo the 10 kg no-pack-animal baseline (plan settlements-npcs-047)', () => {
+    const registry = createNpcStateRegistry()
+    const state = registry.getOrCreate('0_0:npc:0', 0)
+    expect(state.transportCargo.maxWeight).toBe(10)
+  })
+
+  it('hydrates a legacy snapshot cargo (created under the pre-047 5 kg limit) at the new 10 kg baseline without losing contents', () => {
+    const before = createNpcStateRegistry()
+    const state = before.getOrCreate('0_0:npc:0', 0)
+    state.transportCargo.add('carrot', 5)
+
+    const hydrated = createNpcStateRegistry(before.serialize()).getOrCreate('0_0:npc:0', 0)
+    expect(hydrated.transportCargo.maxWeight).toBe(10)
+    expect(hydrated.transportCargo.count('carrot')).toBe(5)
+  })
 })
 
 describe('NpcAuthoritativeState accompanyCommitment / travel (plan npc-029)', () => {

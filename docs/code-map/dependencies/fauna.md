@@ -412,6 +412,8 @@ Generated from TypeScript imports.
 - `world/cart.ts`
 - `world/createCarts.test.ts`
 - `world/createCarts.ts`
+- `world/transportCapacity.test.ts`
+- `world/transportCapacity.ts`
 
 ## `fauna/animalDialogue.ts`
 

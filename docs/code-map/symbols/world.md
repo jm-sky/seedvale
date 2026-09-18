@@ -2025,6 +2025,12 @@ Generated from exported TypeScript symbols.
 - `TimeSkipFadeStrength` — type — line 8
 - `TimeSkipTickResult` — type — line 10
 
+## `world/transportCapacity.ts`
+
+- `BASE_TRANSPORT_CARGO_MAX_WEIGHT_KG` — const — line 18
+  - domain: settlements-npcs
+- `resolveNpcTransportCargoCapacity` — function — line 22
+
 ## `world/transportOffscreen.ts`
 
 - `estimateOffscreenTravelDays` — function — line 41
