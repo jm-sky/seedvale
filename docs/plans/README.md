@@ -99,6 +99,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `settlements-npcs-045-settlement-elder-demographics.md`                     | 🟡 | M      | -                                                                                                                                                                                                                                                                                          | npc-professions-households-and-age        |
 | ◼️ `npc-053-profession-aware-weapon-choice-and-armor-use.md`                   | 🟡 | M      | ~~items-player-027~~, ~~items-player-029~~, ~~items-player-047~~                                                                                                                                                                                                                           | quests-travelling-merchant-journeys       |
 | 💡 `npc-052-contextual-elder-social-titles.md`                                 | ⚪ | S      | settlements-npcs-045                                                                                                                                                                                                                                                                       | npc-professions-households-and-age        |
+| ◼️ `settlements-npcs-046-pasture-well-trough-local-water-use.md`               | 🟡 | S      | ~~settlements-009~~, ~~settlements-npcs-035~~                                                                                                                                                                                                                                              | -                                         |
 
 ---
 
@@ -219,7 +220,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - persistence: `006`
 - quests-progression: `067`
 - settlements: `020`
-- settlements-npcs: `046`
+- settlements-npcs: `047`
 - tools: `017`
 - ui-input: `025`
 - world: `032`
