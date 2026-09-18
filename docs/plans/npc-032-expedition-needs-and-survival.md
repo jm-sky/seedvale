@@ -1,966 +1,675 @@
 # Plan: Expedition needs and survival
 
 **Created:** 2026-09-11
-**Status:** `draft` 📝
-**Type:** feature
+**Status:** `planned` 📋
 **Priority:** high · **Effort:** L
-**Depends on:** npc-029, npc-017, npc-025, items-player-028
+**Depends on:** ~~npc-029~~, ~~npc-017~~, ~~npc-025~~, ~~settlements-npcs-028~~, items-player-028, items-player-032
 **Domain:** `npc`
+**Type:** `feature`
 **Subdomains:** `needs` `behavior` `decision-making` `lifecycle`
 **Tags:** `companions` `expedition` `survival` `provisions` `healing` `off-screen`
 **Roadmap:** `companions.md`
-
-> **Draft note:** ten plan opisuje integrację istniejącej autonomii i survivalu NPC z tymczasowym `accompany/follow commitment`. Przed zmianą statusu na `planned` należy ponownie zweryfikować finalne API `settlements-npcs-019`, `npc-029` i `items-player-028`, ponieważ obecnie pozostają planowanymi zależnościami. Nie implementować companion-specific survival state.
+**Model:** Sonnet, Composer
 
 ## Goal
 
-Sprawić, aby NPC posiadający tymczasowy `accompany/follow commitment` nadal funkcjonował jako zwykły autonomiczny NPC podczas wyprawy.
+Sprawić, aby NPC posiadający aktywny `accompanyCommitment` nadal funkcjonował jako zwykły autonomiczny NPC podczas wielogodzinnej lub wielodniowej wyprawy.
 
-Wyprawa ma korzystać z istniejących:
-
-- hunger/thirst,
-- stamina/vigor i rest,
-- needs/pressures/strategies/actions,
-- `personalInventory`,
-- provisions,
-- injury/healing,
-- player-storage access policy,
-- combat/flee interruption,
-- persistent accompany commitment,
-- generic travel/off-screen continuity,
-- schedule/place/home context.
-
-Docelowy przepływ:
+Docelowy model pozostaje:
 
 ```text
-ordinary NPC
-+
-active accompany commitment
-        ↓
-normal hunger / thirst / fatigue / injury / danger
-        ↓
-existing pressure + decision arbitration
-        ↓
-survival action interrupts follow
-        ↓
-existing resource acquisition / personal provisions / permitted storage
-        ↓
-need resolved
-        ↓
-normal re-arbitration
-        ↓
-is accompany commitment still viable?
-    ├─ yes → resume same accompany duty
-    └─ no  → explicitly end commitment with reason
-                  ↓
-             generic return travel
-                  ↓
-             normal NPC life
+normal NPC needs
++ personalInventory
++ permitted external resources
++ accompany commitment
++ current world situation
+→ normal decisions/actions
 ```
+
+Accompany jest trwałym semantic commitmentem, ale nie osobnym survival mode. Głód, pragnienie, odpoczynek, uraz, danger/flee i śmierć pozostają własnością istniejących NPC systems.
 
 Nie tworzyć:
 
-- `CompanionNeeds`,
-- `CompanionSurvival`,
-- `CompanionProvisions`,
-- `CompanionRest`,
-- `CompanionHealing`,
-- osobnego inventory,
-- osobnego survival/off-screen engine,
-- nowych hunger/thirst/fatigue meters dla towarzyszy.
+- `CompanionNeeds`, `ExpeditionSurvivalSystem` ani companion-only pressure table;
+- expedition inventory, ration counter ani drugiej kopii `personalInventory`;
+- osobnego companion tickera/off-screen loop;
+- companion schedule;
+- route-wide resource/danger simulation.
 
-## Current architecture and reuse
+## Recon result — what already works
 
-### Hunger/thirst already belong to ordinary NPC pressure arbitration
+### Authoritative state and persistence
 
-`src/ai/Needs.ts` już posiada:
+`src/settlement/npcState.ts::NpcAuthoritativeState` już jest jednym ownerem dla:
 
-- hunger i thirst,
-- deterministic pressure generation,
-- normalne i critical thresholds,
-- normalny relief po zakończeniu action.
+- `needs`;
+- `stamina`;
+- `vigor`;
+- `health`;
+- `physicalInjury` + `injuryRecoveryUpdatedAtDays`;
+- `personalInventory`;
+- `accompanyCommitment`;
+- `travel`.
 
-`NpcAgent` arbitruje te pressures razem z weather, healing i innymi decision candidates. Critical physiological pressure już potrafi przerwać bieżącą akcję bez kasowania trwałego commitmentu.
+Ten sam obiekt przeżywa `NpcAgent` reconstruction, settlement stream-out/in, `WorldBundle` rebuild i `SaveData.npcStates`.
 
-**Implication:** accompany nie potrzebuje własnego hunger/thirst modelu ani innych thresholdów.
+`NpcAgent.carried` jest transient work/logistics cargo i nie może stać się expedition inventory.
 
-### Personal provisions are already normal NPC resources
+**Decision:** `npc-032` nie dodaje nowego persisted survival state. Jeżeli potrzebny jest dodatkowy checkpoint podróży, należy rozszerzyć istniejący generic `NpcTravelContinuity`.
 
-`npc-017` rozszerzył zwykły NPC survival o durable provisions w `NpcAuthoritativeState.personalInventory`.
+### Hunger/thirst and ordinary interruption/resume
 
-Aktualne mechanizmy obejmują:
+`NpcAgent.update()` tickuje zwykłe `needs`, a `choose` arbitruje je w istniejącym pressure/decision pipeline.
 
-- `personalFood` jako normalną strategię hunger,
-- personal liquid container jako normalne źródło water,
-- realne food freshness,
-- realne waterskin instances i litres,
-- bounded provision estimation,
-- real household → `personalInventory` provisioning.
+`tickCriticalInterrupt()` raz na sekundę potrafi przerwać schedule-driven `goTo/execute` dla critical need albo vigor collapse i wraca do pełnego `choose`.
 
-`src/ai/npcPersonalProvisions.ts` już posiada m.in. `countPersonalFood()`, `countPersonalDrinkPortions()`, `findDrinkablePersonalWaterContainer()` i provisioning helpers.
+`npc-029` już wykonuje accompany jako idle-duty przez `tryPursueAccompany()`. Survival action nie kasuje `accompanyCommitment`; po zakończeniu normalna re-arbitracja ponownie odnajduje ten sam commitment.
 
-**Implication:** runtime expedition survival ma konsumować te mechanizmy zamiast je kopiować.
+**Decision:** zwykły hunger/thirst/exhaustion/sleep/combat/flee jest temporary interruption, nie abandonment.
 
-### `personalInventory` is the durable owner
+### Personal food and water
 
-`NpcAuthoritativeState.personalInventory` należy do konkretnej NPC identity i przeżywa:
+`src/ai/npcPersonalProvisions.ts` oraz zwykłe strategie już używają `personalInventory`:
 
-- `NpcAgent` reconstruction,
-- settlement stream-out/in,
-- `WorldBundle` rebuild,
-- save/load przez `SaveData.npcStates`.
+- `personalFood` jest pierwszym realnym hunger source przed pantry/settlement fallbackami;
+- `personalWater` jest pierwszym water source;
+- food zachowuje freshness;
+- water zużywa realne liquid-container instances;
+- `estimateEscortProvisionNeed()` i provisioning z `npc-017/npc-030` już istnieją.
 
-`NpcAgent.carried` pozostaje transient work/logistics cargo.
+Paid escort może więc dostać realne provisions przed usługą, a runtime nie potrzebuje nowego ration modelu. Voluntary companion nie dostaje magicznego auto-provisioningu.
 
-Ownership pozostaje:
+### Detailed stamina/vigor/rest
+
+Accompany używa zwykłego `NpcPlannedAction { kind: 'accompany' }` i fazy `goTo`, więc walking już płaci `WALK_FATIGUE_RATE`. `exhausted` zatrzymuje ruch i po recovery wraca do poprzedniej fazy. Vigor collapse ma najwyższy priorytet i reuse istniejący sleep path.
+
+Nie dodawać expedition stamina/vigor.
+
+### Injury and natural recovery
+
+`physicalInjury`, derived severity oraz lazy `resolveInjuryRecovery()` są już normalnym authoritative NPC state. `npc-025` dostarcza treatment suitability i severity semantics.
+
+### Danger/flee
+
+Detailed NPC już reaguje na lokalne threat/combat poprzez istniejące flow. Te reakcje mogą przerwać accompany action bez kasowania commitmentu.
+
+Nie dodawać route danger modelu ani off-screen encounters w tym planie.
+
+### Generic travel/off-screen survival
+
+Po `settlements-npcs-028` istnieją:
+
+- `src/ai/npcTravel.ts` — `NpcTravelContinuity`, detailed ↔ off-screen handoff, interpolation, blocking i purpose-backed arrival;
+- `src/ai/npcTravelCheckpoint.ts::resolveNpcTravelCheckpoint()`;
+- `src/ai/npcOffscreenSurvival.ts::resolveNpcOffscreenTravelInterval()`.
+
+Generic off-screen survival już:
+
+- tickuje hunger/thirst deterministycznie po elapsed world time;
+- konsumuje realne personal food/water;
+- rozwiązuje lazy injury recovery;
+- zatrzymuje travel jako `blocked`, gdy deprivation osiągnie limit bez personal provisions;
+- używa `survivalResolvedAtDays`, więc ten sam interval nie jest rozliczany dwa razy.
+
+Nie tworzyć companion off-screen engine.
+
+## Recon gaps that this plan actually owns
+
+### 1. Away companion still sees home/settlement fallback sources
+
+Po wyczerpaniu personal provisions zwykły `beginNeed()` nadal może wybrać źródła zakładające lokalność własnej osady:
+
+Food:
 
 ```text
-personal food / drink / medicine / weapons / tools
-→ personalInventory
-
-temporary task/logistics cargo
-→ carried
+personalFood
+→ householdFood
+→ SettlementEconomy / household exchange
+→ hunt / nearbyFoodSource
+→ unconditional gardenGather
 ```
 
-Expedition provisions nie mogą tworzyć trzeciego ownera.
-
-### Player → NPC transfer already has the correct ownership contract
-
-`items-player-027` definiuje general-purpose ownership transfer:
+Water:
 
 ```text
-Player Inventory
-→ NPC personalInventory
-→ normal NPC decisions/actions determine use
+personalWater
+→ householdWater
+→ settlement/player well resolved relative to home
 ```
 
-Towarzyszenie nie zmienia tych semantics.
+To jest poprawne dla zwykłego mieszkańca, ale nie dla NPC kilometry od domu.
 
-### Player storage is a permission layer, not an AI source of intent
+**Decision:** przy aktywnym accompany albo purpose-backed long-distance travel nie wolno traktować household/economy/home garden/home well jako zdalnie dostępnych.
 
-`items-player-028` rozdziela:
+Travel-aware acquisition ma używać wyłącznie:
+
+1. zasobu już w `personalInventory`;
+2. bounded source query istniejącego przy **bieżącej pozycji** NPC;
+3. known/reachable player storage dopuszczonego przez finalny Stage 2 storage contract;
+4. inaczej — brak wykonalnej strategii, bez magicznego fallbacku do domu/ogrodu.
+
+Food może reuse `SettlementFoodSourceHooks.queryNearest(currentPosition, FOOD_SOURCE_SEARCH_RADIUS)` i hunter target query, ponieważ oba są już lokalne względem live NPC.
+
+Water ma reuse istniejący player-well lookup, ale origin dla travel survival musi być current NPC position, nie `home`. Znane own-settlement wells mogą być kandydatem tylko wtedy, gdy mieszczą się w istniejącym bounded well-search contract; nie dodawać globalnego well scan. Nie ma dziś generic natural-water NPC source i ten plan go nie wymyśla.
+
+Poza travel context obecna kolejność strategii pozostaje bez zmian.
+
+### 2. Scheduled sleep explicitly walks to home
+
+`decideNpcAction()` może zwrócić `scheduledSleep`, a `NpcAgent.beginGoSleep()` zawsze ustawia `sleepDest = home`.
+
+To oznacza, że companion w nocy może próbować wrócić do własnego domu mimo aktywnej wyprawy.
+
+`beginCollapseSleep()` ma już właściwy neutralny precedent: używa `preferHomeSleep(distance)`; gdy NPC jest dalej niż `HOME_SLEEP_RANGE`, śpi w miejscu.
+
+**Decision:** scheduled sleep przy aktywnym accompany/purpose-backed travel ma reuse tę samą locality rule:
 
 ```text
-item ownership
-!= storage access permission
-!= NPC reason to use item
-!= transfer
-!= consumption
+home within existing HOME_SLEEP_RANGE
+→ existing goSleep(home)
+
+otherwise
+→ existing sleep phase at current locality
 ```
 
-Storage policy może pozwolić na food/water/medicine i egzekwować reserve, ale nie generuje hunger/healing pressure.
+Nie tworzyć campsite, fake home ani companion bed. Waking wraca do `choose()`, więc commitment wznowi się naturalnie.
 
-Ten plan jest consumerem tego mechanizmu; nie kopiuje policy do NPC state.
+### 3. Healing still reads transient `carried`
 
-### Fatigue/rest already exist
+Aktualnie zarówno healing pressure w `NpcAgent.choose()`, jak i `beginHeal()`, `debugInjuryState()` oraz `giveBandageForDebug()` używają `this.carried`.
 
-Aktualny `NpcAgent` posiada:
+To jest sprzeczne z authoritative personal belongings i powoduje, że bandage przekazany przez player → `personalInventory` jest niewidoczny dla zwykłego self-healing.
 
-- stamina drain podczas ruchu i pracy,
-- `exhausted` phase,
-- recovery do istniejącego resume ratio,
-- vigor drain/recovery,
-- vigor-collapse sleep,
-- scheduled sleep,
-- Endurance-dependent recovery.
-
-Nie potrzeba expedition fatigue meter.
-
-### Injury/healing already belong to normal NPC autonomy
-
-`physicalInjury` jest persistent authoritative state. Istnieje już:
+**Decision:** w ramach tego planu wykonać małą **shared NPC healing ownership correction**, nie companion branch:
 
 ```text
 physicalInjury
-→ derived injury severity
-→ healing pressure
-→ npcDecision arbitration
-→ heal action
+→ severity
+→ suitable treatment lookup in personalInventory
+→ same owner revalidated on heal completion
+→ consume from personalInventory
 ```
 
-Natural injury recovery korzysta z elapsed world time i nie należy do render lifecycle.
+Jeżeli preflight znajdzie realny workflow, w którym treatment celowo siedzi w `carried`, może zostać jawnie obsłużony jako drugie źródło z zachowaniem source identity. `carried` nie może być domyślnym ownerem personal medicine.
 
-### Current healing ownership is inconsistent with durable personal belongings
+Self-treatment podczas active travel nie może wymagać powrotu do `home`. Gdy suitable treatment jest już osobistą własnością NPC, heal action ma wykonywać się lokalnie przy current position. Poza travel context dotychczasowe home treatment behaviour może pozostać.
 
-Aktualne healing pressure i `beginHeal()` szukają treatmentu w transient `NpcAgent.carried`, podczas gdy durable personal belongings i player-given medicine należą do `personalInventory`.
+### 4. Player storage Stage 1 is insufficient
 
-Obecny problem:
+`items-player-028` jest obecnie `planned` i definiuje tylko actor-level `withdraw/deposit` allow/deny.
+
+Jego własne implementation notes jawnie odkładają do `items-player-032`:
+
+- resource/category rules;
+- `StorageAccessPurpose`;
+- `assigned_only`;
+- reserves/limits;
+- autonomous food/water acquisition;
+- expedition authority.
+
+`items-player-032` jest również `planned` i zależy od `items-player-028`.
+
+**Decision:** runtime use of player storage w `npc-032` zależy od **obu** planów, a właściwym resource/context integration contractem jest `items-player-032`.
+
+Storage nie tworzy pressure. Jest tylko source candidate w zwykłej hunger/thirst/healing strategy i finalny transfer zawsze idzie do `personalInventory`.
+
+Nie implementować w `npc-032` własnej storage policy, reserve ani grant lifecycle.
+
+### 5. `endAccompany()` does not create return-home travel
+
+Aktualne `NpcAgent.endAccompany()`:
+
+1. czyści `accompanyCommitment`;
+2. ustawia `npcState.travel = null`;
+3. wraca do ordinary decision flow.
+
+Detailed NPC może później wrócić do domu przez schedule, ale nie ma persistent/off-screen **return-home commitment**. `NpcTravelPurpose` posiada dziś `expedition`, `transport` i `merchant-return`, ale nie zwykły NPC return-home.
+
+**Decision:** survival abandonment musi przejść przez istniejący generic travel owner, dodając najmniejszy reusable purpose, np.:
+
+```ts
+{ kind: 'return-home' }
+```
+
+bez osobnego `CompanionReturnState`.
+
+Flow:
 
 ```text
-player gives NPC bandage
-→ bandage enters personalInventory
-→ normal healing path does not see it
+capture current authoritative position/checkpoint
+→ source-specific abandonment consequence
+→ end accompany
+→ create generic travel to existing NPC home position with return-home purpose
+→ normal travel + survival interruptions
+→ purpose arrival observed exactly once
+→ clear travel
+→ ordinary schedule
 ```
 
-To jest ogólna luka zwykłego NPC healing i powinna zostać naprawiona w shared healing path, nie przez companion-only branch.
+Arrival observer ma być generic/bounded i nie tworzyć drugiego registry.
 
-### Accompany already owns interruption/resumption and return handoff
+### 6. Off-screen accompany survival stops at captured leg ETA
 
-`npc-029` definiuje source-neutral persistent accompany commitment.
+`npcTravelCheckpoint.ts::survivalToDays()` ogranicza survival resolution do `execution.arrivesAtDays`.
 
-Commitment:
+Dla ordinary purpose travel arrival kończy leg, ale `resolveOffscreenNpcTravel()` celowo nie kończy travel, gdy `accompanyCommitment` nadal istnieje. W efekcie off-screen companion po dojściu do zamrożonego targetu może pozostać unloaded dłużej, a hunger/thirst nie są dalej rozliczane po captured ETA.
 
-- nie jest `NeedId`,
-- nie jest `activePlan`,
-- nie znika przy zwykłym survival interruption,
-- jest wykonywany jako low-priority/idle-tier duty,
-- powinien zostać ponownie znaleziony po zwykłej re-arbitracji,
-- oddaje NPC do generic return/travel po zakończeniu.
+**Decision:** poprawić **generic checkpoint semantics**, nie companion ticker:
 
-Ten plan nie implementuje drugiego pause/resume lifecycle ani `CompanionReturnHome`.
+- spatial interpolation nadal kończy się na captured destination;
+- dla aktywnego accompany survival elapsed time ma być rozliczany do aktualnego checkpoint `nowDays`, również po captured spatial ETA;
+- reification nadal umieszcza NPC maksymalnie na captured destination, po czym live follow retargetuje do bieżącej pozycji gracza;
+- `survivalResolvedAtDays` pozostaje exactly-once anchor.
 
-### Off-screen travel foundation remains a dependency boundary
+Nie robić per-frame retargetingu unloaded NPC ani śledzenia całej trasy gracza.
 
-Authoritative NPC needs/injury/inventory przeżywają reconstruction, ale normalny decision/action loop działa na live `NpcAgent`.
+### 7. Generic off-screen survival currently does not simulate fatigue/rest
 
-`settlements-npcs-019` i `npc-029` mają dostarczyć generic detailed ↔ off-screen travel continuity z invariantem:
+`npcOffscreenSurvival.ts` świadomie nie dotyka stamina/vigor; current generic travel ETA również nie modeluje cyklu marsz–odpoczynek.
+
+**Decision V1:** `npc-032` nie wymyśla drugiego coarse fatigue modelu ani nie zmienia generic ETA. Off-screen fidelity dla tego planu to:
+
+- hunger/thirst + real provisions;
+- injury recovery;
+- death/blocking;
+- preservation (bez resetu) stamina/vigor.
+
+Detailed simulation nadal ma pełne stamina/exhaustion/sleep semantics. Osobny generic travel-rest/ETA model wymaga własnego planu, jeśli będzie potrzebny. Nie fałszować go lokalnie tylko dla companions.
+
+## Detailed resource-resolution contract
+
+### Food during accompany/travel
 
 ```text
-detailed execution
-XOR
-off-screen execution
+hunger pressure wins
+→ personal food?
+→ bounded nearby real food/hunt source?
+→ permitted + known/reachable player storage food?   [after items-player-032]
+→ none
 ```
 
-Jeżeli finalny shared travel contract nie potrafi uwzględnić potrzeb NPC podczas nieobecności live agenta, należy rozszerzyć ten shared mechanism. `npc-032` nie może tworzyć `CompanionOffscreenSimulation`.
+Nie korzystać z remote household/economy/abstract garden tylko dlatego, że NPC nadal ma household pointer.
 
-## Existing behaviour that should work naturally after `npc-029`
+Po withdrawal z player storage item trafia do `personalInventory`; ordinary personal-food action odpowiada za konsumpcję.
 
-Poniższych zachowań nie implementować ponownie poza integracją/regression coverage.
-
-### Hunger/thirst interruption
+### Water during accompany/travel
 
 ```text
-follow
-→ hunger/thirst pressure
-→ ordinary need wins
-→ ordinary resource action
-→ relief
-→ choose()
-→ same accompany commitment is eligible again
+thirst pressure wins
+→ drinkable personal liquid container?
+→ permitted + known/reachable player storage water container? [after items-player-032]
+→ bounded usable well near current NPC position?
+→ none
 ```
 
-### Personal provisions
+Water pozostaje realnym liquid-container state. Nie dodawać scalar expedition water.
 
-Food i water znajdujące się już w `personalInventory` są zwykłymi NPC survival resources.
-
-### Short fatigue recovery
-
-Follow execution powinien podlegać tym samym physical movement costs co ordinary travel:
-
-```text
-movement
-→ stamina exhaustion
-→ existing exhausted recovery
-→ resume movement
-```
-
-### Vigor collapse
-
-Istniejący vigor-collapse response nadal wygrywa z accompany execution.
-
-### Injury state and natural recovery
-
-Injury, severity, impairment i lazy natural recovery pozostają zwykłym NPC state.
-
-### Combat/flee interruption
-
-Existing combat/flee behaviour może przerwać follow execution bez kasowania commitmentu.
-
-Combat cooperation / protect-player pressure należy do osobnego późniejszego etapu Companions.
-
-### Persistence of needs and personal belongings
-
-Needs, stamina, vigor, injury i `personalInventory` już posiadają właściwy persistent owner.
-
-### Resume commitment
-
-Nie potrzeba persistent `survival_pause`. Zwykły survival action ma wygrać, zakończyć się i oddać NPC do normalnej re-arbitracji. Jeśli commitment nadal istnieje i nic pilniejszego nie wygrywa, accompany duty zostanie ponownie wykonane.
-
-### Return to normal life
-
-Po zakończeniu commitmentu generic return/travel + normal schedule należą do `npc-029` / shared travel infrastructure.
-
-## Architectural decisions
-
-### 1. `npc-032` is integration, not a second survival system
-
-Centralny invariant:
-
-```text
-accompany commitment
-+
-ordinary NPC autonomy
-```
-
-nie:
-
-```text
-accompany commitment
-→ companion survival mode
-```
-
-Nie dodawać nowych survival meters, companion pressure tables, companion-specific strategy list ani expedition scheduler.
-
-### 2. Follow must participate in ordinary physical-cost semantics
-
-`npc-029` może wymagać moving-target executor zamiast statycznego `NpcPlannedAction`, ale jego ruch nadal musi korzystać z tych samych physical costs co ordinary travel:
-
-- walking stamina drain,
-- Endurance-dependent recovery,
-- exhaustion,
-- vigor-collapse behaviour.
-
-Nie dopuścić do sytuacji:
-
-```text
-ordinary goTo → fatigues NPC
-followPlayer → free movement
-```
-
-Preferować shared movement/fatigue seam zamiast companion-specific drain.
-
-### 3. Active travel commitment replaces local routine duties, not physiology
-
-Aktywny accompany commitment jest tymczasowym commitmentem do podróży, więc nie powinien powodować prób wykonywania lokalnych obowiązków schedule oddalonych o kilometry.
-
-Podczas active travel commitment:
-
-- hunger/thirst/injury/exhaustion/sleep pozostają authoritative,
-- ordinary local work/home/social/eat schedule destinations nie powinny odciągać NPC z wyprawy,
-- po zakończeniu commitmentu i powrocie do normalnej locality zwykły effective schedule odzyskuje pełne authority.
-
-Nie modyfikować schedule templates ani nie tworzyć companion schedule.
-
-### 4. Away-from-home sleep/rest should reuse travel locality before adding new state
-
-Scheduled sleep podczas dalekiej wyprawy nie może oznaczać automatycznie:
-
-```text
-22:00
-→ walk back to home settlement
-→ sleep
-```
-
-Najpierw spróbować rozszerzyć istniejący sleep/rest flow tak, aby przy active travel commitment rozwiązywał destination z current travel locality/context.
-
-Preferowany kierunek:
-
-```text
-existing suitable local rest/shelter/place
-→ current travel/stay anchor
-→ safe current-locality fallback if current architecture supports it
-```
-
-Dopiero jeśli aktualny codebase nie ma żadnego neutralnego seam, wydzielić mały reusable travel-rest resolver.
-
-Nie tworzyć `CompanionCamp`, fake household ani fake home przy graczu.
-
-### 5. Durable self-healing must use durable personal treatment ownership
-
-Naprawić shared NPC healing invariant:
-
-```text
-NPC-owned injury treatment
-→ personalInventory
-→ healing pressure sees it
-→ healing action sees the same item
-→ treatment consumes the same authoritative item
-```
-
-Pressure i execution nie mogą używać różnych inventory owners.
-
-Jeżeli istniejący transient work flow rzeczywiście potrzebuje treatment w `carried`, może zostać zachowany jako jawne dodatkowe źródło po reconie, ale `carried` nie może być domyślnym ownerem personal medicine.
-
-### 6. Self-treatment while travelling should be local when the item is already owned
-
-Posiadanie suitable treatment podczas wyprawy nie powinno wymuszać wielokilometrowego powrotu do własnego domu tylko dlatego, że historyczny healing action używa home jako destination.
-
-Dla self-treatmentu z itemem już w `personalInventory` preferować lokalny treatment/rest context:
+### Medicine during accompany/travel
 
 ```text
 injury pressure
-→ local stop/rest destination
-→ normal heal action
-→ consume personal treatment
-→ re-arbitrate
+→ suitable treatment in personalInventory?
+→ permitted + known/reachable player storage treatment? [after items-player-032]
+→ none
 ```
 
-Home pozostaje normalnym fallbackiem dla NPC w swojej zwykłej locality.
+Jeżeli storage dostarcza treatment, najpierw real transfer do `personalInventory`, potem normalny healing action.
 
-Nie dodawać hospital/doctor/companion healing location.
+### Off-screen resources
 
-### 7. Player storage should plug into resource acquisition, not create companion strategy tables
+Off-screen resolver może używać tylko tego, co authoritative i dostępne bez world scan:
 
-Po `items-player-028` authorized/reachable player storage powinien być dostępnym **resource source** dla zwykłych survival actions.
-
-Preferować rozszerzenie istniejącego resource-acquisition seam zamiast mnożenia companion-only strategii.
-
-Przykład hunger:
-
-```text
-hunger wins
-→ existing food acquisition evaluates normal sources
-→ personal food unavailable
-→ permitted/reachable player storage is an eligible source
-→ authoritative policy/reserve revalidation
-→ real transfer to personalInventory
-→ ordinary personal-food consumption
-```
-
-Analogiczna zasada dotyczy water i injury treatment.
-
-Storage permission:
-
-- nie generuje pressure,
-- nie zmienia thresholdów,
-- nie gwarantuje zasobu,
-- nie omija reserve,
-- nie teleportuje resource,
-- nie daje globalnej wiedzy o storage.
-
-Planning może wykryć dostępność wcześniej, ale authoritative withdrawal musi ponownie sprawdzić policy, reserve, amount, destination capacity i item/instance state.
-
-### 8. Provision estimation belongs to expedition preparation, not runtime survival
-
-`npcPersonalProvisions.ts` ma wartościową bounded estimation logic, ale ten plan nie powinien przejmować odpowiedzialności za obliczanie całego expedition loadoutu.
-
-Paid escort, voluntary expedition context i settlement expedition assignment mogą korzystać ze wspólnego source-neutral helpera, jeśli `npc-030` lub inny wcześniejszy plan go wyodrębni.
-
-`npc-032` konsumuje realne provisions; nie tworzy `ExpeditionProvisionPlanner`.
-
-Jeżeli implementacja wymaga drobnej ekstrakcji istniejącego helpera na neutralne `awayHours`, jest to dozwolony supporting refactor, ale nie główny feature tego planu.
-
-### 9. Survival response and commitment viability are separate questions
-
-Zwykły survival pressure odpowiada:
-
-> co NPC powinien zrobić teraz?
-
-Continuation evaluation odpowiada:
-
-> czy po uwzględnieniu aktualnego stanu dalsze utrzymywanie tego travel commitmentu nadal ma sens?
-
-Nie kończyć wyprawy dlatego, że pojawił się ordinary hunger/thirst/exhaustion response.
-
-### 10. No persistent `survival_pause`
-
-Temporary inability to follow is już reprezentowana przez normalny decision/action pipeline.
-
-```text
-need / injury / rest
-→ ordinary action
-→ commitment remains
-→ later re-arbitration
-```
-
-Nie dodawać `pausedForSurvival`, `refusesToTravel` ani drugiego companion lifecycle.
-
-### 11. Continuation evaluation should only decide whether the commitment remains viable
-
-Dodać mały pure/inspectable evaluator dopiero na boundary wykonywania/re-wznawiania accompany duty.
-
-Koncepcyjnie:
-
-```ts
-type AccompanyContinuationEvaluation =
-  | { outcome: 'continue' }
-  | { outcome: 'abandon'; reasons: AccompanyAbandonReason[] }
-```
-
-Exact type ma zostać dopasowany do finalnego `npc-029` lifecycle API.
-
-Inputs powinny korzystać wyłącznie z istniejącego state/context, np.:
-
-- current hunger/thirst severity,
-- personal provisions,
-- wykonalne istniejące resource-source candidates,
-- permitted/reachable player storage,
-- injury severity,
-- available suitable treatment,
-- stamina/vigor/collapse state,
-- existing danger/flee context tylko jeśli finalny dependency contract udostępnia potrzebny sygnał.
-
-Nie tworzyć:
-
-- expedition morale,
-- survival confidence,
-- loyalty meter,
-- route-wide resource simulation.
-
-### 12. Abandonment is explicit, bounded and semantic
-
-Genuine abandonment może wystąpić, gdy aktualne shared NPC mechanisms pokazują, że dalsza podróż jest niewykonalna lub nierozsądna, np. ciężki survival state bez wykonalnego sposobu rozwiązania albo poważny uraz bez wykonalnego recovery/treatment path.
-
-Dokładne kryteria mają korzystać z istniejących critical/severity semantics; nie dodawać companion-specific threshold copies.
-
-Nie abandonować wyłącznie przez:
-
-- ordinary hunger,
-- ordinary thirst,
-- exhausted stamina,
-- jedną noc,
-- pojedynczy pathfinding failure,
-- krótką separację,
-- zwykły combat interruption.
-
-Jeżeli rezultat to `abandon`:
-
-```text
-continuation evaluator
-→ npc-029 ends accompany commitment with semantic reason
-→ source-specific system observes/resolves its own consequence
-→ generic return travel
-```
-
-Ten plan nie wylicza wages, nie modyfikuje relationship/reputation i nie implementuje contract cancellation economics.
-
-### 13. Off-screen survival belongs to the generic travel execution owner
-
-Nie implementować w `npc-032` osobnego off-screen engine.
-
-Finalny generic off-screen travel owner z `settlements-npcs-019` / `npc-029` powinien mieć możliwość wykonywania neutralnego NPC travel-survival step albo wywoływać istniejące shared helpers.
-
-Koncepcyjnie:
-
-```text
-off-screen travel interval
-→ advance ordinary needs
-→ apply coarse activity fatigue/rest semantics
-→ resolve lazy injury recovery
-→ consume physically owned/available survival resources where allowed
-→ evaluate commitment viability
-→ continue / rest / end commitment
-```
-
-Ten helper powinien być reusable dla innych long-distance NPC travel flows, w szczególności `settlements-npcs-028`, a nie sprawdzać `isCompanion`.
-
-### 14. Same authoritative state in detailed and off-screen simulation
-
-Off-screen simulation mutuje te same authoritative:
-
-- `needs`,
-- `stamina`,
-- `vigor`,
-- `physicalInjury`,
 - `personalInventory`.
 
-Nie tworzy off-screen copies.
+Nie pobierać z player storage, household, wells ani world resources off-screen. Brak personal provisions może ustawić travel `blocked`; detailed/reified NPC dopiero sprawdza lokalne źródła.
 
-Preferować deterministic bounded coarse stepping z istniejącymi rates/helpers zamiast jednego dużego skoku lub per-frame simulation unloaded NPC.
+## Commitment continuation and abandonment
 
-W każdym momencie dokładnie jeden execution owner:
+Nie dodawać persistent `survival_pause`.
+
+Przed ponownym wykonaniem `tryPursueAccompany()` dodać mały pure/inspectable continuation check, który używa istniejących state/severity/resource-candidate semantics.
+
+### Continue
+
+Commitment pozostaje aktywny przy:
+
+- ordinary hunger/thirst, jeśli istnieje normalna wykonalna survival strategy;
+- stamina exhaustion;
+- scheduled/local sleep;
+- vigor collapse/recovery;
+- temporary combat/flee;
+- single movement/path failure;
+- serious injury, jeżeli zwykły recovery/treatment path nadal istnieje.
+
+### Abandon
+
+V1 może zakończyć expedition tylko na podstawie już istniejących hard survival semantics:
+
+1. **critical hunger/thirst + brak wykonalnego travel-local source** po normalnym strategy resolution;
+2. **critical physical injury + brak suitable treatment/recovery path**, zgodnie z `npc-025`;
+3. reified `travel.blocked` z off-screen deprivation, jeśli po ponownej lokalnej resolution nadal nie istnieje wykonalny source.
+
+Nie kopiować numeric thresholds — użyć `Needs` critical semantics i `resolveInjurySeverity()`.
+
+Off-screen checkpoint sam **nie powinien automatycznie abandonować** tylko dlatego, że personal provisions się skończyły: nie posiada bounded world context do udowodnienia, że przy aktualnej pozycji nie istnieje local source. Ma zatrzymać travel i zachować stan do późniejszej resolution.
+
+Death pozostaje owned przez istniejący death lifecycle i nie jest survival abandonment.
+
+### Source-specific consequence
+
+Dla voluntary source:
 
 ```text
-detailed NpcAgent
-XOR
-off-screen travel execution
+endAccompany('abandoned')
+→ return-home travel
 ```
 
-Handoff nie może podwójnie naliczyć need drift, consumption, healing albo fatigue.
-
-### 15. Off-screen resource access remains physically bounded
-
-`personalInventory` jest zawsze prawidłowym durable source.
-
-Player storage może zostać użyty off-screen tylko wtedy, gdy finalny travel/storage context potrafi stwierdzić, że dany storage jest rzeczywiście dostępny/reachable dla tego NPC. Withdrawal nadal przechodzi przez `items-player-028` authoritative policy/reserve transaction.
-
-Nie dopuszczać:
+Dla `work-contract` escort:
 
 ```text
-authorized somewhere in world
-→ remotely consume from chest
+WorkContracts.release(contractId, npcId, 'abandoned', timing)
+→ endAccompany('abandoned')
+→ return-home travel
 ```
 
-Natural world resources off-screen mogą być użyte tylko przez istniejący/shared bounded contract. Nie dodawać globalnych food/water/pathfinding scans per coarse tick.
+Reuse istniejące npc-030 semantics: abandonment nie tworzy dodatniej wage claim. `npc-032` nie liczy wynagrodzeń ani reputation consequences.
 
-### 16. Prefer zero new persisted fields in `npc-032`
+## Interrupt/resume lifecycle
 
-To jest ważny architecture check.
+Detailed flow:
 
-Istniejący authoritative state już persistuje:
+```text
+accompany action
+→ critical need / collapse / danger
+→ existing interruption
+→ ordinary need/rest/heal/flee action
+→ state mutation
+→ choose()
+→ continuation evaluation
+   ├─ viable → same accompany commitment drives next idle duty
+   └─ non-viable → explicit abandonment + return-home travel
+```
 
-- hunger/thirst needs,
-- stamina,
-- vigor,
-- injury,
-- temporary conditions,
-- `personalInventory`.
+Nie przechowywać konkretnej przerwanej follow action. Semantic commitment jest wystarczającym resume ownerem.
 
-Accompany persistence należy do `npc-029`.
+## Return-home lifecycle
 
-Player-storage policy persistence należy do `items-player-028`.
+Return-home jest zwykłym generic travel, nie teleportem i nie schedule shortcutem.
 
-Generic travel/off-screen progress należy do shared travel foundation.
+Required semantics:
+
+- destination = istniejąca home position NPC;
+- detailed live NPC używa `tryPursueCommittedTravel()`;
+- stream-out używa `beginOffscreenNpcTravel()`;
+- `resolveNpcTravelCheckpoint()` rozlicza hunger/thirst/injury;
+- critical needs mogą zatrzymać/interrupt return tak samo jak inną podróż;
+- blocked return pozostaje blocked, nie teleportuje NPC;
+- arrival jest obserwowany idempotentnie i usuwa tylko generic travel;
+- po arrival zwykły schedule odzyskuje authority.
+
+Nie zmieniać household/settlement membership.
+
+## Travel schedule boundary
+
+Aktywny `accompanyCommitment` lub purpose-backed long-distance `travel` zastępuje lokalne routine duties jako low-priority commitment.
+
+Podczas takiej podróży:
+
+- physiology, injury, weather, danger i sleep pozostają authoritative;
+- local `work/home/eat/social` schedule nie może wysłać NPC kilometrami do home settlement;
+- scheduled sleep korzysta z travel-local rule opisanej wyżej;
+- po return-home arrival ordinary schedule działa dokładnie jak wcześniej.
+
+Nie modyfikować `SCHEDULE_TEMPLATES`; gate ma być przy dispatch/source resolution.
+
+## Persistence and reconstruction
+
+Prefer zero new `NpcAuthoritativeState` fields.
+
+Persistowane pozostają istniejące:
+
+- needs/stamina/vigor/health/injury;
+- `personalInventory`;
+- `accompanyCommitment`;
+- `travel`, w tym `survivalResolvedAtDays`, `blocked`, `arrival` i nowy generic purpose variant jeśli dodany.
+
+Transient:
+
+- phase/action/path;
+- follow hysteresis;
+- continuation evaluation result;
+- local strategy candidates.
+
+Reconstruction ma wyprowadzać zachowanie z tych samych authoritative fields, bez companion flags.
+
+## Performance guardrails
 
 Nie dodawać:
 
-- `SaveCompanionNeeds`,
-- expedition food/water counters,
-- duplicated injury state,
-- duplicated inventory snapshot,
-- companion-only timestamps,
-- duplicated current position.
+- per-frame expedition survival scans;
+- dodatkowego companion tickera;
+- globalnych scans player storages/wells/food;
+- route-wide danger/resource simulation;
+- off-screen pathfinding;
+- per-meter persisted path.
 
-Jeżeli off-screen travel rzeczywiście potrzebuje temporal checkpointu, należy on do generic travel execution contract, nie do companion survival state.
+Reuse:
 
-## Expected integration points
+- istniejący once-per-second critical interrupt cadence;
+- normalny decision cadence;
+- bounded `FOOD_SOURCE_SEARCH_RADIUS` / existing well lookup;
+- Stage 2 known/reachable storage candidates;
+- checkpoint/lazy `resolveNpcTravelCheckpoint()`;
+- event-based `npcOffscreenSurvival`.
 
-Implementation powinien zweryfikować finalne call-sites podczas preflight zamiast szerokiego refactoru.
+Multiple companions są oceniani niezależnie na ich istniejących NPC ticks/checkpoints; nie tworzyć party managera.
+
+## Integration points
 
 ### `src/ai/NpcAgent.ts`
 
-Prawdopodobne integration points:
+Zweryfikowane call-sites:
 
-- detailed accompany fatigue semantics,
-- active-travel schedule override boundary,
-- away-from-home sleep/rest resolution,
-- healing source/location correction,
-- continuation check przed ponownym wykonaniem accompany duty,
-- semantic abandonment handoff.
-
-### `src/ai/Needs.ts`
-
-Reuse istniejących meters/rates/critical thresholds. Nie dodawać nowego `NeedId`.
-
-### `src/ai/npcDecision.ts`
-
-Reuse istniejącego pressure/decision arbitration. Nie dodawać companion decision priority. Zmiana tylko jeśli finalny `npc-029` seam nie pozwala wykonać continuation check na idle-duty boundary.
+- `update()` — needs/stamina/vigor ticking i critical interruption;
+- `choose` block — healing pressure obecnie czyta `carried`;
+- `beginNeed()` — food/water execution oraz home-based fallback assumptions;
+- `computeFoodStrategyCandidates()` — travel-aware filtering/source candidates;
+- `beginHeal()` — treatment owner + local travel treatment;
+- `beginCollapseSleep()` / `beginGoSleep()` — reuse locality semantics dla scheduled travel sleep;
+- `tryPursueIdleDuty()` / `tryPursueAccompany()` — continuation/abandonment boundary;
+- `endAccompany()` — obecnie czyści travel; survival abandonment potrzebuje capture → end → generic return orchestration;
+- `beginOffscreenTravelHandoff()`;
+- `catchUpCommittedTravel()`;
+- `tryPursueCommittedTravel()`;
+- `debugInjuryState()` / `giveBandageForDebug()` — align z personal treatment ownership.
 
 ### `src/ai/npcStrategies.ts`
 
-Preferować rozszerzenie generalnego resource acquisition o permitted player-storage sources, nie companion-only strategy list.
+Rozszerzyć zwykłe source candidates/gating; nie tworzyć companion strategy table.
 
 ### `src/ai/npcPersonalProvisions.ts`
 
-Reuse personal food/water helpers. Ewentualna neutralizacja existing provision estimate jest supporting refactor only.
+Reuse consumption, counts i existing escort estimate. Nie dodawać expedition ration state.
 
-### `src/ai/healingPressure.ts` / existing healing action path
+### `src/ai/npcTravel.ts`
 
-Treatment availability i execution muszą korzystać z tego samego durable personal-resource lookup.
+Dodać tylko minimalny generic return-home purpose/arrival support potrzebny do persistent return. Nie dodawać companion travel type.
+
+### `src/ai/npcTravelCheckpoint.ts`
+
+Domknąć survival-after-captured-ETA dla aktywnego accompany, zachowując exactly-once `survivalResolvedAtDays`.
+
+### `src/ai/npcOffscreenSurvival.ts`
+
+Reuse jako jedyny coarse survival resolver. V1 nie rozszerza go o osobny stamina/vigor model.
 
 ### `src/settlement/npcState.ts`
 
-Nie oczekuje się nowego survival state.
+Tylko additive serialization support, jeśli generic `NpcTravelPurpose` dostanie nowy variant. Nie dodawać survival fields.
 
-### Final `npc-029` accompany lifecycle API
+### Storage seam after `items-player-028` + `items-player-032`
 
-Reuse:
+Reuse policy-aware transfer, resource/context rule, reserve i current-state revalidation. `npc-032` tylko dostarcza normalny `personal_need` / treatment intent i destination `personalInventory`.
 
-- active commitment lookup,
-- ordinary interruption/resume,
-- semantic end reason,
-- generic return handoff.
+### `src/world/createWorkContracts.ts`
 
-### Final `items-player-028` storage access API
+Reuse `WorkContracts.release(..., 'abandoned', timing)` dla paid escort abandonment.
 
-Reuse:
+## Dependencies and boundaries
 
-- policy/grant lookup,
-- structured access purpose,
-- reserve-safe authoritative withdrawal,
-- temporary expedition grant lifecycle.
+### `npc-029-npc-accompany-follow-commitment` — implemented / verification needed
 
-Nie kopiować policy data do NPC state.
+Owns source-neutral `accompanyCommitment`, follow/stay, ordinary interruption/resume i public start/set/end seams.
 
-### Final `settlements-npcs-019` travel/off-screen API
+`npc-032` nie kopiuje commitmentu.
 
-Reuse:
+### `npc-017-work-contracts-food-and-drink` — implemented
 
-- detailed ↔ off-screen handoff,
-- exactly-one execution owner,
-- elapsed travel context,
-- reification.
+Owns durable personal provisions i normalne personal food/water use.
 
-Jeżeli finalne API różni się od założeń tego draftu, użyć zaimplementowanego shared contractu zamiast stabilizować assumptions tutaj.
+### `npc-025-injury-severity-and-treatment-requirements` — implemented
 
-## Dependencies and related plans
+Owns injury severity, impairment, suitability i lazy natural recovery.
 
-### `npc-029-npc-accompany-follow-commitment`
+### `settlements-npcs-028-long-distance-npc-travel-and-expedition-movement` — implemented / verification needed
 
-Hard dependency.
+Owns generic long-distance travel checkpoint oraz `npcOffscreenSurvival`. To jest realny foundation; stary draft nie powinien już traktować go jako przyszłego API.
 
-Owns accompany commitment, follow/stay, ordinary interruption/resume, separation/recovery, ending and generic return handoff.
+### `items-player-028-npc-player-storage-access-policies` — planned
 
-### `settlements-npcs-019-persistent-and-off-screen-transport`
+Stage 1 actor-level permission. Nadal wymagany foundation.
 
-Transitive dependency przez `npc-029`, ale bezpośrednio istotny dla off-screen continuity. Jeśli jego finalny shared travel contract jest zbyt transport-specific dla ordinary travelling NPC, poprawić shared seam zamiast tworzyć companion-specific engine.
+### `items-player-032-npc-player-storage-resource-and-context-rules` — planned
 
-### `npc-017-work-contracts-food-and-drink`
-
-Reuse implemented personal provisions i ordinary hunger/thirst strategy integration.
-
-### `npc-025-injury-severity-and-treatment-requirements`
-
-Reuse injury severity, impairment, treatment suitability i lazy natural recovery.
+Bezpośredni contract dla autonomous survival withdrawals, resource rules, reserve i purpose/authority. Player-storage część `npc-032` nie może zostać zaimplementowana przed tym planem.
 
 ### `items-player-027-player-to-npc-item-transfer-and-equipment`
 
-Relevant ownership contract:
+Already-landed ownership contract dla ręcznie przekazanych provisions/medicine → `personalInventory`.
+
+### `npc-030` / `npc-031`
+
+Źródła commitmentu, nie runtime survival owners. Paid i voluntary companions mają używać identycznego `npc-032` flow.
+
+### Settlement expeditions
+
+`src/world/expeditionProvisioning.ts` jest assignment-specific provisioning dla settlement expedition party. Nie jest runtime companion survival ownerem. Jego invariant — real items trafiają do member `personalInventory` — pozostaje zgodny z tym planem.
+
+### Travelling merchants
+
+`settlements-npcs-050-merchant-journey-provisioning-and-readiness.md` jest obecnie draftem i dotyczy **pre-departure readiness/provisioning** merchant party.
+
+Boundary:
 
 ```text
-player gives provision/medicine
-→ NPC personalInventory
-→ ordinary NPC survival AI
+settlements-npcs-050
+→ czy merchant/party jest gotowy do wyjazdu i jak zdobywa brakujące wyposażenie przed departure
+
+npc-032/shared NPC travel survival
+→ co dzieje się z normalnym NPC po rozpoczęciu podróży
 ```
 
-### `items-player-028-npc-player-storage-access-policies`
-
-Hard dependency dla shared-storage survival source. Policy pozostaje oddzielona od NPC decision.
-
-### `npc-030-paid-expedition-escort-work-contracts`
-
-Alignment, nie dependency. Paid Work Contract może przygotować provisions i stworzyć accompany commitment; runtime survival pozostaje source-neutral.
-
-### `npc-031-voluntary-expedition-joining`
-
-Alignment, nie dependency. Voluntary joining tworzy ten sam commitment; późniejsze survival behaviour jest identyczne.
-
-### `settlements-npcs-027-npc-expedition-assignment-and-provisioning`
-
-Alignment, nie dependency. Settlement-driven expedition provisioning również powinno kończyć się realnymi resources w personal inventory.
-
-### `settlements-npcs-028-long-distance-npc-travel-and-expedition-movement`
-
-Architectural alignment. Powinien docelowo korzystać z tego samego generic off-screen travel survival seam zamiast własnych expedition needs.
+Nie przenosić merchant cargo/readiness/pack-animal logic do `npc-032`. Każdy source-neutral helper poprawiony tutaj (personal provisions, generic travel checkpoint, return semantics) powinien pozostać reusable dla merchant travel.
 
 ## Scope
 
-- preserve normal hunger/thirst arbitration during accompany;
-- ensure follow movement uses ordinary stamina/vigor semantics;
-- suppress distant local-routine schedule destinations while travel commitment is active;
-- resolve away-from-home sleep/rest through shared travel locality/context;
-- make durable self-treatment use `personalInventory` consistently;
-- allow local self-treatment during travel;
-- expose authorized/reachable player storage as a normal survival resource source;
-- evaluate whether an accompany commitment remains viable without persistent pause state;
-- explicitly end an unviable commitment with a semantic survival reason;
-- hand abandonment into the shared return/travel mechanism;
-- integrate ordinary survival with generic off-screen travel execution;
-- preserve one authoritative state across detailed/off-screen simulation;
-- extend existing diagnostics/trace rather than creating companion-specific tooling.
+Included:
+
+1. Travel-aware food/water source eligibility bez remote home/settlement fallback.
+2. Reuse personal provisions as first survival source.
+3. Integration z Stage 2 permitted player storage jako normalnym source candidate.
+4. Scheduled sleep locality podczas active travel.
+5. Shared healing ownership correction `carried → personalInventory`.
+6. Local self-treatment podczas travel.
+7. Pure bounded continuation/abandonment evaluation.
+8. Paid-escort release przez istniejący Work Contract lifecycle.
+9. Persistent generic return-home travel po abandonment.
+10. Off-screen accompany survival continuing after captured spatial ETA.
+11. Existing travel-blocked → detailed resolution → resume/abandon flow.
+12. Diagnostics/tests potrzebne do obserwowania tych decyzji.
 
 ## Non-goals
 
-- `CompanionNeeds` or other companion survival state;
-- new hunger/thirst/fatigue/injury meters;
-- companion inventory or ration counters;
-- companion schedule templates;
-- party/group resource manager;
-- party formations;
-- combat cooperation / protect-player pressure;
-- new flee/combat scoring;
-- relationship consequences of abandonment;
-- expedition memory/history;
-- permanent companion relocation;
-- player-storage permission UI itself;
-- implementation of `items-player-028` policy model;
-- paid escort reward/payment rules;
-- voluntary-joining scoring;
-- settlement expedition staffing;
-- expedition loadout planner;
-- global route planning;
-- random off-screen encounters;
-- teleport catch-up;
-- global world-resource searches;
-- new campsite/household system;
-- LLM-driven behaviour.
+- companion-only needs/inventory/survival AI;
+- expedition loadout planning;
+- automatic voluntary-companion provisioning;
+- merchant readiness/cargo/pack-animal preparation;
+- new natural-water system;
+- campsite/bedroll/camp building;
+- new danger scoring or random travel encounters;
+- companion combat cooperation;
+- relationship/reputation consequences;
+- paid escort wage logic;
+- storage policy/UI implementation;
+- global source discovery;
+- new off-screen stamina/vigor/ETA model;
+- party/group survival manager;
+- player teleport/catch-up.
 
 ## Implementation order
 
-1. Verify implemented dependency chain and final public contracts: `settlements-npcs-019` → `npc-029`, plus `items-player-028`.
-2. Normalize shared NPC healing ownership so durable personal treatment in `personalInventory` is visible to both pressure and execution.
-3. Make self-treatment travel-safe by resolving a local treatment/rest destination while away from home.
-4. Verify detailed accompany movement pays ordinary stamina/vigor costs and exhaustion/collapse already interrupt/resume correctly.
-5. Add active-travel schedule boundary so distant local routine duties do not pull the NPC home/workplace mid-expedition.
-6. Integrate player-storage resources into the existing general resource-acquisition path using `items-player-028` policy/revalidation.
-7. Add the smallest pure continuation evaluator at the accompany idle-duty boundary; no persistent pause state.
-8. Connect `abandon` to `npc-029` semantic end + generic return handoff.
-9. Extend the generic off-screen travel owner with ordinary NPC survival stepping only if the final shared travel foundation does not already provide it.
-10. Extend existing inspection/trace and add focused regression tests.
+1. Add focused regression tests around current accompany + need/sleep/heal/travel behaviour before changing logic.
+2. Correct shared NPC treatment ownership to `personalInventory`; align debug helper/inspection.
+3. Add travel-aware source eligibility to food/water strategy construction while leaving non-travel behaviour byte-for-behaviour equivalent.
+4. After `items-player-028/032` land, wire authorized current-local player storage as ordinary food/water/treatment source; transfer to `personalInventory` and revalidate at commit.
+5. Reuse `preferHomeSleep` for scheduled sleep during active travel so distant NPC sleeps locally.
+6. Add pure continuation evaluator at the accompany idle-duty boundary using existing critical need/injury semantics and current resource candidates.
+7. Add source-specific abandonment orchestration: Work Contract release when applicable, then `endAccompany('abandoned')`.
+8. Extend generic `NpcTravelPurpose` with return-home purpose and start persistent travel from the captured current/checkpoint position.
+9. Extend generic checkpoint semantics so active accompany keeps settling survival after captured ETA; preserve exactly-once checkpointing.
+10. Resolve `travel.blocked` after reification: normal local need resolution first, then clear/resume or abandon; never magic-unblock.
+11. Extend existing trace/inspection with only the minimum reason/result needed to debug continuation/abandonment.
+12. Add JSDoc to important public/architectural helpers; use `@domain npc` where useful for preflight discovery.
 
-For important public/architectural helpers add focused JSDoc where it improves preflight discovery; use `@domain npc` where appropriate.
+## Automated verification
 
-## Verification
+Cover at least:
 
-### Automated — ordinary needs remain authoritative
+- critical hunger/thirst interrupts follow without clearing commitment when a viable source exists;
+- personal food/water is consumed from `personalInventory`;
+- away companion with empty provisions does **not** walk to remote household/economy/abstract garden/home well;
+- bounded nearby food/well source remains usable during travel;
+- Stage 2 allowed player-storage food/water/treatment works only through the authoritative policy/resource gate and respects reserve/current-state revalidation;
+- non-travel NPC retains current household/economy/garden/well behaviour;
+- follow walking still drains stamina through ordinary `goTo`; exhaustion recovers and resumes;
+- distant scheduled sleep uses local `sleep`, not multi-kilometre `goSleep(home)`;
+- waking re-arbitrates and resumes the same commitment;
+- bandage in `personalInventory` is seen by healing pressure and consumed by `beginHeal()`;
+- travel self-heal does not require home; ordinary non-travel heal behaviour remains valid;
+- ordinary hunger/thirst/exhaustion/sleep/combat/flee/path retry do not abandon;
+- critical unsatisfied survival state can produce `abandoned` only after normal source resolution proves no path;
+- paid escort abandonment calls existing Work Contract release semantics and does not create a positive wage claim;
+- voluntary abandonment does not touch Work Contracts;
+- abandonment captures current position, clears accompany and starts purpose-backed return-home travel;
+- return survives stream-out/save/load and arrival clears only the travel commitment;
+- blocked return never teleports home;
+- off-screen accompany continues hunger/thirst settlement beyond the captured spatial ETA;
+- `survivalResolvedAtDays` prevents duplicate need drift/consumption across repeated checkpoints/save/load;
+- off-screen exhaustion/vigor are preserved, not reset or independently re-simulated;
+- reified blocked travel attempts normal local resolution before abandonment;
+- multiple accompanying NPCs remain independent;
+- NPC without accompany/committed travel is regression-identical.
 
-Verify:
-
-```text
-follow
-→ critical hunger/thirst
-→ ordinary survival action
-→ accompany commitment survives
-→ need relieved
-→ ordinary re-arbitration
-→ same accompany duty resumes
-```
-
-NPC thresholds remain unchanged.
-
-### Automated — personal provisions
-
-Verify:
-
-- personal food is consumed before an unnecessary distant trip;
-- personal waterskin litres decrease through existing liquid-container semantics;
-- empty provisions provide no relief;
-- food freshness / liquid instance identity remain intact.
-
-### Automated — durable transferred medicine
-
-Verify:
-
-```text
-player gives NPC bandage
-→ personalInventory
-→ injury pressure sees it
-→ normal heal action consumes the same item
-```
-
-No required copy through `carried`.
-
-### Automated — player storage
-
-After `items-player-028` verify:
-
-- authorized NPC can use allowed food/water/medicine when ordinary pressure requires it;
-- forbidden resource is ignored;
-- minimum reserve is never crossed;
-- `assigned_only` is not treated as generic personal-need permission;
-- revoked temporary expedition grant prevents later access;
-- planning availability is revalidated at authoritative mutation.
-
-### Automated — fatigue/rest
-
-Verify:
-
-- detailed follow incurs ordinary movement fatigue;
-- exhaustion pauses movement and restores stamina;
-- recovery resumes the same commitment;
-- vigor collapse remains authoritative;
-- scheduled sleep while away does not trigger a long walk back to home solely because the clock changed;
-- waking allows normal re-arbitration and follow resume.
-
-### Automated — schedule boundary
-
-Verify an accompanying NPC does not leave a distant expedition solely because its settlement schedule enters `work`, `home`, `eat` or `social`, while physiological/sleep survival behaviour still functions.
-
-After return to normal locality, ordinary schedule behaviour resumes unchanged.
-
-### Automated — healing
-
-Verify:
-
-- healing pressure and execution resolve treatment from the same durable owner;
-- serious/critical injury follows existing `npc-025` semantics;
-- locally owned treatment does not require walking back to the home settlement;
-- natural recovery remains unchanged.
-
-### Automated — continuation / abandonment
-
-Verify ordinary hunger, thirst, exhausted stamina, sleep, one path failure, short separation and temporary combat interruption do not by themselves abandon the expedition.
-
-Verify a bounded state with no viable normal survival path can explicitly end the accompany commitment with an inspectable reason.
-
-Ending is idempotent.
-
-### Automated — return
-
-Verify:
-
-```text
-survival abandonment
-→ end accompany commitment
-→ generic return travel
-```
-
-Ordinary needs/injury/rest can still interrupt return. After reaching normal locality, ordinary schedule regains authority without companion-specific home state.
-
-### Automated — off-screen continuity
-
-Using the final shared travel foundation, verify:
-
-- needs continue consistently during off-screen travel;
-- personal food/water consumption uses the same `personalInventory`;
-- injury recovery remains elapsed-time based;
-- detailed → off-screen handoff does not double-tick survival;
-- off-screen → detailed does not reset needs/items;
-- repeated save/load/reification does not duplicate consumption or healing;
-- exactly one execution owner advances the travelling NPC.
-
-### Automated — persistence
-
-Prefer zero new `npc-032` persisted fields.
-
-Verify existing authoritative state survives save/load during:
-
-- ordinary accompaniment,
-- hunger/thirst interruption,
-- away rest,
-- injury/healing,
-- return after abandonment.
-
-### Automated — regressions
-
-NPC without active travel/accompany commitment retains unchanged:
-
-- schedules,
-- hunger/thirst,
-- Work Contracts,
-- healing,
-- profession work,
-- combat/flee,
-- household/economy resource acquisition.
-
-Existing `npc-017` remote-work provisioning remains functional after any small shared-helper extraction.
-
-### Manual browser verification — User
-
-AI does not perform browser verification.
-
-User should verify at least:
-
-1. Accompanying NPC becomes hungry/thirsty during a long journey, uses real owned supplies and later resumes follow.
-2. NPC can use permitted player storage while respecting reserve; no permission means no withdrawal.
-3. Long follow movement causes ordinary fatigue/exhaustion rather than free movement.
-4. Night/rest while away does not make the NPC walk kilometres home just because its schedule reached sleep.
-5. Local settlement work/home/social schedule does not pull an accompanying NPC out of the expedition.
-6. A wounded NPC can use a personally owned bandage while travelling.
-7. Ordinary survival interruptions do not end the expedition.
-8. A genuinely non-viable expedition can be explicitly abandoned for an inspectable reason.
-9. After abandonment the NPC sensibly returns toward normal life.
-10. Stream-out/in and save/load do not reset needs, injury, provisions or duplicate consumption.
-11. Ordinary NPCs without an accompany commitment behave as before.
+AI does not perform browser verification. Manual gameplay verification belongs to User.
 
 ## Completion criteria
 
-The plan is complete when an active accompany commitment does not create a special survival agent:
+The plan is complete when a companion remains an ordinary NPC:
 
 ```text
-normal NPC state
-+
-temporary accompany commitment
-        ↓
-ordinary needs / fatigue / injury
-        ↓
-ordinary resource acquisition
+ordinary needs/injury/rest
 + personalInventory
-+ permitted player storage
-        ↓
-ordinary survival interruption
-        ↓
-normal re-arbitration
-        ↓
-continue if commitment remains viable
-OR
-explicitly end commitment if no longer viable
-        ↓
-generic return
-        ↓
-ordinary NPC life
++ current-local legal sources
++ accompanyCommitment
+→ ordinary decision/action
+→ temporary survival interruption
+→ resume commitment
+   OR
+→ explicit bounded abandonment
+→ generic persistent return-home travel
+→ ordinary life
 ```
 
-The same authoritative state remains coherent across detailed and off-screen travel without `CompanionNeeds`, duplicated inventory/injury state or a parallel survival/travel engine.
+and the same authoritative state remains coherent across detailed/off-screen execution without companion-only state, remote home-resource assumptions, duplicated inventory or a second survival engine.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
