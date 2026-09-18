@@ -82,6 +82,7 @@ function stubNpc(
     gender?: 'male' | 'female'
     personality?: BigFivePersonality
     traits?: readonly Trait[]
+    followUp?: { kind: 'deliver_world_knowledge', id: string } | null
   } = {},
 ): NpcAgent {
   return {
@@ -96,6 +97,7 @@ function stubNpc(
     getDialogueLine: () => dialogueLine,
     preparePaymentRequest: () => paymentClaim,
     pendingVoluntaryJoinProposal: () => null,
+    pendingPlayerFollowUp: () => extras.followUp ?? null,
     voiceActor: 'alex',
     mesh: { position: { x: 0, y: 0, z: 0 } },
     stopPlayerReactionVoice: () => {},
@@ -210,6 +212,21 @@ describe('openNpcDialogueMenu talk_to_npc seam (plan quests-progression-014)', (
     expect(resolveNpcDialogueOpenTopic()).toBe('payment')
     expect(ui.npcDialogueMenu.paymentClaim?.coins).toBe(4)
     closeNpcDialogueMenu()
+  })
+
+  it('surfaces a pending Player follow-up without auto-opening or consuming it (plan npc-050)', () => {
+    const qm = new QuestManager([], undefined, new Inventory())
+    const npc = stubNpc('Piotr', PIOTR_ID, 'hello there', null, {
+      followUp: { kind: 'deliver_world_knowledge', id: 'followUp:1' },
+    })
+    openNpcDialogueMenu(npc, stubSettlement, qm, 12)
+
+    // Present at open time...
+    expect(ui.npcDialogueMenu.followUp).toEqual({ kind: 'deliver_world_knowledge', id: 'followUp:1' })
+    // ...but never the implicit auto-open topic (that stays payment/joinProposal only).
+    expect(resolveNpcDialogueOpenTopic()).toBeNull()
+    closeNpcDialogueMenu()
+    expect(ui.npcDialogueMenu.followUp).toBeNull()
   })
 
   it('does not advance talk_to_npc for a same-name NPC with a different id', () => {

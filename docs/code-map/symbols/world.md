@@ -1285,16 +1285,22 @@ Generated from exported TypeScript symbols.
 
 ## `world/locations/guardLocalKnowledge.ts`
 
-- `createGuardLocalKnowledge` — function — line 87
+- `createGuardLocalKnowledge` — function — line 116
   - domain: world-locations
-- `GUARD_AREA_RESEARCH_PENDING` — const — line 18
-- `GUARD_AREA_RESEARCH_STARTED` — const — line 16
-- `GUARD_LOCAL_KNOWLEDGE_CHUNK_RADIUS` — const — line 23
-- `GUARD_LOCAL_KNOWLEDGE_DELAY_DAYS` — const — line 22
-- `GuardLocalKnowledge` — type — line 46
-- `GuardLocalKnowledgeDeps` — type — line 54
-- `isSaveGuardLocalKnowledge` — function — line 223
-- `SaveGuardLocalKnowledge` — type — line 25
+- `GUARD_AREA_RESEARCH_PENDING` — const — line 20
+- `GUARD_AREA_RESEARCH_READY` — const — line 26
+- `GUARD_AREA_RESEARCH_STARTED` — const — line 18
+- `GUARD_LOCAL_KNOWLEDGE_CHUNK_RADIUS` — const — line 31
+- `GUARD_LOCAL_KNOWLEDGE_DELAY_DAYS` — const — line 30
+- `GuardLocalKnowledge` — type — line 70
+  - domain: world-locations
+- `GuardLocalKnowledgeDeps` — type — line 78
+- `isSaveGuardLocalKnowledge` — function — line 261
+- `isSaveGuardLocalKnowledgeByNpc` — function — line 273
+- `normalizeSaveGuardLocalKnowledge` — function — line 289
+  - domain: world-locations
+- `SaveGuardLocalKnowledge` — type — line 33
+- `SaveGuardLocalKnowledgeByNpc` — type — line 53
 
 ## `world/locations/knownSettlementReputation.ts`
 
@@ -1401,6 +1407,12 @@ Generated from exported TypeScript symbols.
 - `NavigationTargets` — type — line 21
 - `setActiveNavigationTargets` — function — line 90
 - `SetTargetResult` — type — line 12
+
+## `world/locations/npcPlayerFollowUpDelivery.ts`
+
+- `deliverNpcWorldKnowledgeFollowUp` — function — line 24
+  - domain: world-locations
+- `NpcPlayerFollowUpDeliveryDeps` — type — line 7
 
 ## `world/locations/revealLocationKnowledge.ts`
 

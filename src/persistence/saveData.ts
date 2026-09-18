@@ -21,7 +21,7 @@ import type { SaveTemporaryConditionsSnapshot } from '../shared/temporaryConditi
 import type { TrapKind, TrapState } from '../world/animalTraps'
 import type { CropId } from '../world/cropLifecycle'
 import type { ExpeditionAssignment } from '../world/expeditionAssignment'
-import type { SaveGuardLocalKnowledge } from '../world/locations/guardLocalKnowledge'
+import type { SaveGuardLocalKnowledge, SaveGuardLocalKnowledgeByNpc } from '../world/locations/guardLocalKnowledge'
 import type { MapConfidence, MapSource } from '../world/map/mapTypes'
 import type { SaveGrave } from '../world/npcGraves'
 import type { WellStage } from '../world/playerWell'
@@ -44,7 +44,7 @@ import { isTradeGrievanceList, type TradeGrievance } from '../items/tradeGrievan
 import { QUEST_STATES, type QuestProgressEntry } from '../quests/quests'
 import { isPreparationSize, type PreparationSize } from '../terrain/terrainPreparation'
 import { CONDITION_MAX } from '../world/condition'
-import { isSaveGuardLocalKnowledge } from '../world/locations/guardLocalKnowledge'
+import { isSaveGuardLocalKnowledge, isSaveGuardLocalKnowledgeByNpc } from '../world/locations/guardLocalKnowledge'
 import { PALISADE_REQUIRED_WORK } from '../world/palisade'
 import { PLAYER_TROUGH_CAPACITY_LITRES, PLAYER_TROUGH_REQUIRED_WORK } from '../world/playerTrough'
 import { WELL_STAGE_WORK_HOURS } from '../world/playerWell'
@@ -178,9 +178,13 @@ export type SaveMap = {
    *  max 3 — re-validated against current knowledge on load, never trusted
    *  blindly (see `world/locations/navigationTargets.ts`'s `restore`). */
   targets: string[]
-  /** Home-guard local-knowledge research wait/selection (plan quests-progression-047).
-   *  Absent on older saves = idle. Worker handles are never stored. */
-  guardLocalKnowledge?: SaveGuardLocalKnowledge
+  /** Per-asking-NPC local-knowledge research wait/selection (plan
+   *  quests-progression-047, generalized by npc-050 §10). Absent on older
+   *  saves = no requests in flight. Worker handles are never stored. A
+   *  legacy single-object save (pre-npc-050, home-guard-only) is still
+   *  accepted here and normalized onto the stable home-guard id in
+   *  `createApp.ts` at restore time. */
+  guardLocalKnowledge?: SaveGuardLocalKnowledge | SaveGuardLocalKnowledgeByNpc
 }
 
 /** Reputation Badges / Achievements (plan world-007 §10) — `hiddenFindsFound`
@@ -1089,7 +1093,11 @@ function isSaveMap(value: unknown): value is SaveMap {
   if (!map.discoveredCells.every((cell) => typeof cell === 'string')) return false
   if (!isSaveLocationKnowledgeField(map.discoveredLocations)) return false
   if (!Array.isArray(map.targets) || !map.targets.every((id) => typeof id === 'string')) return false
-  if (map.guardLocalKnowledge !== undefined && !isSaveGuardLocalKnowledge(map.guardLocalKnowledge)) return false
+  if (
+    map.guardLocalKnowledge !== undefined
+    && !isSaveGuardLocalKnowledge(map.guardLocalKnowledge)
+    && !isSaveGuardLocalKnowledgeByNpc(map.guardLocalKnowledge)
+  ) return false
   return true
 }
 
@@ -2007,7 +2015,28 @@ function isNpcStateSnapshot(value: unknown): value is NpcStateSnapshot {
   if (s.accompanyCommitment !== undefined && s.accompanyCommitment !== null && !isNpcAccompanyCommitment(s.accompanyCommitment)) return false
   if (s.travel !== undefined && s.travel !== null && !isNpcTravelContinuity(s.travel)) return false
   if (s.merchantJourney !== undefined && s.merchantJourney !== null && !isMerchantJourneyState(s.merchantJourney)) return false
+  if (s.playerFollowUp !== undefined && s.playerFollowUp !== null && !isNpcPlayerFollowUp(s.playerFollowUp)) return false
   return true
+}
+
+const NPC_WORLD_KNOWLEDGE_FOLLOW_UP_SOURCE_KINDS: ReadonlySet<string> = new Set(['guard', 'hunter'])
+const NPC_PLAYER_FOLLOW_UP_MAX_LOCATIONS = 8
+
+/** Validates a `NpcPlayerFollowUp` (plan npc-050) — plain semantic data with
+ *  stable ids only, never a runtime ref. Fail-closed: an unrecognized `kind`
+ *  or malformed source/payload rejects the whole save (`isNpcStateSnapshot`),
+ *  rather than silently inventing a follow-up. */
+function isNpcPlayerFollowUp(value: unknown): boolean {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const f = value as Record<string, unknown>
+  if (f.kind !== 'deliver_world_knowledge') return false
+  if (typeof f.id !== 'string' || f.id.length === 0) return false
+  if (typeof f.createdAtDays !== 'number' || !Number.isFinite(f.createdAtDays) || f.createdAtDays < 0) return false
+  if (!f.source || typeof f.source !== 'object' || Array.isArray(f.source)) return false
+  const source = f.source as Record<string, unknown>
+  if (typeof source.kind !== 'string' || !NPC_WORLD_KNOWLEDGE_FOLLOW_UP_SOURCE_KINDS.has(source.kind)) return false
+  if (!Array.isArray(f.selectedLocationIds) || f.selectedLocationIds.length > NPC_PLAYER_FOLLOW_UP_MAX_LOCATIONS) return false
+  return f.selectedLocationIds.every((id) => typeof id === 'string')
 }
 
 const MERCHANT_JOURNEY_PHASES: ReadonlySet<string> = new Set(['outbound', 'returning', 'visiting'])

@@ -28,6 +28,7 @@ function stubNpc(partial: Partial<NpcAgent> & Pick<NpcAgent, 'id' | 'displayName
     getDialogueLine: () => 'hello',
     preparePaymentRequest: () => null,
     pendingVoluntaryJoinProposal: () => null,
+    pendingPlayerFollowUp: () => null,
     voiceActor: 'alex',
     mesh: { position: { x: 0, y: 0, z: 0 } },
     stopPlayerReactionVoice: () => {},

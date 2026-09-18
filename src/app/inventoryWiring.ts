@@ -1,4 +1,5 @@
 import type { NpcAgent } from '../ai/NpcAgent'
+import type { NpcWorldKnowledgeFollowUpSource } from '../ai/npcPlayerFollowUp'
 import type { createWorldAudio } from '../audio/createWorldAudio'
 import type { EquipmentSlot, EquipmentState } from '../items/equipment'
 import type { HeldTool } from '../items/HeldTool'
@@ -20,6 +21,7 @@ import type { NpcTradeStockRow } from '../ui-vue/store'
 import type { Hud } from '../ui/createHud'
 import type { Toast } from '../ui/createToast'
 import type { DayNightState } from '../world/dayNight'
+import type { GuardLocalKnowledge } from '../world/locations/guardLocalKnowledge'
 import type { LocationKnowledge } from '../world/locations/locationKnowledge'
 import type { NavigationTargets } from '../world/locations/navigationTargets'
 import type { WorldLocationCatalog } from '../world/locations/worldLocationCatalog'
@@ -75,6 +77,7 @@ import {
 } from '../settlement/horseAcquisition'
 import { horseVendorNpcId } from '../settlement/merchantTrade'
 import { hideBusy, showBusy, ui } from '../ui-vue/store'
+import { GUARD_AREA_RESEARCH_PENDING } from '../world/locations/guardLocalKnowledge'
 import {
   FAR_RANGE_KM,
   MEDIUM_RANGE_KM,
@@ -86,6 +89,7 @@ import {
   settlementsInBand,
   weightedTopN,
 } from '../world/locations/locationDiscovery'
+import { deliverNpcWorldKnowledgeFollowUp } from '../world/locations/npcPlayerFollowUpDelivery'
 import { revealLocationKnowledge } from '../world/locations/revealLocationKnowledge'
 import { payWorkContractAssignment } from './actions/workContractPayment'
 
@@ -209,8 +213,9 @@ export type InventoryWiringDeps = {
   locationKnowledge: LocationKnowledge
   navigationTargets: NavigationTargets
   dayNight: DayNightState
-  /** Home-guard deferred local-knowledge research (plan quests-progression-047). */
-  guardLocalKnowledge: { askAboutArea: (originX: number, originZ: number) => string }
+  /** Per-asking-NPC deferred local-knowledge research (plan
+   *  quests-progression-047, generalized by npc-050). */
+  guardLocalKnowledge: Pick<GuardLocalKnowledge, 'askAboutArea'>
   /** Opens the Player → NPC give sheet (plan items-player-027). */
   openNpcGiveItem: (npcId: string, displayName: string) => void
 }
@@ -926,8 +931,16 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
     },
     onRequestFood: (npc) => resolveAssistanceDialogue(npc, 'food'),
     onRequestWater: (npc) => resolveAssistanceDialogue(npc, 'water'),
-    onAskAboutArea: () => {
-      return guardLocalKnowledge.askAboutArea(player.mesh.position.x, player.mesh.position.z)
+    onAskAboutArea: (npc) => {
+      const npcState = bundle.settlementsManager.getNpcState(npc.id)
+      if (!npcState) return GUARD_AREA_RESEARCH_PENDING
+      const deliveryDeps = { getLocation: (id: string) => locationCatalog.getById(id), locationKnowledge }
+      const pending = npcState.playerFollowUp
+      if (pending) return deliverNpcWorldKnowledgeFollowUp(deliveryDeps, npcState, pending.id) ?? GUARD_AREA_RESEARCH_PENDING
+      const source: NpcWorldKnowledgeFollowUpSource = { kind: npc.role === 'hunter' ? 'hunter' : 'guard' }
+      const line = guardLocalKnowledge.askAboutArea(npc.id, player.mesh.position.x, player.mesh.position.z, source)
+      const justArmed = npcState.playerFollowUp
+      return justArmed ? (deliverNpcWorldKnowledgeFollowUp(deliveryDeps, npcState, justArmed.id) ?? line) : line
     },
     onPayWage: () => {
       const npc = ui.npcDialogueMenu.npc as NpcAgent | null

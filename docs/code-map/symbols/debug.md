@@ -231,11 +231,11 @@ Generated from exported TypeScript symbols.
 
 ## `debug/npcTrace.ts`
 
-- `createNpcTraceBuffer` — function — line 157
-- `NPC_TRACE_CAPACITY` — const — line 155
-- `NpcTraceBuffer` — type — line 148
+- `createNpcTraceBuffer` — function — line 162
+- `NPC_TRACE_CAPACITY` — const — line 160
+- `NpcTraceBuffer` — type — line 153
 - `NpcTraceEvent` — type — line 15
-- `NpcTraceEventType` — type — line 140
+- `NpcTraceEventType` — type — line 145
 
 ## `debug/playerGroundTrace.ts`
 

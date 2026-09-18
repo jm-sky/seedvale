@@ -4,6 +4,7 @@ import type { NpcAgent } from '../ai/NpcAgent'
 import type { QuestDialoguePreviewEntry } from '../quests/QuestManager'
 import { nearestArchetype } from '../ai/dialogue'
 import { aboutSelfLine, aboutVillageLine, currentActivityLine, goodbyeLine } from '../ai/dialogueTemplates'
+import { isAdultAge } from '../settlement/professionStaffing'
 import { useOverlayScreen } from './composables/useOverlayScreen'
 import {
   acceptNpcDialogueOffer,
@@ -74,6 +75,15 @@ const helpDrilled = ref(false)
 /** When true, leaving a drilled help payload returns to Aktywne sprawy. */
 const activeMattersOrigin = ref(false)
 const isHomeGuard = computed(() => state.npc?.role === 'guard' && state.settlement?.isHome === true)
+/** "Opowiedz mi coś o okolicy" eligibility (plan world-012 §7, extended to
+ *  living local hunters by npc-050 §9) — same canonical `role` other quest
+ *  modules already key off, no separate "knows area" flag. */
+const canAskAboutArea = computed(() => {
+  const npc = state.npc
+  if (!npc || npc.health.dead) return false
+  if (isHomeGuard.value) return true
+  return npc.role === 'hunter' && isAdultAge(npc.age)
+})
 const guardRewardLine = ref('')
 const foodLine = ref('')
 const waterLine = ref('')
@@ -275,12 +285,13 @@ function requestWater(): void {
 }
 
 async function askAboutArea(): Promise<void> {
-  if (discoveringArea.value) return
+  const npc = state.npc as NpcAgent | null
+  if (discoveringArea.value || !npc) return
   emitUiClick()
   topicOriginGroup.value = group.value
   discoveringArea.value = true
   try {
-    areaLine.value = await state.onAskAboutArea?.() ?? ''
+    areaLine.value = await state.onAskAboutArea?.(npc) ?? ''
     topic.value = 'aboutArea'
   } finally {
     discoveringArea.value = false
@@ -498,7 +509,7 @@ watch(() => state.open, (open) => {
         class="flex flex-col gap-2"
       >
         <button
-          v-if="isHomeGuard"
+          v-if="canAskAboutArea"
           type="button"
           class="cursor-pointer rounded-md bg-white/5 px-3 py-2 text-left text-sm hover:bg-white/10"
           :disabled="discoveringArea"

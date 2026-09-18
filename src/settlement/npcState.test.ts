@@ -105,6 +105,38 @@ describe('createNpcStateRegistry', () => {
     expect(hydrated.graveVisits).not.toBe(state.graveVisits)
   })
 
+  it('defaults playerFollowUp to null for a genuinely new npc and round-trips an armed one (plan npc-050)', () => {
+    const before = createNpcStateRegistry()
+    const state = before.getOrCreate('0_0:npc:0', 0)
+    expect(state.playerFollowUp).toBeNull()
+
+    const selectedLocationIds = ['cemetery:a:1', 'ruins:b:2']
+    state.playerFollowUp = {
+      kind: 'deliver_world_knowledge',
+      id: 'playerFollowUp:0_0:npc:0:1',
+      createdAtDays: 3,
+      source: { kind: 'guard' },
+      selectedLocationIds,
+    }
+
+    const hydrated = createNpcStateRegistry(before.serialize()).getOrCreate('0_0:npc:0', 0)
+    expect(hydrated.playerFollowUp).toEqual(state.playerFollowUp)
+    expect(hydrated.playerFollowUp).not.toBe(state.playerFollowUp)
+    expect(hydrated.playerFollowUp?.selectedLocationIds).not.toBe(selectedLocationIds)
+  })
+
+  it('an older snapshot without playerFollowUp still loads with no follow-up (plan npc-050)', () => {
+    const registry = createNpcStateRegistry({
+      '0_0:npc:0': {
+        health: { current: 100, max: 100, dead: false },
+        stamina: { current: 100, max: 100 },
+        vigor: { current: 100, max: 100 },
+        needs: { thirst: 0, woodDuty: 0, waterDuty: 0, hunger: 0 },
+      },
+    })
+    expect(registry.getOrCreate('0_0:npc:0', 0).playerFollowUp).toBeNull()
+  })
+
   it('clear() drops every state so the next getOrCreate starts fresh', () => {
     const registry = createNpcStateRegistry()
     const state = registry.getOrCreate('0_0:npc:0', 0)

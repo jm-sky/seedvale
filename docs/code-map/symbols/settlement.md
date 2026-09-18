@@ -547,44 +547,44 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/npcPostDeath.ts`
 
-- `canLootNpcCorpse` — function — line 209
-- `claimNpcCorpseForBurial` — function — line 148
-- `cloneNpcCorpseLoot` — function — line 67
-- `cloneNpcPostDeath` — function — line 71
-- `commitNpcDeath` — function — line 238
-- `corpseLootInventory` — function — line 216
-- `createActiveNpcPostDeath` — function — line 104
-- `createEmptyNpcCorpseLoot` — function — line 85
-- `createLegacyTerminalNpcPostDeath` — function — line 91
-- `dropNpcCorpseLoot` — function — line 295
-- `EMPTY_NPC_CORPSE_LOOT` — const — line 62
-- `finalizeExpiredNpcCorpse` — function — line 315
-- `FinalizeNpcBurialResult` — type — line 188
-- `finalizeNpcCorpseBurial` — function — line 192
-- `hasActiveNpcCorpse` — function — line 123
-- `isNpcCorpseBuryable` — function — line 180
-- `markNpcPostDeathTerminal` — function — line 142
-- `NPC_CORPSE_BONES_ONSET_DAYS` — const — line 59
-- `NPC_CORPSE_REMOVE_DAYS` — const — line 60
-- `NPC_CORPSE_ROT_ONSET_DAYS` — const — line 58
-- `npcCorpseBurialClaimOwner` — function — line 176
-- `NpcCorpseCleanupReason` — type — line 30
-- `NpcCorpseLootSnapshot` — type — line 38
-- `NpcCorpsePhase` — type — line 28
-- `npcCorpsePhaseFromElapsedDays` — function — line 127
-- `npcCorpseReadyToRemove` — function — line 137
-- `NpcPostDeathState` — type — line 40
-- `NpcPostDeathStatus` — type — line 26
+- `canLootNpcCorpse` — function — line 210
+- `claimNpcCorpseForBurial` — function — line 149
+- `cloneNpcCorpseLoot` — function — line 68
+- `cloneNpcPostDeath` — function — line 72
+- `commitNpcDeath` — function — line 243
+- `corpseLootInventory` — function — line 217
+- `createActiveNpcPostDeath` — function — line 105
+- `createEmptyNpcCorpseLoot` — function — line 86
+- `createLegacyTerminalNpcPostDeath` — function — line 92
+- `dropNpcCorpseLoot` — function — line 301
+- `EMPTY_NPC_CORPSE_LOOT` — const — line 63
+- `finalizeExpiredNpcCorpse` — function — line 321
+- `FinalizeNpcBurialResult` — type — line 189
+- `finalizeNpcCorpseBurial` — function — line 193
+- `hasActiveNpcCorpse` — function — line 124
+- `isNpcCorpseBuryable` — function — line 181
+- `markNpcPostDeathTerminal` — function — line 143
+- `NPC_CORPSE_BONES_ONSET_DAYS` — const — line 60
+- `NPC_CORPSE_REMOVE_DAYS` — const — line 61
+- `NPC_CORPSE_ROT_ONSET_DAYS` — const — line 59
+- `npcCorpseBurialClaimOwner` — function — line 177
+- `NpcCorpseCleanupReason` — type — line 31
+- `NpcCorpseLootSnapshot` — type — line 39
+- `NpcCorpsePhase` — type — line 29
+- `npcCorpsePhaseFromElapsedDays` — function — line 128
+- `npcCorpseReadyToRemove` — function — line 138
+- `NpcPostDeathState` — type — line 41
+- `NpcPostDeathStatus` — type — line 27
   - domain: npc
   - role: Authoritative NPC corpse lifecycle, loot snapshot and burial handoff.
   - owns: NpcPostDeathState
-- `recoverStaleNpcBurialClaim` — function — line 167
-- `releaseNpcCorpseBurialClaim` — function — line 158
-- `resolveNpcCorpsePhase` — function — line 132
-- `shouldSkipNpcCorpsePresentation` — function — line 327
-- `snapshotCorpseLoot` — function — line 220
-- `transferCorpseCountTo` — function — line 277
-- `transferCorpseInstanceTo` — function — line 261
+- `recoverStaleNpcBurialClaim` — function — line 168
+- `releaseNpcCorpseBurialClaim` — function — line 159
+- `resolveNpcCorpsePhase` — function — line 133
+- `shouldSkipNpcCorpsePresentation` — function — line 333
+- `snapshotCorpseLoot` — function — line 221
+- `transferCorpseCountTo` — function — line 283
+- `transferCorpseInstanceTo` — function — line 267
 
 ## `settlement/npcRelationships.ts`
 
@@ -594,17 +594,17 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/npcState.ts`
 
-- `createNpcAuthoritativeState` — function — line 268
-- `createNpcStateRegistry` — function — line 317
-- `MAX_HP` — const — line 50
-- `MAX_STAMINA` — const — line 51
-- `NpcAuthoritativeState` — type — line 88
+- `createNpcAuthoritativeState` — function — line 279
+- `createNpcStateRegistry` — function — line 329
+- `MAX_HP` — const — line 51
+- `MAX_STAMINA` — const — line 52
+- `NpcAuthoritativeState` — type — line 89
   - domain: settlements-npcs
-- `NpcGraveVisitRecord` — type — line 42
-- `NpcId` — type — line 38
-- `NpcPhysicalMaxima` — type — line 254
-- `NpcStateRegistry` — type — line 303
-- `NpcStateSnapshot` — type — line 180
+- `NpcGraveVisitRecord` — type — line 43
+- `NpcId` — type — line 39
+- `NpcPhysicalMaxima` — type — line 265
+- `NpcStateRegistry` — type — line 315
+- `NpcStateSnapshot` — type — line 187
 
 ## `settlement/pathDryness.ts`
 

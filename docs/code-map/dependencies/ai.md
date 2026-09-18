@@ -69,6 +69,7 @@ Generated from TypeScript imports.
 - `ai/npcColliderRim.ts`
 - `ai/npcCombat.ts`
 - `ai/npcDecision.ts`
+- `ai/npcInitiatedDialogueRequest.ts`
 - `ai/npcLoadout.ts`
 - `ai/npcLocomotion.ts`
 - `ai/npcLogistics.ts`
@@ -78,6 +79,7 @@ Generated from TypeScript imports.
 - `ai/npcMovementWatchdog.ts`
 - `ai/npcPersonalProvisions.ts`
 - `ai/npcPlan.ts`
+- `ai/npcPlayerFollowUp.ts`
 - `ai/npcProfessionWork.ts`
 - `ai/npcStrategies.ts`
 - `ai/npcTravel.ts`
@@ -440,6 +442,7 @@ Generated from TypeScript imports.
 - `app/inventoryWiring.ts`
 - `world/locations/guardLocalKnowledge.test.ts`
 - `world/locations/guardLocalKnowledge.ts`
+- `world/locations/npcPlayerFollowUpDelivery.ts`
 
 ## `ai/economicPressure.test.ts`
 
@@ -880,6 +883,13 @@ Generated from TypeScript imports.
 - `app/worldBundle.ts`
 - `settlement/SettlementsManager.ts`
 
+## `ai/npcInitiatedDialogueRequest.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `app/createApp.ts`
+
 ## `ai/npcLoadout.test.ts`
 
 **Imports**
@@ -1170,6 +1180,27 @@ Generated from TypeScript imports.
 - `ai/npcPlan.test.ts`
 - `debug/npcTrace.ts`
 - `settlement/npcState.ts`
+
+## `ai/npcPlayerFollowUp.test.ts`
+
+**Imports**
+
+- `ai/npcPlayerFollowUp.ts`
+
+## `ai/npcPlayerFollowUp.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `ai/npcPlayerFollowUp.test.ts`
+- `app/createApp.ts`
+- `app/inventoryWiring.ts`
+- `settlement/npcPostDeath.ts`
+- `settlement/npcState.ts`
+- `world/locations/guardLocalKnowledge.test.ts`
+- `world/locations/guardLocalKnowledge.ts`
+- `world/locations/npcPlayerFollowUpDelivery.test.ts`
+- `world/locations/npcPlayerFollowUpDelivery.ts`
 
 ## `ai/npcPlayerReactionVoice.test.ts`
 

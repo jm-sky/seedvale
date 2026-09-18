@@ -1211,6 +1211,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `ai/npcPlayerFollowUp.ts`
 - `items/Inventory.ts`
 - `items/createDroppedItems.ts`
 - `items/foodItems.ts`
@@ -1267,6 +1268,7 @@ Generated from TypeScript imports.
 - `ai/helperAssignment.ts`
 - `ai/npcAccompanyCommitment.ts`
 - `ai/npcPlan.ts`
+- `ai/npcPlayerFollowUp.ts`
 - `ai/npcTravel.ts`
 - `ai/npcVigor.ts`
 - `items/Inventory.ts`
@@ -1329,6 +1331,7 @@ Generated from TypeScript imports.
 - `world/expeditionParty.ts`
 - `world/expeditionProvisioning.test.ts`
 - `world/expeditionProvisioning.ts`
+- `world/locations/guardLocalKnowledge.ts`
 - `world/transportOffscreen.test.ts`
 - `world/transportOffscreen.ts`
 - `world/transportTravelArrival.test.ts`

@@ -292,6 +292,8 @@ function formatEvent(event: NpcTraceEvent): string {
     case 'plan.created': return `${t}s plan.created → ${event.goal}`
     case 'plan.progressed': return `${t}s plan.progressed → ${event.goal} +${event.amount} (${event.total})`
     case 'plan.stateChanged': return `${t}s plan.stateChanged → ${event.goal} ${event.from} → ${event.to}`
+    case 'playerFollowUp.approachStarted': return `${t}s playerFollowUp.approachStarted → ${event.followUpId}`
+    case 'playerFollowUp.dialogueOpened': return `${t}s playerFollowUp.dialogueOpened → ${event.followUpId}`
     case 'queue.joined': return `${t}s queue.joined → ${event.queueId}`
     case 'queue.left': return `${t}s queue.left → ${event.queueId}`
     case 'queue.served': return `${t}s queue.served → ${event.queueId}`

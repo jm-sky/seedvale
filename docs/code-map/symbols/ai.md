@@ -181,25 +181,25 @@ Generated from exported TypeScript symbols.
 
 ## `ai/NpcAgent.ts`
 
-- `classifyPendingActivity` — function — line 741
-- `configureNpcPlayerReactionAudio` — function — line 989
-- `CurrentActivity` — type — line 551
-- `CurrentActivityKind` — type — line 544
-- `HUNT_RESUPPLY_ARROW_TARGET` — const — line 858
-- `NPC_HEIGHT` — const — line 483
-- `NPC_SHADOW_DISTANCE` — const — line 488
-- `NpcAgent` — class — line 1121
+- `classifyPendingActivity` — function — line 753
+- `configureNpcPlayerReactionAudio` — function — line 1001
+- `CurrentActivity` — type — line 554
+- `CurrentActivityKind` — type — line 547
+- `HUNT_RESUPPLY_ARROW_TARGET` — const — line 870
+- `NPC_HEIGHT` — const — line 486
+- `NPC_SHADOW_DISTANCE` — const — line 491
+- `NpcAgent` — class — line 1140
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcAgentDeps` — type — line 1006
-- `NpcInspectionSnapshot` — type — line 566
-- `NpcWhy` — type — line 716
-- `projectNpcWhy` — function — line 783
-- `promoteChainKind` — function — line 733
+- `NpcAgentDeps` — type — line 1018
+- `NpcInspectionSnapshot` — type — line 569
+- `NpcWhy` — type — line 728
+- `projectNpcWhy` — function — line 795
+- `promoteChainKind` — function — line 745
 
 ## `ai/npcAnimalThreat.ts`
 
@@ -371,6 +371,14 @@ Generated from exported TypeScript symbols.
 - `ReadyExpeditionAssignmentSlice` — type — line 22
   - domain: settlements-npcs
 
+## `ai/npcInitiatedDialogueRequest.ts`
+
+- `configureRequestNpcInitiatedDialogue` — function — line 23
+- `getSharedRequestNpcInitiatedDialogue` — function — line 27
+- `RequestNpcInitiatedDialogue` — type — line 19
+- `RequestNpcInitiatedDialogueReason` — type — line 17
+  - domain: npc
+
 ## `ai/npcLoadout.ts`
 
 - `defaultWeaponForRole` — function — line 23
@@ -534,6 +542,18 @@ Generated from exported TypeScript symbols.
 - `progressPlan` — function — line 154
 - `resumePlan` — function — line 125
 - `setPlanStrategy` — function — line 109
+
+## `ai/npcPlayerFollowUp.ts`
+
+- `armNpcPlayerFollowUp` — function — line 70
+  - domain: npc
+- `cloneNpcPlayerFollowUp` — function — line 41
+- `consumeNpcPlayerFollowUp` — function — line 90
+- `createNpcPlayerFollowUpId` — function — line 30
+- `NpcPlayerFollowUp` — type — line 16
+- `NpcPlayerFollowUpHost` — type — line 56
+- `NpcWorldKnowledgeFollowUpSource` — type — line 14
+  - domain: npc
 
 ## `ai/npcProfessionWork.ts`
 

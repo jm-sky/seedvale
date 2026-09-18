@@ -19,7 +19,7 @@ import type { VueUi } from '../ui-vue/mount'
 import type { CropPlacement } from '../world/cropLifecycle'
 import type { DayNightState } from '../world/dayNight'
 import type { FishingBaitState } from '../world/fishing'
-import type { SaveGuardLocalKnowledge } from '../world/locations/guardLocalKnowledge'
+import type { SaveGuardLocalKnowledgeByNpc } from '../world/locations/guardLocalKnowledge'
 import type { LocationKnowledge } from '../world/locations/locationKnowledge'
 import type { NavigationTargets } from '../world/locations/navigationTargets'
 import type { MapDiscovery } from '../world/map/mapDiscovery'
@@ -79,7 +79,7 @@ export type SaveStateDeps = {
    *  layer (see `world/locations/locationKnowledge.ts`'s doc). */
   locationKnowledge: LocationKnowledge
   navigationTargets: NavigationTargets
-  getGuardLocalKnowledge?: () => SaveGuardLocalKnowledge | undefined
+  getGuardLocalKnowledge?: () => SaveGuardLocalKnowledgeByNpc | undefined
   landOwnership: LandOwnershipRegistry
   vueUi: VueUi
   worldFlags: {

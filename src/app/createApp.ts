@@ -12,6 +12,8 @@ import type { PlayerActionContext } from './actions/actionContext'
 import { configureNpcPlayerReactionAudio } from '../ai/NpcAgent'
 import { NpcBarkLimiter } from '../ai/npcBarkLimiter'
 import { configureRequestNpcBark, createRequestNpcBark } from '../ai/npcBarkRequest'
+import { configureRequestNpcInitiatedDialogue } from '../ai/npcInitiatedDialogueRequest'
+import { armNpcPlayerFollowUp } from '../ai/npcPlayerFollowUp'
 import { NEUTRAL_PLAYER_SOCIAL_STATE } from '../ai/reactionChance'
 import { playAnimalCombatDeath } from '../audio/actionSounds'
 import { playNegativeConsequence } from '../audio/consequenceSounds'
@@ -255,7 +257,7 @@ import {
 } from '../world/locations/abandonedCemeteryCache'
 import { isDarkForestTreasureChestLooted } from '../world/locations/darkForestTreasureSite'
 import { getActiveDarkForestTreasureSite } from '../world/locations/darkForestTreasureSiteRuntime'
-import { createGuardLocalKnowledge } from '../world/locations/guardLocalKnowledge'
+import { createGuardLocalKnowledge, normalizeSaveGuardLocalKnowledge } from '../world/locations/guardLocalKnowledge'
 import { listKnownSettlementOptions, resolveCharacterReputationSettlementId } from '../world/locations/knownSettlementReputation'
 import { createLocationKnowledge, setActiveLocationKnowledge } from '../world/locations/locationKnowledge'
 import {
@@ -922,8 +924,18 @@ export async function createApp(
     nearestSettlements: (originX, originZ, maxKm) => worldLocationCatalog.nearestSettlements(originX, originZ, maxKm),
     homeLocationId: () => settlementLocationId(bundle.settlementsManager.getHomeDef()),
     searchChunkRadius: LANDMARK_QUEST_SEARCH_CHUNK_RADIUS,
+    // Ready research transfers into the asking NPC's own authoritative
+    // follow-up (plan npc-050 §8) — this service stops being a second
+    // owner of the deliverable result once armed.
+    armFollowUp: (npcId, followUp) => {
+      const state = bundle.settlementsManager.getNpcState(npcId)
+      if (!state) return null
+      return armNpcPlayerFollowUp(state, { kind: 'deliver_world_knowledge', ...followUp }, npcId)
+    },
   })
-  guardLocalKnowledge.restore(initialSave?.map.guardLocalKnowledge)
+  // Restored once `homeGuardNpcId` is resolved further below — a legacy
+  // (pre-npc-050) save's anonymous single record needs that stable id to
+  // migrate onto (plan npc-050 §10).
   const locationProximityDiscovery = createLocationProximityDiscovery({
     getCaveDefinitions: () => bundle.caves.definitions(),
     lookupSettlement: lookupSettlementCell,
@@ -1603,6 +1615,7 @@ export async function createApp(
   }
 
   const homeGuardNpcId = selectGuardQuestGiver(npcsBySettlement.get(homeSettlementId) ?? [])?.id
+  guardLocalKnowledge.restore(normalizeSaveGuardLocalKnowledge(initialSave?.map.guardLocalKnowledge, homeGuardNpcId))
   const questDefs = [...authoredQuestDefs, ...opportunityQuestDefs]
   const initialQuestState = initialSave?.quests
     ? {
@@ -3247,6 +3260,24 @@ export async function createApp(
     vueUi.isWorldMapOpen() ||
     vueUi.isWorldInspectionOpen() ||
     vueUi.isActionConfirmOpen()
+  // NPC-initiated dialogue-open runtime seam (plan npc-050 §6) — `NpcAgent`
+  // never imports Vue; on `approachPlayer` arrival for an outstanding Player
+  // follow-up it calls this instead. Reuses the same "another modal already
+  // has the cursor" gate as `blocksGamePointerLockRestore` rather than a
+  // second ad hoc UI-busy check; a denial leaves the follow-up pending for a
+  // later idle-duty attempt.
+  configureRequestNpcInitiatedDialogue((npcId) => {
+    if (blocksGamePointerLockRestore() || player.isDowned()) return false
+    for (const settlement of bundle.settlementsManager.getLoaded()) {
+      const npc = settlement.npcs.find((entry) => entry.id === npcId)
+      if (!npc) continue
+      if (npc.health.dead) return false
+      exitGamePointerLock(renderer.domElement)
+      vueUi.openNpcDialogueMenu(npc, settlement, questManager, dayNight.timeOfDay)
+      return true
+    }
+    return false
+  })
   const scheduleRestorePointerLockAfterFlavorDialog = (): void => {
     queueMicrotask(() => {
       if (!restorePointerLockAfterFlavorDialog) return
@@ -3586,6 +3617,7 @@ export async function createApp(
     configureNpcVoiceSounds(null)
     configureNpcPlayerReactionAudio(null)
     configureRequestNpcBark(null)
+    configureRequestNpcInitiatedDialogue(null)
     configureAudioVolumes(worldAudio.getVolumes(), null)
     worldAudio.dispose()
     // Marks a still-in-flight initial-boot background phase stale before

@@ -1,3 +1,4 @@
+import type { NpcPlayerFollowUp } from '../ai/npcPlayerFollowUp'
 import type { DroppedItems } from '../items/createDroppedItems'
 import type { ItemKind } from '../items/items'
 import { expandFoodBatchesToUnits } from '../items/foodItems'
@@ -234,9 +235,13 @@ export function snapshotCorpseLoot(inventory: Inventory): NpcCorpseLootSnapshot 
  * deliberately does not become corpse loot; carrier death is a known,
  * unresolved gap (order stays `in-transit`, cargo stays on the dead NPC's
  * state) left for a future corpse/cargo-handoff plan.
+ *
+ * Also clears an undelivered Player follow-up (plan npc-050) — a dead NPC
+ * cannot approach or answer, and this is the one-shot alive→dead edge, not
+ * `NpcAgent.die()` (which also runs for already-dead hydration).
  */
 export function commitNpcDeath(opts: {
-  state: { postDeath: NpcPostDeathState | null }
+  state: { postDeath: NpcPostDeathState | null, playerFollowUp?: NpcPlayerFollowUp | null }
   personalInventory: Inventory
   x: number
   z: number
@@ -253,6 +258,7 @@ export function commitNpcDeath(opts: {
     deathAtDays: opts.nowDays,
     loot: snapshotCorpseLoot(corpse),
   })
+  if (opts.state.playerFollowUp !== undefined) opts.state.playerFollowUp = null
   return true
 }
 

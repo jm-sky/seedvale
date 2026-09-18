@@ -136,6 +136,11 @@ export type NpcTraceEvent =
     blockers: readonly string[]
   }
   | { simTime: number; type: 'voluntaryJoin.initiativeGate'; score: number; threshold: number }
+  /** NPC-initiated Player follow-up lifecycle (plan npc-050) — `approachStarted`
+   *  fires once per idle-duty approach attempt, `dialogueOpened` only when the
+   *  app-level runtime seam actually opened the dialogue menu on it. */
+  | { simTime: number; type: 'playerFollowUp.approachStarted'; followUpId: string }
+  | { simTime: number; type: 'playerFollowUp.dialogueOpened'; followUpId: string }
 
 export type NpcTraceEventType = NpcTraceEvent['type']
 

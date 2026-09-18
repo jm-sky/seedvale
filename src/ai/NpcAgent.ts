@@ -39,6 +39,8 @@ import type { HelperAssignment } from './helperAssignment'
 import type { ActionId, NpcPlannedAction, Phase } from './npcAction'
 import type { NpcBarkIntent } from './npcBarkPolicies'
 import type { RequestNpcBark } from './npcBarkRequest'
+import type { RequestNpcInitiatedDialogue } from './npcInitiatedDialogueRequest'
+import type { NpcPlayerFollowUp } from './npcPlayerFollowUp'
 import {
   disposeObject3D,
   loadGltfAnimated,
@@ -308,6 +310,7 @@ import {
   resolveNpcRangedWeapon,
 } from './npcCombat'
 import { decideNpcAction, type NpcDecisionKind, scoreNpcDecisions, shouldInterruptAction } from './npcDecision'
+import { getSharedRequestNpcInitiatedDialogue } from './npcInitiatedDialogueRequest'
 import { seedHunterStartingArrows, seedInitialPersonalBelongingsIfNeeded } from './npcLoadout'
 import {
   type NpcLocomotionMode,
@@ -651,6 +654,15 @@ export type NpcInspectionSnapshot = {
     pendingProposal: VoluntaryExpeditionTerms | null
     cooldownUntilDays: number
   }
+  /** This NPC's own outstanding Player follow-up (plan npc-050), or `null`
+   *  when it owes the Player nothing right now — read from
+   *  `NpcAuthoritativeState`, not from in-flight approach execution.
+   *  Optional on synthetic test snapshots. */
+  playerFollowUp?: {
+    kind: NpcPlayerFollowUp['kind']
+    id: string
+    locationCount: number
+  } | null
   action: {
     kind: ActionId
     destination: { x: number, y: number, z: number }
@@ -1107,6 +1119,13 @@ export type NpcAgentDeps = {
   structureRepairHooks?: NpcStructureRepairHooks | null
   /** Stateless cave/world spatial queries for movement (plan npc-027). */
   npcWorldMovement?: NpcWorldMovementQueries
+  /**
+   * Optional NPC-initiated dialogue-open requester (plan npc-050). When
+   * omitted, falls back to module-level `configureRequestNpcInitiatedDialogue`
+   * wiring from `createApp.ts` — same "optional per-agent override, shared
+   * module default" shape as `requestNpcBark`.
+   */
+  requestNpcInitiatedDialogue?: RequestNpcInitiatedDialogue
 }
 
 /**
@@ -1438,6 +1457,12 @@ export class NpcAgent {
    * `configureRequestNpcBark` from createApp (npc-049).
    */
   private readonly requestNpcBarkOverride: RequestNpcBark | null
+  /**
+   * Optional per-agent NPC-initiated dialogue-open override (tests);
+   * production uses `configureRequestNpcInitiatedDialogue` from createApp
+   * (plan npc-050).
+   */
+  private readonly requestNpcInitiatedDialogueOverride: RequestNpcInitiatedDialogue | null
   /** In-flight lookAtPlayer reaction bark — stopped when dialogue opens or a
    *  new reaction replaces it. */
   private playerReactionVoice: ActiveSound | null = null
@@ -1663,6 +1688,7 @@ export class NpcAgent {
     this.playAt = playAt
     this.playAtCancelableOverride = deps.playAtCancelable ?? null
     this.requestNpcBarkOverride = deps.requestNpcBark ?? null
+    this.requestNpcInitiatedDialogueOverride = deps.requestNpcInitiatedDialogue ?? null
     this.forest = forest
     this.id = npcId
     this.queues = queues
@@ -1993,6 +2019,13 @@ export class NpcAgent {
         pendingProposal: this.pendingJoinProposal,
         cooldownUntilDays: this.voluntaryJoinCooldownUntilDays,
       },
+      playerFollowUp: this.npcState.playerFollowUp
+        ? {
+            kind: this.npcState.playerFollowUp.kind,
+            id: this.npcState.playerFollowUp.id,
+            locationCount: this.npcState.playerFollowUp.selectedLocationIds.length,
+          }
+        : null,
       action: this.pendingAction
         ? {
             kind: this.pendingAction.kind,
@@ -5128,20 +5161,23 @@ export class NpcAgent {
   }
 
   /**
-   * Idle-duty dispatch (plan npc-029, extended by npc-030/npc-031) — a
-   * paid-escort service boundary first (never masked by the accompany
+   * Idle-duty dispatch (plan npc-029, extended by npc-030/npc-031/npc-050) —
+   * a paid-escort service boundary first (never masked by the accompany
    * executor claiming this idle slot every tick), then accompany, then Work
-   * Contract, then a voluntary-join proposal, then the ordinary schedule.
-   * Deterministic; incompatible work/accompany pairs are rejected at
-   * creation, not re-arbitrated here. Voluntary initiative deliberately sits
-   * last — it must never jump ahead of an accepted Work Contract or an
-   * already-active accompany commitment (plan npc-031 implementation notes).
+   * Contract, then an outstanding Player follow-up delivery, then a
+   * voluntary-join proposal, then the ordinary schedule. Deterministic;
+   * incompatible work/accompany pairs are rejected at creation, not
+   * re-arbitrated here. Voluntary initiative deliberately sits last — it
+   * must never jump ahead of an accepted Work Contract, an already-active
+   * accompany commitment, or a concrete communication obligation the NPC
+   * already owes the Player (plan npc-031/npc-050 implementation notes).
    */
   private tryPursueIdleDuty(scheduledActivity: ScheduleActivity): boolean {
     if (this.tryResolveEscortService()) return true
     if (this.tryPursueAccompany()) return true
     if (this.tryPursueCommittedTravel()) return true
     if (this.tryPursueWorkContract(scheduledActivity)) return true
+    if (this.tryDeliverPlayerFollowUp()) return true
     return this.tryProposeVoluntaryJoin(scheduledActivity)
   }
 
@@ -5463,6 +5499,70 @@ export class NpcAgent {
     if (mine) return this.pursueAcceptedContract(mine.contract, mine.assignment)
     if (this.tryRequestWorkPayment()) return true
     return this.tryAcceptWorkContractOpportunity(contracts, scheduledActivity)
+  }
+
+  /** Read-only view of this NPC's own outstanding Player follow-up (plan
+   *  npc-050) for the dialogue layer/inspector to surface — same "stable ids
+   *  only, resolved fresh from authoritative state" contract as
+   *  `pendingVoluntaryJoinProposal()`. `null` when this NPC owes the Player
+   *  nothing right now. */
+  pendingPlayerFollowUp(): NpcPlayerFollowUp | null {
+    return this.npcState.playerFollowUp
+  }
+
+  /**
+   * Outstanding Player follow-up idle-duty executor (plan npc-050 §4/§5) —
+   * only ever *approaches and asks to open dialogue*; it never reveals
+   * anything or clears `npcState.playerFollowUp` itself. Delivery/consume
+   * stays owned by the shared app-level seam
+   * (`world/locations/npcPlayerFollowUpDelivery.ts`), reached only once the
+   * player actually engages the opened dialogue. A denied dialogue-open (or
+   * the player leaving range mid-approach) simply leaves the follow-up
+   * pending for a later idle-duty cycle — never a world-wide chase.
+   */
+  private tryDeliverPlayerFollowUp(): boolean {
+    if (this.health.dead) return false
+    const followUp = this.npcState.playerFollowUp
+    if (!followUp) return false
+    if (!isPlayerLocallyEligible(
+      this.mesh.position.x,
+      this.mesh.position.z,
+      this.lastObserverX,
+      this.lastObserverZ,
+    )) return false
+    if (isPlayerApproachArrived(
+      this.mesh.position.x,
+      this.mesh.position.z,
+      this.lastObserverX,
+      this.lastObserverZ,
+    )) {
+      this.requestPlayerFollowUpDialogue(followUp.id)
+      return true
+    }
+    this.trace.record({ simTime: this.simClock, type: 'playerFollowUp.approachStarted', followUpId: followUp.id })
+    this.startAction({
+      kind: 'approachPlayer',
+      destination: copyVec3({ x: this.lastObserverX, y: this.mesh.position.y, z: this.lastObserverZ }),
+      durationSec: 0.6 * this.waitMultiplier,
+      onComplete: () => this.requestPlayerFollowUpDialogue(followUp.id),
+    })
+    return true
+  }
+
+  /** Revalidates the follow-up is still the same pending one, then asks the
+   *  app/runtime seam (`npcInitiatedDialogueRequest.ts`) to open the
+   *  existing NPC dialogue menu on it. A failed/denied open leaves the
+   *  follow-up untouched for a later attempt (plan npc-050 §6). */
+  private requestPlayerFollowUpDialogue(followUpId: string): boolean {
+    const followUp = this.npcState.playerFollowUp
+    if (!followUp || followUp.id !== followUpId) return false
+    const request = this.requestNpcInitiatedDialogueOverride ?? getSharedRequestNpcInitiatedDialogue()
+    if (!request) return false
+    const opened = request(this.id, 'player_follow_up')
+    if (opened) {
+      this.trace.record({ simTime: this.simClock, type: 'playerFollowUp.dialogueOpened', followUpId })
+    }
+    return opened
   }
 
   private claimTiming() {

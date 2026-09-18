@@ -2879,6 +2879,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `ai/dialogueTemplates.ts`
+- `ai/npcPlayerFollowUp.ts`
 - `world/locations/guardLocalKnowledge.ts`
 - `world/locations/locationKnowledge.ts`
 - `world/locations/worldKnowledgeResearch.ts`
@@ -2889,7 +2890,9 @@ Generated from TypeScript imports.
 **Imports**
 
 - `ai/dialogueTemplates.ts`
+- `ai/npcPlayerFollowUp.ts`
 - `quests/quests.ts`
+- `settlement/npcState.ts`
 - `world/locations/locationConfig.ts`
 - `world/locations/locationDiscovery.ts`
 - `world/locations/locationKnowledge.ts`
@@ -2900,6 +2903,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/createApp.ts`
+- `app/inventoryWiring.ts`
 - `app/saveState.ts`
 - `persistence/saveData.ts`
 - `world/locations/guardLocalKnowledge.test.ts`
@@ -2988,6 +2992,8 @@ Generated from TypeScript imports.
 - `world/locations/locationKnowledge.test.ts`
 - `world/locations/locationProximityDiscovery.test.ts`
 - `world/locations/locationProximityDiscovery.ts`
+- `world/locations/npcPlayerFollowUpDelivery.test.ts`
+- `world/locations/npcPlayerFollowUpDelivery.ts`
 - `world/locations/revealLocationKnowledge.ts`
 - `world/locations/worldLocationCatalog.test.ts`
 - `world/map/mapData.ts`
@@ -3098,6 +3104,29 @@ Generated from TypeScript imports.
 - `ui-vue/lib/drawMinimap.ts`
 - `world/locations/navigationTargets.test.ts`
 - `world/locations/revealLocationKnowledge.ts`
+
+## `world/locations/npcPlayerFollowUpDelivery.test.ts`
+
+**Imports**
+
+- `ai/npcPlayerFollowUp.ts`
+- `world/locations/locationKnowledge.ts`
+- `world/locations/npcPlayerFollowUpDelivery.ts`
+- `world/locations/worldLocationTypes.ts`
+
+## `world/locations/npcPlayerFollowUpDelivery.ts`
+
+**Imports**
+
+- `ai/dialogueTemplates.ts`
+- `ai/npcPlayerFollowUp.ts`
+- `world/locations/locationKnowledge.ts`
+- `world/locations/worldLocationTypes.ts`
+
+**Imported by**
+
+- `app/inventoryWiring.ts`
+- `world/locations/npcPlayerFollowUpDelivery.test.ts`
 
 ## `world/locations/revealLocationKnowledge.ts`
 
@@ -3297,6 +3326,8 @@ Generated from TypeScript imports.
 - `world/locations/locationDiscovery.test.ts`
 - `world/locations/locationDiscovery.ts`
 - `world/locations/locationProximityDiscovery.test.ts`
+- `world/locations/npcPlayerFollowUpDelivery.test.ts`
+- `world/locations/npcPlayerFollowUpDelivery.ts`
 - `world/locations/worldLocationCatalog.test.ts`
 - `world/locations/worldLocationCatalog.ts`
 - `world/locations/worldLocationNames.ts`

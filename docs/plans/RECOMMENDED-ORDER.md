@@ -171,59 +171,51 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `L` · **Score:**  40  
    → **unlocks:** 1/1
 
-25. `npc-050` — **NPC-initiated player follow-ups and proactive dialogue**  
-  🔴 `M` · **Score:**  39  
-   → **unlocks:** 0/0
-
-26. `quests-progression-058` — **Injured dog discovery thread**  
+25. `quests-progression-058` — **Injured dog discovery thread**  
   🟡 `M` · **Score:**  37  
    → **unlocks:** 0/0
 
-27. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
+26. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
   🔴 `M` · **Score:**  35  
    → **unlocks:** 0/0
 
-28. `npc-054` — **NPC desired gifts, gift acceptance and relationship rewards**  
+27. `npc-054` — **NPC desired gifts, gift acceptance and relationship rewards**  
   🔴 `L` · **Score:**  30  
    → **unlocks:** 0/0
 
-29. `items-player-014` — **Rope-pullable resource transport**  
+28. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-30. `settlements-019` — **Settlement render submission budget**  
+29. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-31. `tools-005` — **Seedvale Character Preparation Panel**  
+30. `world-terrain-039` — **N8AO / post-process cost budget**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-32. `world-terrain-039` — **N8AO / post-process cost budget**  
+31. `world-terrain-040` — **Vegetation render budget v2**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-33. `world-terrain-040` — **Vegetation render budget v2**  
-  🔴 `M` · **Score:**  27  
-   → **unlocks:** 0/0
-
-34. `items-player-044` — **Shoulder and forearm equipment slots**  
+32. `items-player-044` — **Shoulder and forearm equipment slots**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-35. `world-terrain-041` — **Agent presentation render LOD**  
+33. `world-terrain-041` — **Agent presentation render LOD**  
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-36. `settlements-npcs-046` — **Pasture Well & Trough Local Water Use**  
+34. `settlements-npcs-046` — **Pasture Well & Trough Local Water Use**  
   🟡 `S` · **Score:**  21  
    → **unlocks:** 0/0
 
-37. `items-player-032` — **NPC player-storage resource and context rules**  
+35. `items-player-032` — **NPC player-storage resource and context rules**  
   🟡 `L` · **Score:**  20  
    → **unlocks:** 0/0
 
-38. `quests-progression-061` — **Builder — Complete an Unfinished Palisade Segment**  
+36. `quests-progression-061` — **Builder — Complete an Unfinished Palisade Segment**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 

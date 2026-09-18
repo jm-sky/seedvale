@@ -915,6 +915,8 @@ Generated from TypeScript imports.
 - `ai/characters.ts`
 - `ai/npcBarkLimiter.ts`
 - `ai/npcBarkRequest.ts`
+- `ai/npcInitiatedDialogueRequest.ts`
+- `ai/npcPlayerFollowUp.ts`
 - `ai/reactionChance.ts`
 - `app/actions/actionContext.ts`
 - `app/actions/containerActions.ts`
@@ -1455,6 +1457,7 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `ai/dialogueTemplates.ts`
+- `ai/npcPlayerFollowUp.ts`
 - `ai/npcTradeAvailability.ts`
 - `ai/voluntaryExpeditionJoin.ts`
 - `app/actions/workContractPayment.ts`
@@ -1493,10 +1496,12 @@ Generated from TypeScript imports.
 - `ui/createHud.ts`
 - `ui/createToast.ts`
 - `world/dayNight.ts`
+- `world/locations/guardLocalKnowledge.ts`
 - `world/locations/locationConfig.ts`
 - `world/locations/locationDiscovery.ts`
 - `world/locations/locationKnowledge.ts`
 - `world/locations/navigationTargets.ts`
+- `world/locations/npcPlayerFollowUpDelivery.ts`
 - `world/locations/revealLocationKnowledge.ts`
 - `world/locations/worldLocationCatalog.ts`
 

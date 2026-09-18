@@ -25,6 +25,7 @@ function stubNpc(overrides: Partial<NpcAgent> & Pick<NpcAgent, 'id' | 'displayNa
     getDialogueLine: () => 'hello',
     preparePaymentRequest: () => null,
     pendingVoluntaryJoinProposal: () => null,
+    pendingPlayerFollowUp: () => null,
     mesh: { position: { x: 0, y: 0, z: 0 } },
     stopPlayerReactionVoice: () => {},
     ...overrides,

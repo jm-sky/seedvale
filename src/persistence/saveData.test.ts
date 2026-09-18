@@ -1570,6 +1570,36 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
     })).toBe(false)
   })
 
+  it('accepts the current per-npc guardLocalKnowledge shape and rejects a malformed entry (plan npc-050)', () => {
+    expect(isSaveData({
+      ...validSave,
+      map: {
+        discoveredCells: [],
+        discoveredLocations: [],
+        targets: [],
+        guardLocalKnowledge: {
+          'home:npc:0': {
+            status: 'resolved',
+            requestedAtDays: 1,
+            revealAtDays: 1 + 1 / 24,
+            originX: 0,
+            originZ: 0,
+            selectedIds: ['cemetery:a:1'],
+          },
+        },
+      },
+    })).toBe(true)
+    expect(isSaveData({
+      ...validSave,
+      map: {
+        discoveredCells: [],
+        discoveredLocations: [],
+        targets: [],
+        guardLocalKnowledge: { 'home:npc:0': { status: 'requested' } },
+      },
+    })).toBe(false)
+  })
+
   it('migrates a real v21 save (plan items-player-020) into current, defaulting missing playerTroughs to []', () => {
     const { playerTroughs: _pt, ...v21Body } = validSave
     const v21Save = { ...v21Body, version: 21 }
@@ -2039,6 +2069,44 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
         'npc:1': {
           ...snapshot,
           accompanyCommitment: { target: { kind: 'horse' }, source: { kind: 'voluntary' }, mode: 'follow', startedAtDays: 1 },
+        },
+      },
+    })).toEqual({ status: 'invalid' })
+  })
+
+  it('round-trips npcStates playerFollowUp and rejects a malformed/oversized one (plan npc-050)', () => {
+    const snapshot = {
+      health: { current: 100, max: 100, dead: false },
+      stamina: { current: 100, max: 100 },
+      vigor: { current: 100, max: 100 },
+      needs: { thirst: 0, woodDuty: 0, waterDuty: 0, hunger: 0 },
+      postDeath: null,
+      personalInventory: { counts: {}, instances: [] },
+      playerFollowUp: {
+        kind: 'deliver_world_knowledge' as const,
+        id: 'playerFollowUp:npc:1:1',
+        createdAtDays: 3,
+        source: { kind: 'guard' as const },
+        selectedLocationIds: ['cemetery:a:1', 'ruins:b:2'],
+      },
+    }
+    const result = loadStoredSave({ ...validSave, npcStates: { 'npc:1': snapshot } })
+    expect(result.status).toBe('ok')
+    if (result.status === 'ok') {
+      expect(result.data.npcStates?.['npc:1']?.playerFollowUp).toEqual(snapshot.playerFollowUp)
+    }
+    expect(loadStoredSave({
+      ...validSave,
+      npcStates: {
+        'npc:1': { ...snapshot, playerFollowUp: { ...snapshot.playerFollowUp, kind: 'deliver_quest_update' } },
+      },
+    })).toEqual({ status: 'invalid' })
+    expect(loadStoredSave({
+      ...validSave,
+      npcStates: {
+        'npc:1': {
+          ...snapshot,
+          playerFollowUp: { ...snapshot.playerFollowUp, selectedLocationIds: Array.from({ length: 9 }, (_, i) => `loc:${i}`) },
         },
       },
     })).toEqual({ status: 'invalid' })

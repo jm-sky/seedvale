@@ -1,7 +1,7 @@
 # Plan: NPC-initiated player follow-ups and proactive dialogue
 
 **Created:** 2026-09-17
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** high · **Effort:** M
 **Depends on:** ~~quests-progression-047~~, ~~world-030~~
 **Domain:** `npc`
@@ -10,6 +10,26 @@
 **Tags:** `player-follow-up` `proactive-dialogue` `world-knowledge` `approach-player`
 **Roadmap:** -
 **Model:** Opus, Sonnet
+
+## Implementation status
+
+Implemented on `main` (2026-09-18):
+
+- `ai/npcPlayerFollowUp.ts`: the discriminated `NpcPlayerFollowUp` contract (V1 only `deliver_world_knowledge`) plus `armNpcPlayerFollowUp()`/`consumeNpcPlayerFollowUp()`/`cloneNpcPlayerFollowUp()` — stable ids/source only, at most one active follow-up per NPC, idempotent arm.
+- `settlement/npcState.ts`: optional `playerFollowUp` on `NpcAuthoritativeState`/`NpcStateSnapshot`, cloned in `fromSnapshot()`/`serialize()`; absent on old saves means `null`.
+- `settlement/npcPostDeath.ts::commitNpcDeath()`: clears an undelivered follow-up exactly once on the alive→dead edge.
+- `world/locations/guardLocalKnowledge.ts`: generalized from a home-guard-only singleton to an owner-keyed `npcId → request state` map (`askAboutArea(npcId, originX, originZ, source)`); the resolved+delay-elapsed stage now arms the asking NPC's follow-up via an injected `armFollowUp` dep instead of revealing directly. Legacy single-record saves migrate onto the stable home-guard id in `createApp.ts` at restore time (`normalizeSaveGuardLocalKnowledge()`).
+- `world/locations/npcPlayerFollowUpDelivery.ts::deliverNpcWorldKnowledgeFollowUp()`: the one delivery/consume seam — revalidates id/kind, re-resolves each location id against the current catalog, reveals through `LocationKnowledge.reveal(..., 'npc')`, consumes only after that commits. Idempotent.
+- `ai/NpcAgent.ts`: `tryDeliverPlayerFollowUp()` wired into `tryPursueIdleDuty()` (after Work Contract, before voluntary-join initiative) — approaches via the existing `approachPlayer` local-range/arrival helpers, then requests dialogue open through a narrow runtime seam; `pendingPlayerFollowUp()` read-only projection.
+- `ai/npcInitiatedDialogueRequest.ts`: module-level `configureRequestNpcInitiatedDialogue()`/shared getter (same shape as `npcBarkRequest.ts`) so `NpcAgent` never imports Vue. Wired in `createApp.ts` to `vueUi.openNpcDialogueMenu()`, gated by the existing `blocksGamePointerLockRestore()` modal check.
+- `ui-vue/store.ts` / `NpcDialogueMenu.vue`: typed `followUp` snapshot on dialogue-open state (never auto-selected/consumed by `resolveNpcDialogueOpenTopic()`); `onAskAboutArea` now takes the open NPC explicitly and, in `app/inventoryWiring.ts`, delivers an already-pending or just-armed follow-up through the same seam before falling back to `guardLocalKnowledge`'s own pending/immediate-known lines.
+- The "Opowiedz mi coś o okolicy" topic is now available to the selected home guard and to living adult local hunters (`isAdultAge`), through the same mechanism — no separate `hunterLocalKnowledge` copy.
+- `persistence/saveData.ts`: validates `NpcStateSnapshot.playerFollowUp` and the per-npc `guardLocalKnowledge` map (fail-closed); no save-version bump (both stay optional/sparse).
+- Diagnostics: `playerFollowUp.approachStarted`/`playerFollowUp.dialogueOpened` trace events and a `playerFollowUp` inspection-snapshot field.
+- Automated tests: `ai/npcPlayerFollowUp.test.ts`, `world/locations/npcPlayerFollowUpDelivery.test.ts`, `world/locations/guardLocalKnowledge.test.ts` (rewritten for the per-npc/arm-not-reveal contract), `settlement/npcState.test.ts` and `settlement/npcPostDeath.test.ts` round-trip/death-clear cases, `persistence/saveData.test.ts` validation cases, and an `ui-vue/npcDialogueOpen.test.ts` case for "surfaced but never auto-consumed on open".
+- Not unit-tested directly: `NpcAgent.tryDeliverPlayerFollowUp()`'s idle-duty integration itself — matching the existing precedent for `tryProposeVoluntaryJoin()` (plan npc-031), which also has no isolated unit test; the pure/data-owning pieces around it are fully covered instead.
+
+Browser/gameplay verification remains manual (see Manual verification § below).
 
 ## Problem
 

@@ -5,6 +5,7 @@ import {
   cloneNpcAccompanyCommitment,
   type NpcAccompanyCommitment,
 } from '../ai/npcAccompanyCommitment'
+import { cloneNpcPlayerFollowUp, type NpcPlayerFollowUp } from '../ai/npcPlayerFollowUp'
 import { cloneNpcTravel, type NpcTravelContinuity } from '../ai/npcTravel'
 import { MAX_VIGOR } from '../ai/npcVigor'
 import {
@@ -171,6 +172,12 @@ export type NpcAuthoritativeState = {
    *  non-Trader). Mutable in place like `activePlan`. Semantic phase/context
    *  only — never a second cargo/travel clock, see `merchantJourney.ts`. */
   merchantJourney: MerchantJourneyState | null
+  /** Outstanding NPC-initiated Player follow-up (plan npc-050) — `null`
+   *  while this NPC has nothing pending. Mutable in place like `activePlan`.
+   *  At most one active follow-up; a producer (e.g. `guardLocalKnowledge`)
+   *  arms it once ready and stops being the delivery owner (implementation
+   *  notes §1/§3). Round-trips via `NpcStateSnapshot`. */
+  playerFollowUp: NpcPlayerFollowUp | null
 }
 
 /** Plain-data snapshot — mirrors `SettlementEconomy.snapshot()` /
@@ -216,6 +223,9 @@ export type NpcStateSnapshot = {
   /** Optional merchant journey (plan settlements-npcs-038). Absent (including
    *  every pre-038 save) means no active journey. */
   merchantJourney?: MerchantJourneyState | null
+  /** Optional Player follow-up (plan npc-050). Absent (including every
+   *  pre-050 save) means `null` — no follow-up. */
+  playerFollowUp?: NpcPlayerFollowUp | null
 }
 
 function fromSnapshot(id: NpcId, snapshot: NpcStateSnapshot, maxima?: NpcPhysicalMaxima): NpcAuthoritativeState {
@@ -241,6 +251,7 @@ function fromSnapshot(id: NpcId, snapshot: NpcStateSnapshot, maxima?: NpcPhysica
     accompanyCommitment: cloneNpcAccompanyCommitment(snapshot.accompanyCommitment),
     travel: cloneNpcTravel(snapshot.travel),
     merchantJourney: cloneMerchantJourney(snapshot.merchantJourney),
+    playerFollowUp: cloneNpcPlayerFollowUp(snapshot.playerFollowUp),
     needsInitialPersonalLoadout: false,
   }
   if (maxima) applyDerivedStaminaMax(state.stamina, maxima.maxStamina)
@@ -289,6 +300,7 @@ export function createNpcAuthoritativeState(
     accompanyCommitment: null,
     travel: null,
     merchantJourney: null,
+    playerFollowUp: null,
     needsInitialPersonalLoadout: true,
   }
 }
@@ -357,6 +369,7 @@ export function createNpcStateRegistry(initial?: Record<NpcId, NpcStateSnapshot>
           accompanyCommitment: cloneNpcAccompanyCommitment(state.accompanyCommitment) ?? undefined,
           travel: cloneNpcTravel(state.travel) ?? undefined,
           merchantJourney: cloneMerchantJourney(state.merchantJourney) ?? undefined,
+          playerFollowUp: cloneNpcPlayerFollowUp(state.playerFollowUp) ?? undefined,
         }
       }
       return out

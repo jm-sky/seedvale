@@ -90,10 +90,19 @@ type NpcDialogueMenuState = {
    *  against the currently-open `npc`, same shape as `onAskSword`. */
   onRequestFood: ((npc: NpcAgent) => string) | null
   onRequestWater: ((npc: NpcAgent) => string) | null
-  /** "Opowiedz mi coś o okolicy" (plan world-012 §7) — home guard only, same
-   *  "no args, resolved against whatever NPC/settlement is open" shape as
-   *  `onAskSword`. May be async when location discovery yields (plan world-022). */
-  onAskAboutArea: (() => string | Promise<string>) | null
+  /** "Opowiedz mi coś o okolicy" (plan world-012 §7, extended to eligible
+   *  hunters by npc-050 §9) — resolved against the open `npc`, same
+   *  "explicit npc argument" shape as `onRequestFood`. May be async when
+   *  location discovery yields (plan world-022). When a Player follow-up is
+   *  already pending on this NPC, the handler delivers it through the same
+   *  shared seam `requestNpcInitiatedDialogue` uses (plan npc-050 §7). */
+  onAskAboutArea: ((npc: NpcAgent) => string | Promise<string>) | null
+  /** This NPC's own outstanding Player follow-up (plan npc-050), resolved
+   *  once at open time — same "stable snapshot, re-resolved by the handler"
+   *  shape as `paymentClaim`/`joinProposal`. `null` when it has nothing
+   *  pending. Presentation-only: opening/previewing never consumes it —
+   *  only `onAskAboutArea`'s shared delivery seam does. */
+  followUp: { kind: 'deliver_world_knowledge', id: string } | null
   /** Wage-claim context for the open NPC (plan npc-016) — stable ids only.
    *  `onPayWage` re-resolves live contract/assignment/inventories. */
   paymentClaim: { contractId: string, npcId: string, coins: number } | null
@@ -761,7 +770,7 @@ export function emitUiClick(): void {
 }
 
 export const ui = reactive({
-  npcDialogueMenu: { open: false, npc: null, npcHeading: '', settlement: null, timeOfDay: 0, helpResult: null, resolveQuestHelp: null, resolveQuestPreview: null, canClaimGuardReward: false, getCanClaimGuardReward: null, onClaimGuardReward: null, canTrade: false, getCanTrade: null, onOpenTrade: null, onRequestFood: null, onRequestWater: null, onAskAboutArea: null, paymentClaim: null, onPayWage: null, onGiveItem: null, joinProposal: null, onRespondToJoinProposal: null, onProposeJoin: null } as NpcDialogueMenuState,
+  npcDialogueMenu: { open: false, npc: null, npcHeading: '', settlement: null, timeOfDay: 0, helpResult: null, resolveQuestHelp: null, resolveQuestPreview: null, canClaimGuardReward: false, getCanClaimGuardReward: null, onClaimGuardReward: null, canTrade: false, getCanTrade: null, onOpenTrade: null, onRequestFood: null, onRequestWater: null, onAskAboutArea: null, followUp: null, paymentClaim: null, onPayWage: null, onGiveItem: null, joinProposal: null, onRespondToJoinProposal: null, onProposeJoin: null } as NpcDialogueMenuState,
   villagers: { open: false, entries: [] as VillagerEntry[], page: 0, containers: [] as VillagerContainerOption[] },
   inventory: { open: false, counts: {}, groups: [], totalWeight: 0, maxWeight: 0, totalSize: 0, maxSize: 0, heldTool: null, heldInstanceId: null, primaryMelee: null, primaryRanged: null, onDrop: null, onEquip: null, onUnequip: null, equippedSlots: {}, onEquipArmor: null, onUnequipArmor: null, onConsume: null, onRead: null, onPlaceTrap: null, onSellInstances: null, onSharpen: null, onPlaceContainer: null, onPlaceTent: null, onSetPrimaryMelee: null, onSetPrimaryRanged: null } as InventoryState,
   pauseMenu: {
@@ -1047,6 +1056,8 @@ export function openNpcDialogueMenu(npc: NpcAgent, settlement: Settlement, quest
   state.canTrade = state.getCanTrade?.() ?? false
   state.paymentClaim = npc.preparePaymentRequest()
   state.joinProposal = npc.pendingVoluntaryJoinProposal()
+  const followUp = npc.pendingPlayerFollowUp()
+  state.followUp = followUp ? { kind: followUp.kind, id: followUp.id } : null
   state.open = true
   emitUiOpen()
   // Cut any in-flight lookAtPlayer reaction bark so it cannot stack with the
@@ -1126,6 +1137,7 @@ function resetNpcDialogueMenu(): void {
   state.resolveQuestPreview = null
   state.paymentClaim = null
   state.joinProposal = null
+  state.followUp = null
 }
 /** `decline: false` means this close is a transition (e.g. into trade — see
  *  `openMerchantFromDialogue`), not the player actually leaving/declining — skip
@@ -1158,7 +1170,7 @@ export function configureNpcDialogueMenu(handlers: {
   getCanTrade: () => boolean
   onRequestFood: (npc: NpcAgent) => string
   onRequestWater: (npc: NpcAgent) => string
-  onAskAboutArea: () => string | Promise<string>
+  onAskAboutArea: (npc: NpcAgent) => string | Promise<string>
   onPayWage: () => string
   onGiveItem: () => void
   onRespondToJoinProposal: (accept: boolean) => string

@@ -113,6 +113,23 @@ describe('commitNpcDeath', () => {
     // The second, ignored edge must not have touched `extra`'s ownership.
     expect(extra.holdsAny('knife')).toBe(true)
   })
+
+  it('clears an undelivered Player follow-up exactly once on the alive→dead edge (plan npc-050)', () => {
+    const state = createNpcAuthoritativeState('home:npc:0', 0)
+    state.playerFollowUp = {
+      kind: 'deliver_world_knowledge',
+      id: 'playerFollowUp:home:npc:0:1',
+      createdAtDays: 1,
+      source: { kind: 'guard' },
+      selectedLocationIds: ['cemetery:a:1'],
+    }
+    damageHealth(state.health, state.health.maxHp)
+
+    expect(commitNpcDeath({
+      state, personalInventory: state.personalInventory, x: 3, z: 5, yaw: 0, nowDays: 2,
+    })).toBe(true)
+    expect(state.playerFollowUp).toBeNull()
+  })
 })
 
 describe('corpse loot transfer', () => {

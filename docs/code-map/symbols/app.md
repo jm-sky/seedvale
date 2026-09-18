@@ -281,13 +281,13 @@ Generated from exported TypeScript symbols.
 
 ## `app/createApp.ts`
 
-- `createApp` — function — line 418
+- `createApp` — function — line 420
   - system: app-composition
   - role: Composition root: builds every long-lived system, threads their dependencies and owns app-level lifecycle (boot, rebuild, dispose).
   - owns: WorldBundle, GameLoop, AppRenderLoop
   - lifecycle: boot
   - integration: Wires world, player, UI, persistence and audio systems together.
-- `NewAppOptions` — type — line 387
+- `NewAppOptions` — type — line 389
 
 ## `app/faunaEncounterComposition.ts`
 
@@ -366,11 +366,11 @@ Generated from exported TypeScript symbols.
 
 ## `app/inventoryWiring.ts`
 
-- `createInventoryWiring` — function — line 228
-- `InventoryWiring` — type — line 130
-- `InventoryWiringDeps` — type — line 169
-- `MerchantInventoryView` — type — line 116
-- `npcDialogueCanTrade` — function — line 224
+- `createInventoryWiring` — function — line 233
+- `InventoryWiring` — type — line 134
+- `InventoryWiringDeps` — type — line 173
+- `MerchantInventoryView` — type — line 120
+- `npcDialogueCanTrade` — function — line 229
   - domain: settlements-npcs
 
 ## `app/modalState.ts`
