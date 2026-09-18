@@ -146,10 +146,44 @@ describe('classifySettlementContent', () => {
     expect(classifySettlementContent(mesh)).toBe('workplace')
   })
 
-  it('classifies storageGoods tags used by food presentation piles', () => {
-    const mesh = namedMesh('apple')
-    mesh.userData[SETTLEMENT_SHADOW_KIND_USERDATA] = 'storageGoods'
-    expect(classifySettlementContent(mesh)).toBe('storageGoods')
+  it('classifies storage and fire/light diagnostic subcategories', () => {
+    const barrel = new Group()
+    barrel.name = 'settlement-barrels'
+    const barrelMesh = namedMesh('barrel')
+    barrel.add(barrelMesh)
+    expect(classifySettlementContent(barrelMesh)).toBe('storageBarrel')
+
+    const hay = new Group()
+    hay.name = 'settlement-hay'
+    const hayMesh = namedMesh('hay')
+    hay.add(hayMesh)
+    expect(classifySettlementContent(hayMesh)).toBe('storageHay')
+
+    const trough = new Group()
+    trough.name = 'settlement-household-troughs'
+    const troughMesh = namedMesh('trough')
+    trough.add(troughMesh)
+    expect(classifySettlementContent(troughMesh)).toBe('storageTrough')
+
+    const storageGoods = namedMesh('apple')
+    storageGoods.userData[SETTLEMENT_SHADOW_KIND_USERDATA] = 'storageGoods'
+    expect(classifySettlementContent(storageGoods)).toBe('storageGoods')
+
+    const wood = namedMesh('pile')
+    wood.userData[SETTLEMENT_SHADOW_KIND_USERDATA] = 'storageWood'
+    expect(classifySettlementContent(wood)).toBe('storageWood')
+
+    const exteriorLamp = namedMesh('lamp')
+    exteriorLamp.userData[SETTLEMENT_SHADOW_KIND_USERDATA] = 'fireHouseExteriorLamp'
+    expect(classifySettlementContent(exteriorLamp)).toBe('fireHouseExteriorLamp')
+
+    const torch = namedMesh('torch')
+    torch.userData[SETTLEMENT_SHADOW_KIND_USERDATA] = 'fireVillageTorch'
+    expect(classifySettlementContent(torch)).toBe('fireVillageTorch')
+
+    const campfire = namedMesh('campfire')
+    campfire.userData[SETTLEMENT_SHADOW_KIND_USERDATA] = 'fireCampfire'
+    expect(classifySettlementContent(campfire)).toBe('fireCampfire')
   })
 })
 
