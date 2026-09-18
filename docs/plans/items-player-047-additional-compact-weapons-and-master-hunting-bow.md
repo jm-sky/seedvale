@@ -9,6 +9,7 @@
 **Subdomains:** `items` `inventory`
 **Tags:** `weapons` `merchant` `combat` `trade`
 **Roadmap:** `quests-travelling-merchant-journeys.md`
+**Model:** Sonnet, Composer
 
 ## Goal
 
@@ -356,7 +357,7 @@ Dokładną relację względem obecnych bow weights zweryfikować podczas impleme
 
 Size:
 
-**LG**
+**MD**
 
 ### Ammo
 
