@@ -183,7 +183,7 @@ The ground container's persisted counts/instances/food batches already round-tri
 
 ## Suggested implementation order
 
-1. Add `PackConfig`, horse/donkey tuning, `animalPack.ts`, `AnimalSaveState.pack`, validator/migration and focused snapshot/hydrate tests.
+1. Add `PackConfig`, horse/donkey tuning, `animalPack.ts`, `AnimalSaveState.pack`, validator and focused snapshot/hydrate tests.
 2. Add equip/open/unequip actions against the existing player-owned contextual dialog and ContainerScreen transfer flow.
 3. Add attached presentation with async stale-result protection.
 4. Generalize `PlacedContainers` by policy + stable materialization/removal API, preserving chest carry behavior.
