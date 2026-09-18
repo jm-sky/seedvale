@@ -142,17 +142,19 @@ Generated from exported TypeScript symbols.
 ## `perf/report.ts`
 
 - `buildReport` — function — line 18
-- `formatReport` — function — line 141
+- `formatReport` — function — line 143
 
 ## `perf/sceneCensus.ts`
 
 - `BucketStats` — type — line 20
-- `censusScene` — function — line 86
-- `censusTotals` — function — line 105
+- `censusScene` — function — line 100
+- `censusShadowCasters` — function — line 116
+  - domain: world-terrain
+- `censusTotals` — function — line 126
 - `classifyObject` — function — line 42
 - `emptyCensus` — function — line 36
-- `hideBuckets` — function — line 119
-- `restoreVisibility` — function — line 132
+- `hideBuckets` — function — line 140
+- `restoreVisibility` — function — line 153
 - `SCENE_BUCKETS` — const — line 5
 - `SceneBucket` — type — line 18
 - `SceneCensus` — type — line 28

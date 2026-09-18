@@ -781,13 +781,13 @@ Generated from exported TypeScript symbols.
 
 ## `world/clouds.ts`
 
-- `CloudAppearance` — type — line 143
-- `cloudAppearanceFor` — function — line 184
+- `CloudAppearance` — type — line 144
+- `cloudAppearanceFor` — function — line 186
 - `CloudCategory` — type — line 22
 - `CloudCategoryWeights` — type — line 86
 - `cloudCategoryWeightsFor` — function — line 93
-- `CloudSystem` — type — line 243
-- `createClouds` — function — line 275
+- `CloudSystem` — type — line 249
+- `createClouds` — function — line 281
 
 ## `world/collision.ts`
 
