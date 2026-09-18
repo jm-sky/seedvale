@@ -1,6 +1,6 @@
 import type { AgentCpuReport } from './agentCpuDiag'
 import type { GrassFinalizationReport } from './grassFinalizationDiag'
-import type { SceneCensus } from './sceneCensus'
+import type { SceneCensus, SettlementShadowCensus } from './sceneCensus'
 
 /** Categories from plan 103 §2. CPU timers attribute work to these buckets.
  *  SHADOWS / POSTPROCESS are reserved for future GPU-pass splits — today's
@@ -251,6 +251,8 @@ export type PerfReportJson = {
   scene?: SceneCensus
   /** Visible `castShadow` meshes by scene bucket (content estimate, not GPU time). */
   shadowCasters?: SceneCensus
+  /** Settlement-only `castShadow` breakdown by content kind (diagnostic). */
+  settlementShadowCasters?: SettlementShadowCensus
   hitches?: HitchReportRow[]
   isolation?: IsolationProbeRow[]
   systems: Partial<Record<PerfCategory, number>>

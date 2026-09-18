@@ -4,7 +4,7 @@ import type { SessionTotals } from './monitor'
 import type { IsolationProbeRow, LongFrameAttribution, PerfContext, PerfReportJson } from './types'
 import { formatAgentCpuReport } from './agentCpuDiag'
 import { percentile } from './percentile'
-import { SCENE_BUCKETS, type SceneCensus } from './sceneCensus'
+import { SCENE_BUCKETS, type SceneCensus, SETTLEMENT_CONTENT_KINDS, type SettlementShadowCensus } from './sceneCensus'
 import { LONG_FRAME_MS, PERF_CATEGORIES, PERF_CATEGORY_COUNT } from './types'
 
 const EMPTY_CONTEXT: PerfContext = {
@@ -22,6 +22,7 @@ export function buildReport(input: {
   context?: PerfContext
   scene?: SceneCensus
   shadowCasters?: SceneCensus
+  settlementShadowCasters?: SettlementShadowCensus
   isolation?: IsolationProbeRow[]
   agentCpu?: AgentCpuReport | null
   grassFinalization?: GrassFinalizationReport | null
@@ -122,6 +123,7 @@ export function buildReport(input: {
     },
     scene: input.scene,
     shadowCasters: input.shadowCasters,
+    settlementShadowCasters: input.settlementShadowCasters,
     hitches,
     isolation: input.isolation,
     systems,
@@ -149,8 +151,12 @@ export function formatReport(report: PerfReportJson): string {
   const hitchLines = (report.hitches ?? [])
     .map((h) => `  ${h.label.padEnd(22)} n=${h.count} avg=${h.avgMs.toFixed(1)} max=${h.maxMs.toFixed(1)}`)
     .join('\n')
-  const sceneLines = formatCensusLines(report.scene)
-  const shadowCasterLines = formatCensusLines(report.shadowCasters)
+  const sceneLines = formatCensusLines(report.scene, SCENE_BUCKETS)
+  const shadowCasterLines = formatCensusLines(report.shadowCasters, SCENE_BUCKETS)
+  const settlementShadowLines = formatCensusLines(
+    report.settlementShadowCasters,
+    SETTLEMENT_CONTENT_KINDS,
+  )
   const isolationLines = (report.isolation ?? [])
     .map((row) => `  ${row.id.padEnd(18)} render=${row.renderMsAvg.toFixed(1)} ms draws=${row.drawCallsAvg} tris=${formatTriangles(row.trianglesAvg)}`)
     .join('\n')
@@ -209,6 +215,9 @@ export function formatReport(report: PerfReportJson): string {
     '',
     'Shadow casters (one-pass estimate):',
     shadowCasterLines || '  (not sampled)',
+    '',
+    'Settlement shadow casters (one-pass estimate):',
+    settlementShadowLines || '  (not sampled)',
     '',
     'Systems:',
     sysLines || '  (no per-system CPU samples)',
@@ -282,13 +291,16 @@ function formatTriangles(n: number): string {
   return String(n)
 }
 
-function formatCensusLines(census: SceneCensus | undefined): string {
+function formatCensusLines(
+  census: Partial<Record<string, { drawCalls: number, triangles: number, meshes: number, instances: number }>> | undefined,
+  keys: readonly string[],
+): string {
   if (!census) return ''
-  return SCENE_BUCKETS
-    .map((bucket) => {
-      const row = census[bucket]
-      if (row.drawCalls <= 0) return null
-      return `  ${bucket.padEnd(14)} draws=${row.drawCalls} tris=${formatTriangles(row.triangles)} meshes=${row.meshes} inst=${row.instances}`
+  return keys
+    .map((key) => {
+      const row = census[key]
+      if (!row || row.drawCalls <= 0) return null
+      return `  ${key.padEnd(16)} draws=${row.drawCalls} tris=${formatTriangles(row.triangles)} meshes=${row.meshes} inst=${row.instances}`
     })
     .filter((line): line is string => line !== null)
     .join('\n')

@@ -21,7 +21,7 @@ import { formatIsolationReport, runIsolationProbes } from './isolationProbe'
 import { formatLongFrameAttribution } from './longFrameFormat'
 import { formatProgramAttributionReport, formatProgramCensusReport, formatProgramCompileCostReport, getProgramCensus } from './programCensus'
 import { buildReport, formatReport } from './report'
-import { censusScene, censusShadowCasters } from './sceneCensus'
+import { censusScene, censusSettlementShadowCasters, censusShadowCasters } from './sceneCensus'
 
 /** Post-preload settle window (plan tools-001 §3) — lets lazy
  *  initialization/first-use costs that `waitForChunks()` doesn't cover (GC,
@@ -239,6 +239,7 @@ export function createBenchmarkRunner(host: BenchmarkHost): BenchmarkRunner {
 
         const scene = censusScene(host.isolation.scene)
         const shadowCasters = censusShadowCasters(host.isolation.scene)
+        const settlementShadowCasters = censusSettlementShadowCasters(host.isolation.scene)
         // Previously skipped for `stream` — now runs for every scenario so
         // the render-cost breakdown (water/vegetation/postprocessing/mirrors/
         // CPU-GPU separation) is available for the scenario program census
@@ -274,6 +275,7 @@ export function createBenchmarkRunner(host: BenchmarkHost): BenchmarkRunner {
           },
           scene,
           shadowCasters,
+          settlementShadowCasters,
           isolation,
         })
         console.log(formatReport(report))

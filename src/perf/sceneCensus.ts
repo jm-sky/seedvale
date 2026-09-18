@@ -27,6 +27,27 @@ export type BucketStats = {
 
 export type SceneCensus = Record<SceneBucket, BucketStats>
 
+/** Fine-grained settlement shadow-content kinds (diagnostic only).
+ *  Classification uses existing object `name` / `userData.settlementShadowKind`. */
+export const SETTLEMENT_CONTENT_KINDS = [
+  'houseStatic',
+  'houseInteractive',
+  'fence',
+  'storage',
+  'workplace',
+  'landmark',
+  'fireLight',
+  'decor',
+  'other',
+] as const
+
+export type SettlementContentKind = (typeof SETTLEMENT_CONTENT_KINDS)[number]
+
+export type SettlementShadowCensus = Record<SettlementContentKind, BucketStats>
+
+/** Create-time / name-derived tag read by {@link classifySettlementContent}. */
+export const SETTLEMENT_SHADOW_KIND_USERDATA = 'settlementShadowKind'
+
 export type VisibilityRestore = { object: Object3D; visible: boolean }
 
 function emptyBucket(): BucketStats {
@@ -37,6 +58,96 @@ export function emptyCensus(): SceneCensus {
   const out = {} as SceneCensus
   for (const bucket of SCENE_BUCKETS) out[bucket] = emptyBucket()
   return out
+}
+
+export function emptySettlementShadowCensus(): SettlementShadowCensus {
+  const out = {} as SettlementShadowCensus
+  for (const kind of SETTLEMENT_CONTENT_KINDS) out[kind] = emptyBucket()
+  return out
+}
+
+const SETTLEMENT_KIND_SET = new Set<string>(SETTLEMENT_CONTENT_KINDS)
+
+function kindFromUserData(node: Object3D): SettlementContentKind | null {
+  const raw = node.userData[SETTLEMENT_SHADOW_KIND_USERDATA]
+  if (typeof raw === 'string' && SETTLEMENT_KIND_SET.has(raw)) {
+    return raw as SettlementContentKind
+  }
+  return null
+}
+
+function kindFromName(name: string): SettlementContentKind | null {
+  if (
+    name === 'house-static'
+    || name === 'house-static-batch'
+    || name.startsWith('house-static:')
+    || name.startsWith('house-static-batch:')
+  ) {
+    return 'houseStatic'
+  }
+  if (name === 'house-interactive' || name === 'door' || name === 'doorLeaf' || name === 'hingePivot') {
+    return 'houseInteractive'
+  }
+  if (
+    name === 'settlement-palisade'
+    || name.startsWith('settlement-palisade-')
+    || name === 'settlement-pasture-fence'
+    || name.startsWith('settlement-pasture-fence-')
+    || name === 'settlement-paddock-fence'
+    || name.startsWith('settlement-paddock-fence-')
+  ) {
+    return 'fence'
+  }
+  if (
+    name === 'settlement-barrels'
+    || name.startsWith('settlement-barrels-')
+    || name === 'settlement-household-barrels'
+    || name.startsWith('settlement-household-barrels-')
+    || name === 'settlement-household-storage'
+    || name.startsWith('settlement-household-storage-')
+    || name === 'settlement-hay'
+    || name.startsWith('settlement-hay-')
+    || name === 'settlement-paddock-hay'
+    || name.startsWith('settlement-paddock-hay-')
+    || name === 'settlement-household-troughs'
+    || name.startsWith('settlement-household-troughs-')
+    || name === 'settlement-pasture-troughs'
+    || name.startsWith('settlement-pasture-troughs-')
+    || name === 'settlement-paddock-troughs'
+    || name.startsWith('settlement-paddock-troughs-')
+  ) {
+    return 'storage'
+  }
+  if (name.startsWith('garden:')) return 'landmark'
+  if (
+    name === 'settlement-bushes'
+    || name.startsWith('settlement-bushes-')
+    || name === 'settlement-plaza-cobble'
+    || name.startsWith('settlement-plaza-cobble-')
+    || name === 'settlement-plaza-paving'
+  ) {
+    return 'decor'
+  }
+  return null
+}
+
+/**
+ * Settlement-only content kind for shadow diagnostics. Prefers
+ * `userData.settlementShadowKind`, then known create-time / instanced names.
+ * Returns `other` when the mesh is under settlement but unmatched.
+ *
+ * @domain world-terrain
+ */
+export function classifySettlementContent(object: Object3D): SettlementContentKind {
+  let node: Object3D | null = object
+  while (node) {
+    const tagged = kindFromUserData(node)
+    if (tagged) return tagged
+    const fromName = kindFromName(node.name)
+    if (fromName) return fromName
+    node = node.parent
+  }
+  return 'other'
 }
 
 export function classifyObject(object: Object3D): SceneBucket {
@@ -82,8 +193,10 @@ function isRenderableMesh(object: Object3D): object is Mesh {
   return mesh.isMesh === true || mesh instanceof InstancedMesh || mesh instanceof SkinnedMesh
 }
 
-function accumulateMesh(census: SceneCensus, mesh: Mesh): void {
-  const bucket = census[classifyObject(mesh)]
+function accumulateInto(
+  bucket: BucketStats,
+  mesh: Mesh,
+): void {
   const instances = mesh instanceof InstancedMesh ? Math.max(1, mesh.count) : 1
   bucket.meshes += 1
   if (mesh instanceof InstancedMesh) {
@@ -94,6 +207,10 @@ function accumulateMesh(census: SceneCensus, mesh: Mesh): void {
   }
   bucket.drawCalls += drawCallsFor(mesh)
   bucket.triangles += triangleCount(mesh)
+}
+
+function accumulateMesh(census: SceneCensus, mesh: Mesh): void {
+  accumulateInto(census[classifyObject(mesh)], mesh)
 }
 
 /** Estimated one-pass scene submission (no shadow map, no mirror, no post). */
@@ -119,6 +236,23 @@ export function censusShadowCasters(scene: Scene): SceneCensus {
     if (!isRenderableMesh(object)) return
     if (!object.castShadow) return
     accumulateMesh(census, object)
+  })
+  return census
+}
+
+/**
+ * Settlement-only shadow-caster breakdown by content kind. Only counts
+ * visible `castShadow` meshes whose top-level scene bucket is `settlement`.
+ *
+ * @domain world-terrain
+ */
+export function censusSettlementShadowCasters(scene: Scene): SettlementShadowCensus {
+  const census = emptySettlementShadowCensus()
+  scene.traverse((object) => {
+    if (!isRenderableMesh(object)) return
+    if (!object.castShadow) return
+    if (classifyObject(object) !== 'settlement') return
+    accumulateInto(census[classifySettlementContent(object)], object)
   })
   return census
 }

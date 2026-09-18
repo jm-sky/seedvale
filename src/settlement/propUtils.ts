@@ -1,5 +1,9 @@
 import * as THREE from 'three'
 import { loadGltf, prepareProp, preparePropFitMax } from '../assets/loadGltf'
+import {
+  SETTLEMENT_SHADOW_KIND_USERDATA,
+  type SettlementContentKind,
+} from '../perf/sceneCensus'
 
 /**
  * Recolor a cloned prop without mutating shared GLTF materials
@@ -114,6 +118,20 @@ function disableCastShadow(object: THREE.Object3D): THREE.Object3D {
     if (mesh.isMesh) mesh.castShadow = false
   })
   return object
+}
+
+/**
+ * Diagnostic-only shadow census kind for settlement props. Does not affect
+ * simulation, colliders, or main-pass visibility. Skips if already tagged.
+ *
+ * @domain world-terrain
+ */
+export function tagSettlementShadowKind(
+  root: THREE.Object3D,
+  kind: SettlementContentKind,
+): void {
+  if (typeof root.userData[SETTLEMENT_SHADOW_KIND_USERDATA] === 'string') return
+  root.userData[SETTLEMENT_SHADOW_KIND_USERDATA] = kind
 }
 
 export async function loadPropOrFallback(

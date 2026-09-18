@@ -78,7 +78,7 @@ import {
   WOOD_PILE_PROGRESSIVE_URL,
   WOOD_PILE_URL,
 } from './propSpecs'
-import { cloneProp, clonePropWithYaw, loadPropOrFallback, loadPropTemplates, placeOnGround } from './propUtils'
+import { cloneProp, clonePropWithYaw, loadPropOrFallback, loadPropTemplates, placeOnGround, tagSettlementShadowKind } from './propUtils'
 import { placeRatNest } from './ratNestPlacement'
 import {
   plantEntrancePalisade,
@@ -610,6 +610,7 @@ function plantTreeCluster(
       tree.userData.treeSizeJitter = sizeJitter
       tree.userData.treeSpeciesIndex = speciesIndex
       tree.userData.treeInitialStage = initialStage
+      tagSettlementShadowKind(tree, 'decor')
       group.add(tree)
       landmarks.trees.push({
         id,
@@ -862,6 +863,7 @@ export async function buildSettlementProps(
   const wellTemplate = await loadPropOrFallback(WELL_URL, WELL_HEIGHT, createWell)
   const well = wellTemplate.clone(true)
   placeOnGround(well, wellX, wellZ, sampleHeight)
+  tagSettlementShadowKind(well, 'landmark')
   group.add(well)
   landmarks.well.set(wellX, sampleHeight(wellX, wellZ), wellZ)
   landmarks.wellProp = well
@@ -881,6 +883,7 @@ export async function buildSettlementProps(
     if (familyIndex == null) continue
     const hw = wellTemplate.clone(true)
     placeOnGround(hw, lm.x, lm.z, sampleHeight)
+    tagSettlementShadowKind(hw, 'landmark')
     group.add(hw)
     const position = new THREE.Vector3(lm.x, sampleHeight(lm.x, lm.z), lm.z)
     wells.push({
@@ -896,6 +899,7 @@ export async function buildSettlementProps(
   if (pasturePlan) {
     const pw = wellTemplate.clone(true)
     placeOnGround(pw, pasturePlan.well.x, pasturePlan.well.z, sampleHeight)
+    tagSettlementShadowKind(pw, 'landmark')
     group.add(pw)
     const position = new THREE.Vector3(
       pasturePlan.well.x,
@@ -967,6 +971,7 @@ export async function buildSettlementProps(
   )
   const stockpile = await loadPrimaryWoodStockpile()
   placeOnGround(stockpile, stockX, stockZ, sampleHeight)
+  tagSettlementShadowKind(stockpile, 'storage')
   group.add(stockpile)
   landmarks.stockpile.set(stockX, sampleHeight(stockX, stockZ), stockZ)
 
@@ -981,6 +986,7 @@ export async function buildSettlementProps(
     const extra = woodPileExtras[i]!
     const offset = WOOD_PILE_EXTRA_OFFSETS[i]!
     placeOnGround(extra, stockX + offset.dx, stockZ + offset.dz, sampleHeight)
+    tagSettlementShadowKind(extra, 'storage')
     group.add(extra)
   }
   const settlementWoodVisual = createWoodPileVisual(stockpile, woodPileExtras)
@@ -996,6 +1002,7 @@ export async function buildSettlementProps(
     '/models/settlement/crate.glb', 1.0, () => createCrate(1.8),
   )
   placeOnGround(settlementStorageProp, settlementStorageX, settlementStorageZ, sampleHeight)
+  tagSettlementShadowKind(settlementStorageProp, 'storage')
   group.add(settlementStorageProp)
   landmarks.settlementStorage.set(
     settlementStorageX,
@@ -1025,6 +1032,7 @@ export async function buildSettlementProps(
         createRatNest,
       )
       placeOnGround(nestProp, nestSite.x, nestSite.z, sampleHeight)
+      tagSettlementShadowKind(nestProp, 'decor')
       group.add(nestProp)
       landmarks.ratNest = new THREE.Vector3(nestSite.x, nestSite.y, nestSite.z)
       landmarks.ratNestProp = nestProp
@@ -1073,6 +1081,7 @@ export async function buildSettlementProps(
       : createGarden(scale)
     placeOnGround(garden, gardenX, gardenZ, sampleHeight)
     garden.name = `garden:${scale}`
+    tagSettlementShadowKind(garden, 'landmark')
     group.add(garden)
     const foot = new THREE.Vector3(gardenX, sampleHeight(gardenX, gardenZ), gardenZ)
     landmarks.gardens.push(foot)
@@ -1094,6 +1103,7 @@ export async function buildSettlementProps(
     )
     wheat.rotation.y = coreRandom() * Math.PI * 2
     placeOnGround(wheat, wheatX, wheatZ, sampleHeight)
+    tagSettlementShadowKind(wheat, 'landmark')
     group.add(wheat)
     const fieldAnchor = cultivationAnchorFromSettlementField({ x: wheatX, z: wheatZ })
     landmarks.cultivationAnchors = [fieldAnchor, ...(landmarks.cultivationAnchors ?? [])]
@@ -1111,9 +1121,11 @@ export async function buildSettlementProps(
     )
     const marketCrate = await loadPropOrFallback('/models/settlement/crate.glb', 0.6, () => createCrate(1))
     placeOnGround(marketCrate, stallX, stallZ, sampleHeight)
+    tagSettlementShadowKind(marketCrate, 'workplace')
     group.add(marketCrate)
     const marketBarrel = await loadPropOrFallback('/models/settlement/barrel.glb', 0.65, () => createBarrel(1))
     placeOnGround(marketBarrel, stallX + 0.7, stallZ + 0.3, sampleHeight)
+    tagSettlementShadowKind(marketBarrel, 'workplace')
     group.add(marketBarrel)
     const stall = new THREE.Vector3(stallX, sampleHeight(stallX, stallZ), stallZ)
     markets.push(stall)
@@ -1131,6 +1143,7 @@ export async function buildSettlementProps(
   const noticeBoardProp = createSignpost()
   noticeBoardProp.rotation.y = coreRandom() * Math.PI * 2
   placeOnGround(noticeBoardProp, boardX, boardZ, sampleHeight)
+  tagSettlementShadowKind(noticeBoardProp, 'landmark')
   group.add(noticeBoardProp)
   landmarks.noticeBoard.set(boardX, sampleHeight(boardX, boardZ), boardZ)
 
@@ -1527,6 +1540,7 @@ export async function buildSettlementProps(
   for (const p of householdWoodPlacements) {
     const pile = householdWoodTemplate.clone(true)
     placeOnGround(pile, p.x, p.z, sampleHeight)
+    tagSettlementShadowKind(pile, 'storage')
     group.add(pile)
     householdWoodVisuals.push(createWoodPileVisual(pile, []))
   }
@@ -1558,6 +1572,7 @@ export async function buildSettlementProps(
     const anvil = await loadPropOrFallback('/models/parked/anvil.glb', 0.75, () => createAnvil())
     anvil.rotation.y = yawRandom() * Math.PI * 2
     placeOnGround(anvil, geometry.anvil.x, geometry.anvil.z, sampleHeight)
+    tagSettlementShadowKind(anvil, 'workplace')
     group.add(anvil)
 
     const grindWorkbench = await loadPropOrFallback(
@@ -1565,6 +1580,7 @@ export async function buildSettlementProps(
     )
     grindWorkbench.rotation.y = yawRandom() * Math.PI * 2
     placeOnGround(grindWorkbench, geometry.workbench.x, geometry.workbench.z, sampleHeight)
+    tagSettlementShadowKind(grindWorkbench, 'workplace')
     group.add(grindWorkbench)
 
     landmarks.blacksmithWorkplaces.push({
@@ -1646,6 +1662,7 @@ export async function buildSettlementProps(
     const bodyKind = plannedCampfireBodyKind(size)
     const { group: campfire, flame } = createLitCampfireVisual(bodyKind)
     placeOnGround(campfire, fireX, fireZ, sampleHeight)
+    tagSettlementShadowKind(campfire, 'fireLight')
     group.add(campfire)
     landmarks.campfire = {
       position: new THREE.Vector3(fireX, sampleHeight(fireX, fireZ), fireZ),
@@ -1665,6 +1682,7 @@ export async function buildSettlementProps(
       createStockpile,
     )
     placeOnGround(stockpile2, stock2X, stock2Z, sampleHeight)
+    tagSettlementShadowKind(stockpile2, 'storage')
     group.add(stockpile2)
     landmarks.stockpileSecondary = new THREE.Vector3(
       stock2X,
@@ -1702,6 +1720,7 @@ export async function buildSettlementProps(
       preparePropFitMax(wagon, 3.8)
       placeOnGround(wagon, pose.wagonX, pose.wagonZ, sampleHeight)
       wagon.rotation.y = pose.yaw
+      tagSettlementShadowKind(wagon, 'workplace')
       group.add(wagon)
       landmarks.merchantWagon = new THREE.Vector3(
         pose.wagonX,
@@ -1754,6 +1773,7 @@ export async function buildSettlementProps(
       post.rotation.y = yaw
       const torch = createVillageTorchLight(post)
       placeOnGround(torch.object, x, z, sampleHeight)
+      tagSettlementShadowKind(torch.object, 'fireLight')
       group.add(torch.object)
       const y = sampleHeight(x, z)
       villageTorches.push({
@@ -1786,6 +1806,7 @@ export async function buildSettlementProps(
         post.rotation.y = ang + Math.PI - Math.PI / 2
         const torch = createVillageTorchLight(post)
         placeOnGround(torch.object, tx, tz, sampleHeight)
+        tagSettlementShadowKind(torch.object, 'fireLight')
         group.add(torch.object)
         const y = sampleHeight(tx, tz)
         villageTorches.push({
@@ -1919,6 +1940,7 @@ export async function buildSettlementProps(
         markers.push(new THREE.Vector3(spot.x, sampleHeight(spot.x, spot.z), spot.z))
         const flower = clonePropWithYaw(bushTemplates, 2, 0.8, (i * Math.PI) / 3)
         placeOnGround(flower, spot.x, spot.z, sampleHeight)
+        tagSettlementShadowKind(flower, 'decor')
         group.add(flower)
       }
       landmarks.hiddenTreasureMarkers = markers
@@ -1981,6 +2003,7 @@ export async function buildSettlementProps(
       tree.userData.treeSizeJitter = sizeJitter
       tree.userData.treeSpeciesIndex = speciesIndex
       tree.userData.treeInitialStage = initialStage
+      tagSettlementShadowKind(tree, 'decor')
       group.add(tree)
       landmarks.trees.push({
         id,

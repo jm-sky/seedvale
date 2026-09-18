@@ -219,4 +219,36 @@ Shipped diagnostic plumbing; **no production shadow-content rule**.
 - `pnpm build`: pass.
 - No browser verification; no `pnpm docs:sync`.
 
+## Implementation log — 2026-09-18 (settlement shadow sub-census)
+
+Evidence from `docs/performance/results/2026-09-18--023--benchmark-settlement-heavy.md`:
+
+- Isolation: `full 47.6 ms` → `no-shadows 42.0 ms` (measurable shadow cost).
+- Top-level shadow casters: settlement `1702 draws / 1.77M tris`; vegetation 202; environment 265; NPC+fauna only 27 — **no agent distance changes**.
+
+### Code
+
+- `SETTLEMENT_CONTENT_KINDS` + `classifySettlementContent` + `censusSettlementShadowCasters` in `src/perf/sceneCensus.ts`.
+- Report section `Settlement shadow casters (one-pass estimate):` + JSON `settlementShadowCasters`.
+- `tagSettlementShadowKind` in `propUtils.ts`; create-time tags on unlabeled wells/stockpiles/storage/market/workplace/campfire/torches/trees/flowers in `props.ts`.
+- Existing instanced/house/fence names continue to drive classification without new runtime registry.
+
+### Not changed
+
+- No broad settlement `castShadow=false`, no `shadowBudget` cadence changes, no NPC/fauna shadow distances.
+- Top-level `SCENE_BUCKETS` / `hide-settlement` unchanged.
+
+### Gate
+
+- Waiting on user re-run of `?benchmark=settlement-heavy` for the new settlement sub-census section before choosing one production content rule.
+
+### Automated checks (this stage)
+
+- `sceneCensus` + `report` unit tests: pass.
+- `pnpm type-check`: pass.
+- `pnpm lint`: pass.
+- `pnpm test`: one unrelated failure in `src/world/clouds.test.ts` (fog tint vs clear); not touched by this change.
+- `pnpm build`: pass.
+- No browser verification; no `pnpm docs:sync`.
+
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

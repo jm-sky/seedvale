@@ -9,10 +9,13 @@ import {
 import { describe, expect, it } from 'vitest'
 import {
   censusScene,
+  censusSettlementShadowCasters,
   censusShadowCasters,
   classifyObject,
+  classifySettlementContent,
   hideBuckets,
   restoreVisibility,
+  SETTLEMENT_SHADOW_KIND_USERDATA,
 } from './sceneCensus'
 
 function namedMesh(name: string): Mesh {
@@ -110,6 +113,92 @@ describe('censusShadowCasters', () => {
     const census = censusShadowCasters(scene)
     expect(census.vegetation.meshes).toBe(1)
     expect(census.fauna.meshes).toBe(1)
+    expect(census.other.meshes).toBe(0)
+  })
+})
+
+describe('classifySettlementContent', () => {
+  it('classifies house-static-batch and house-interactive by name', () => {
+    const batch = new Group()
+    batch.name = 'house-static-batch'
+    const staticMesh = namedMesh('part')
+    batch.add(staticMesh)
+    expect(classifySettlementContent(staticMesh)).toBe('houseStatic')
+
+    const interactive = new Group()
+    interactive.name = 'house-interactive'
+    const door = namedMesh('doorLeaf')
+    interactive.add(door)
+    expect(classifySettlementContent(door)).toBe('houseInteractive')
+  })
+
+  it('classifies palisade / fence instanced group names', () => {
+    const group = new Group()
+    group.name = 'settlement-palisade'
+    const mesh = namedMesh('settlement-palisade-0')
+    group.add(mesh)
+    expect(classifySettlementContent(mesh)).toBe('fence')
+  })
+
+  it('prefers userData.settlementShadowKind over an ambiguous name', () => {
+    const mesh = namedMesh('misc-prop')
+    mesh.userData[SETTLEMENT_SHADOW_KIND_USERDATA] = 'workplace'
+    expect(classifySettlementContent(mesh)).toBe('workplace')
+  })
+})
+
+describe('censusSettlementShadowCasters', () => {
+  it('skips castShadow=false and non-settlement meshes', () => {
+    const scene = new Scene()
+    const settlement = new Group()
+    settlement.name = 'settlement'
+
+    const noShadow = namedMesh('house-static-batch:0')
+    noShadow.castShadow = false
+    settlement.add(noShadow)
+
+    const terrain = namedMesh('chunk')
+    terrain.castShadow = true
+    scene.add(settlement)
+    scene.add(terrain)
+
+    const census = censusSettlementShadowCasters(scene)
+    expect(census.houseStatic.meshes).toBe(0)
+    expect(census.other.meshes).toBe(0)
+  })
+
+  it('breaks settlement shadow casters into content kinds', () => {
+    const scene = new Scene()
+    const settlement = new Group()
+    settlement.name = 'settlement'
+
+    const batch = new Group()
+    batch.name = 'house-static-batch'
+    const houseMesh = new InstancedMesh(new BoxGeometry(1, 1, 1), new MeshBasicMaterial(), 4)
+    houseMesh.count = 4
+    houseMesh.castShadow = true
+    batch.add(houseMesh)
+    settlement.add(batch)
+
+    const fence = new Group()
+    fence.name = 'settlement-pasture-fence'
+    const fenceMesh = namedMesh('panel')
+    fenceMesh.castShadow = true
+    fence.add(fenceMesh)
+    settlement.add(fence)
+
+    const tagged = namedMesh('well')
+    tagged.castShadow = true
+    tagged.userData[SETTLEMENT_SHADOW_KIND_USERDATA] = 'landmark'
+    settlement.add(tagged)
+
+    scene.add(settlement)
+
+    const census = censusSettlementShadowCasters(scene)
+    expect(census.houseStatic.instancedMeshes).toBe(1)
+    expect(census.houseStatic.instances).toBe(4)
+    expect(census.fence.meshes).toBe(1)
+    expect(census.landmark.meshes).toBe(1)
     expect(census.other.meshes).toBe(0)
   })
 })

@@ -465,8 +465,53 @@ describe('buildReport', () => {
     expect(report.shadowCasters?.settlement.drawCalls).toBe(10)
     const text = formatReport(report)
     expect(text).toContain('Shadow casters (one-pass estimate):')
-    expect(text).toContain('settlement     draws=10')
-    expect(text).toContain('vegetation     draws=2')
-    expect(text).not.toContain('grass          draws=')
+    expect(text).toContain('settlement       draws=10')
+    expect(text).toContain('vegetation       draws=2')
+    expect(text).not.toContain('grass            draws=')
+  })
+
+  it('includes settlement shadow casters breakdown', () => {
+    const categoryMsSum = new Float64Array(PERF_CATEGORY_COUNT)
+    const settlementShadowCasters = {
+      houseStatic: { meshes: 5, instancedMeshes: 5, instances: 200, drawCalls: 5, triangles: 100000 },
+      houseInteractive: { meshes: 0, instancedMeshes: 0, instances: 0, drawCalls: 0, triangles: 0 },
+      fence: { meshes: 3, instancedMeshes: 3, instances: 80, drawCalls: 3, triangles: 40000 },
+      storage: { meshes: 0, instancedMeshes: 0, instances: 0, drawCalls: 0, triangles: 0 },
+      workplace: { meshes: 0, instancedMeshes: 0, instances: 0, drawCalls: 0, triangles: 0 },
+      landmark: { meshes: 1, instancedMeshes: 0, instances: 1, drawCalls: 1, triangles: 2000 },
+      fireLight: { meshes: 0, instancedMeshes: 0, instances: 0, drawCalls: 0, triangles: 0 },
+      decor: { meshes: 0, instancedMeshes: 0, instances: 0, drawCalls: 0, triangles: 0 },
+      other: { meshes: 0, instancedMeshes: 0, instances: 0, drawCalls: 0, triangles: 0 },
+    }
+    const report = buildReport({
+      durationSec: 30,
+      scenario: 'settlement-heavy',
+      totals: {
+        frames: 10,
+        frameMsSum: 170,
+        frameMsMin: 14,
+        frameMsMax: 22,
+        frameMs: [14, 15, 16, 16, 17, 17, 18, 18, 19, 22],
+        drawCallsSum: 10000,
+        drawCallsMax: 1200,
+        trianglesSum: 10_000_000,
+        renderCategoryMs: [],
+        categoryMsSum,
+        spikeCounts: new Int32Array(PERF_CATEGORY_COUNT),
+        hitchCounts: new Int32Array(PERF_CATEGORY_COUNT),
+        hitchByLabel: new Map(),
+        longFrameCount: 0,
+        longFrames: [],
+        mirrorDrawCallsSum: 0,
+        geometriesLast: 0,
+        texturesLast: 0,
+      },
+      settlementShadowCasters,
+    })
+    expect(report.settlementShadowCasters?.houseStatic.drawCalls).toBe(5)
+    const text = formatReport(report)
+    expect(text).toContain('Settlement shadow casters (one-pass estimate):')
+    expect(text).toContain('houseStatic      draws=5')
+    expect(text).toContain('fence            draws=3')
   })
 })
