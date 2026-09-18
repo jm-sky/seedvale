@@ -264,28 +264,28 @@ Generated from exported TypeScript symbols.
 
 ## `items/HeldTool.ts`
 
-- `createHeldTool` — function — line 69
+- `createHeldTool` — function — line 72
   - domain: items-player
   - system: held-tool
   - role: Tracks which single tool/weapon instance is currently equipped in hand.
   - uses: Inventory
-- `HeldTool` — type — line 39
-- `isToolKind` — function — line 35
+- `HeldTool` — type — line 42
+- `isToolKind` — function — line 38
 - `ToolKind` — type — line 7
 
 ## `items/heldToolVisual.ts`
 
-- `BRANCH_HELD_ATTACH` — const — line 206
-- `createHeldToolObject` — function — line 310
-- `findRightHandSocket` — function — line 282
-- `findUbcLeftHandSocket` — function — line 287
+- `BRANCH_HELD_ATTACH` — const — line 226
+- `createHeldToolObject` — function — line 330
+- `findRightHandSocket` — function — line 302
+- `findUbcLeftHandSocket` — function — line 307
 - `HELD_ATTACH` — const — line 45
-- `HELD_GLB` — const — line 215
+- `HELD_GLB` — const — line 235
 - `HeldAttach` — type — line 18
-- `HeldMountContext` — type — line 268
-- `mountAttachOnSocket` — function — line 384
-- `mountHeldToolOnSocket` — function — line 338
-- `preloadHeldToolModels` — function — line 291
+- `HeldMountContext` — type — line 288
+- `mountAttachOnSocket` — function — line 404
+- `mountHeldToolOnSocket` — function — line 358
+- `preloadHeldToolModels` — function — line 311
 
 ## `items/Inventory.ts`
 
@@ -331,36 +331,36 @@ Generated from exported TypeScript symbols.
 ## `items/itemCatalog.ts`
 
 - `ArmorConfig` — type — line 56
-- `ARROW_DAMAGE_BONUS` — const — line 1755
+- `ARROW_DAMAGE_BONUS` — const — line 1786
 - `BookTier` — type — line 179
-- `CAPABILITY_KINDS` — const — line 1798
+- `CAPABILITY_KINDS` — const — line 1829
 - `CAPABILITY_LABEL` — const — line 155
 - `CAPABILITY_NEED_LABEL` — const — line 139
-- `CONSUMABLE_KINDS_BY_NEED` — const — line 1838
+- `CONSUMABLE_KINDS_BY_NEED` — const — line 1869
 - `ConsumableNeed` — type — line 170
 - `consumeNeedNoun` — function — line 288
 - `consumeVerbLabel` — function — line 279
 - `DefenseConfig` — type — line 42
-- `hasItemCapability` — function — line 1823
-- `HOLDABLE_KINDS` — const — line 1789
-- `INJURY_TREATMENT_KINDS` — const — line 1860
-- `isArmorCatalogKind` — function — line 1776
-- `isBodyArmorKind` — function — line 1782
-- `isMeleeToolKind` — function — line 1770
-- `isRangedTool` — function — line 1762
+- `hasItemCapability` — function — line 1854
+- `HOLDABLE_KINDS` — const — line 1820
+- `INJURY_TREATMENT_KINDS` — const — line 1891
+- `isArmorCatalogKind` — function — line 1807
+- `isBodyArmorKind` — function — line 1813
+- `isMeleeToolKind` — function — line 1801
+- `isRangedTool` — function — line 1793
 - `ITEM_CATALOG` — const — line 302
   - domain: items-player
   - system: item-catalog
   - role: Single source of truth for per-`ItemKind` gameplay flags and tool-capability gates.
   - owns: ItemCatalogEntry
-- `ITEM_SYSTEM_ROADMAP` — const — line 1881
+- `ITEM_SYSTEM_ROADMAP` — const — line 1912
 - `ItemCapability` — type — line 112
 - `ItemCatalogEntry` — type — line 181
-- `itemIsResilient` — function — line 1828
+- `itemIsResilient` — function — line 1859
 - `ItemSpawnKind` — type — line 14
-- `itemTreatsPhysicalInjury` — function — line 1873
+- `itemTreatsPhysicalInjury` — function — line 1904
 - `MeleeConfig` — type — line 25
-- `NON_ITEM_PROPS` — const — line 1887
+- `NON_ITEM_PROPS` — const — line 1918
 - `RangedConfig` — type — line 76
 
 ## `items/itemDisplay.ts`
@@ -388,38 +388,38 @@ Generated from exported TypeScript symbols.
 - `ArmorItemInstance` — type — line 57
 - `ArmorKind` — type — line 19
 - `ArmorQuality` — type — line 38
-- `clamp01` — function — line 251
-- `clampCampCondition` — function — line 188
-- `cloneItemInstance` — function — line 256
-- `createItemInstanceId` — function — line 204
-- `createKeyInstance` — function — line 235
-- `createTentInstance` — function — line 193
-- `IDENTITY_ONLY_ITEM_KINDS` — const — line 211
-- `INSTANCE_BACKED_KINDS` — const — line 222
+- `clamp01` — function — line 256
+- `clampCampCondition` — function — line 193
+- `cloneItemInstance` — function — line 261
+- `createItemInstanceId` — function — line 209
+- `createKeyInstance` — function — line 240
+- `createTentInstance` — function — line 198
+- `IDENTITY_ONLY_ITEM_KINDS` — const — line 216
+- `INSTANCE_BACKED_KINDS` — const — line 227
 - `isArmorItemInstance` — function — line 74
 - `isArmorKind` — function — line 62
 - `isArmorQuality` — function — line 66
-- `isInstanceBackedKind` — function — line 239
-- `isLiquidContainerInstance` — function — line 172
-- `isLiquidContainerKind` — function — line 146
-- `isTentItemInstance` — function — line 183
-- `isTrapItemInstance` — function — line 247
-- `isTrapKind` — function — line 243
-- `isWeaponItemInstance` — function — line 159
-- `isWeaponMaintenanceKind` — function — line 119
+- `isInstanceBackedKind` — function — line 244
+- `isLiquidContainerInstance` — function — line 177
+- `isLiquidContainerKind` — function — line 151
+- `isTentItemInstance` — function — line 188
+- `isTrapItemInstance` — function — line 252
+- `isTrapKind` — function — line 248
+- `isWeaponItemInstance` — function — line 164
+- `isWeaponMaintenanceKind` — function — line 124
 - `ItemInstance` — type — line 4
-- `LIQUID_CONTAINER_KIND_LIST` — const — line 136
-- `LIQUID_CONTAINER_KINDS` — const — line 144
-- `LiquidContainerItemInstance` — type — line 166
-- `LiquidContainerKind` — type — line 129
-- `LiquidContent` — type — line 124
+- `LIQUID_CONTAINER_KIND_LIST` — const — line 141
+- `LIQUID_CONTAINER_KINDS` — const — line 149
+- `LiquidContainerItemInstance` — type — line 171
+- `LiquidContainerKind` — type — line 134
+- `LiquidContent` — type — line 129
 - `normalizeArmorQuality` — function — line 70
-- `TentItemInstance` — type — line 178
+- `TentItemInstance` — type — line 183
 - `TrapItemInstance` — type — line 11
 - `TrapKind` — type — line 9
-- `WEAPON_MAINTENANCE_KIND_LIST` — const — line 101
-- `WEAPON_MAINTENANCE_KINDS` — const — line 117
-- `WeaponItemInstance` — type — line 153
+- `WEAPON_MAINTENANCE_KIND_LIST` — const — line 104
+- `WEAPON_MAINTENANCE_KINDS` — const — line 122
+- `WeaponItemInstance` — type — line 158
 - `WeaponMaintenanceKind` — type — line 83
 
 ## `items/itemModels.ts`
@@ -430,23 +430,23 @@ Generated from exported TypeScript symbols.
 
 ## `items/items.ts`
 
-- `canCancelRestNow` — function — line 261
-- `canCancelRestProgress` — function — line 232
-- `createItemMesh` — function — line 1555
-- `hasItemCategory` — function — line 209
-- `hasItemKindCategory` — function — line 213
-- `ITEM_DEFS` — const — line 265
-- `ITEM_SIZE_UNITS` — const — line 182
-- `ItemCategory` — type — line 173
-- `ItemDef` — type — line 195
+- `canCancelRestNow` — function — line 268
+- `canCancelRestProgress` — function — line 239
+- `createItemMesh` — function — line 1589
+- `hasItemCategory` — function — line 216
+- `hasItemKindCategory` — function — line 220
+- `ITEM_DEFS` — const — line 272
+- `ITEM_SIZE_UNITS` — const — line 189
+- `ItemCategory` — type — line 180
+- `ItemDef` — type — line 202
 - `ItemKind` — type — line 6
-- `ItemSize` — type — line 178
-- `itemSizeUnits` — function — line 191
-- `primaryItemCategory` — function — line 222
-- `REST_CANCEL_PROGRESS_THRESHOLD` — const — line 230
-- `REST_CANCEL_VIGOR_THRESHOLD` — const — line 242
-- `restCancelAllowedByStartVigor` — function — line 249
-- `tintBucketGlb` — function — line 1579
+- `ItemSize` — type — line 185
+- `itemSizeUnits` — function — line 198
+- `primaryItemCategory` — function — line 229
+- `REST_CANCEL_PROGRESS_THRESHOLD` — const — line 237
+- `REST_CANCEL_VIGOR_THRESHOLD` — const — line 249
+- `restCancelAllowedByStartVigor` — function — line 256
+- `tintBucketGlb` — function — line 1613
 
 ## `items/ItemSpawner.ts`
 
@@ -552,49 +552,49 @@ Generated from exported TypeScript symbols.
 
 ## `items/tradeCatalog.ts`
 
-- `armorQualityValueMultiplier` — function — line 265
+- `armorQualityValueMultiplier` — function — line 273
   - domain: items-player
-- `BASE_BUY_FACTOR` — const — line 244
+- `BASE_BUY_FACTOR` — const — line 252
   - domain: settlements — full-condition buy-from-NPC factor bounds (plan settlements-npcs-033) — a markup over `tradeValue` the player pays an ordinary NPC. `MIN_BUY_FACTOR` intentionally equals `MAX_SELL_FACTOR` so the best possible buy price never undercuts the best possible merchant buyback for the same nominal value — no standing can create a buy→sell(merchant) arbitrage loop.
-- `BASE_SELL_FACTOR` — const — line 234
+- `BASE_SELL_FACTOR` — const — line 242
   - domain: settlements — full-condition sell factor bounds (plan settlements-006).
-- `BROKEN_SELL_MULTIPLIER` — const — line 438
-- `canSell` — function — line 336
-- `fullConditionBuyFactor` — function — line 408
+- `BROKEN_SELL_MULTIPLIER` — const — line 446
+- `canSell` — function — line 344
+- `fullConditionBuyFactor` — function — line 416
   - domain: settlements — social buy factor for player purchases from an ordinary NPC (plan settlements-npcs-033) — reuses the exact same `relationshipEffect`/`reputationEffect` inputs as merchant sell pricing, but *subtracted* rather than added: better relation/reputation must never raise what the player pays, worse standing must never lower it.
-- `fullConditionSellFactor` — function — line 369
+- `fullConditionSellFactor` — function — line 377
   - domain: settlements — sell factor for a full-condition item before durability scaling.
-- `instanceNominalValue` — function — line 284
+- `instanceNominalValue` — function — line 292
   - domain: items-player
-- `isMerchantStock` — function — line 320
-- `MAX_BUY_FACTOR` — const — line 246
-- `MAX_SELL_FACTOR` — const — line 236
+- `isMerchantStock` — function — line 328
+- `MAX_BUY_FACTOR` — const — line 254
+- `MAX_SELL_FACTOR` — const — line 244
 - `MERCHANT_PRICES` — const — line 22
-- `MERCHANT_STOCK` — const — line 109
-- `merchantInstancePrice` — function — line 296
+- `MERCHANT_STOCK` — const — line 112
+- `merchantInstancePrice` — function — line 304
   - domain: items-player
-- `merchantPrice` — function — line 255
-- `MIN_BUY_FACTOR` — const — line 245
-- `MIN_SELL_FACTOR` — const — line 235
-- `NEUTRAL_SELL_PRICE_CONTEXT` — const — line 226
+- `merchantPrice` — function — line 263
+- `MIN_BUY_FACTOR` — const — line 253
+- `MIN_SELL_FACTOR` — const — line 243
+- `NEUTRAL_SELL_PRICE_CONTEXT` — const — line 234
   - domain: settlements — neutral social standing for merchant sell pricing.
-- `npcInstanceSalePrice` — function — line 309
+- `npcInstanceSalePrice` — function — line 317
   - domain: items-player
-- `npcSalePrice` — function — line 421
+- `npcSalePrice` — function — line 429
   - domain: settlements — player-buys-from-NPC unit price in coins for one ordinary trade-eligible good (plan settlements-npcs-033 §5/§6). Base value reuses the same catalog as merchant stock (`merchantPrice`, falling back to `tradeValue` for kinds the merchant doesn't stock) so no profession/dialogue code hardcodes its own price.
-- `offerValue` — function — line 429
-- `relationshipEffect` — function — line 345
+- `offerValue` — function — line 437
+- `relationshipEffect` — function — line 353
   - domain: settlements — relation tier bonus in percentage points (0.01 = 1 pp).
-- `reputationEffect` — function — line 358
+- `reputationEffect` — function — line 366
   - domain: settlements — weighted reputation × renown amplification (percentage points).
-- `resolveInstanceSellPrice` — function — line 441
+- `resolveInstanceSellPrice` — function — line 449
   - domain: settlements — merchant buyback for a concrete item instance — price is derived, never stored.
-- `roundSellPrice` — function — line 378
+- `roundSellPrice` — function — line 386
   - domain: settlements — deterministic integer coin rounding shared by stack and instance pricing.
-- `sellPrice` — function — line 393
+- `sellPrice` — function — line 401
   - domain: settlements — merchant buyback for a stackable kind at full condition.
-- `SellPriceContext` — type — line 248
-- `tradeValue` — function — line 325
+- `SellPriceContext` — type — line 256
+- `tradeValue` — function — line 333
 
 ## `items/tradeGrievance.ts`
 

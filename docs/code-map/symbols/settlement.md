@@ -467,30 +467,30 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/merchantTrade.ts`
 
-- `generateMerchantAssortment` — function — line 470
+- `generateMerchantAssortment` — function — line 473
 - `HOME_STARTER_MERCHANT_KINDS` — const — line 94
-- `horseVendorNpcId` — function — line 251
-- `isPremiumMerchantGood` — function — line 182
-- `MERCHANT_ARMOR_QUALITY_WEIGHTS` — const — line 565
+- `horseVendorNpcId` — function — line 254
+- `isPremiumMerchantGood` — function — line 185
+- `MERCHANT_ARMOR_QUALITY_WEIGHTS` — const — line 568
 - `MERCHANT_SPECIALIZATIONS` — const — line 42
-- `MerchantArmorQualityContext` — type — line 575
+- `MerchantArmorQualityContext` — type — line 578
 - `MerchantAssortmentContext` — type — line 56
 - `MerchantProfile` — type — line 50
-- `merchantProfileFor` — function — line 242
+- `merchantProfileFor` — function — line 245
 - `MerchantSpecialization` — type — line 35
   - domain: settlements
-- `merchantStockQuantity` — function — line 560
+- `merchantStockQuantity` — function — line 563
 - `PREMIUM_MERCHANT_KINDS` — const — line 69
-- `premiumAvailabilityChance` — function — line 187
-- `resolveMerchantArmorQuality` — function — line 610
+- `premiumAvailabilityChance` — function — line 190
+- `resolveMerchantArmorQuality` — function — line 613
   - domain: settlements
-- `resolveMerchantProfiles` — function — line 223
+- `resolveMerchantProfiles` — function — line 226
   - domain: settlements
-- `resolvePremiumMerchantAssignment` — function — line 396
+- `resolvePremiumMerchantAssignment` — function — line 399
   - domain: settlements
-- `seedMerchantStockIfNeeded` — function — line 634
-- `settlementHasPremiumOffer` — function — line 384
-- `specializationAffinity` — function — line 287
+- `seedMerchantStockIfNeeded` — function — line 637
+- `settlementHasPremiumOffer` — function — line 387
+- `specializationAffinity` — function — line 290
 
 ## `settlement/merchantWagon.ts`
 

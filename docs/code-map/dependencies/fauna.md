@@ -917,6 +917,7 @@ Generated from TypeScript imports.
 - `fauna/corpseDecay.test.ts`
 - `fauna/faunaCombat.test.ts`
 - `fauna/huntingHooks.ts`
+- `items/compactWeaponsAndMasterworkBow.test.ts`
 - `items/highQualityWeapons.test.ts`
 - `player/playerCombat.test.ts`
 

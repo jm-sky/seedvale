@@ -33,6 +33,7 @@ Generated from TypeScript imports.
 - `app/userActions.ts`
 - `fauna/faunaCombat.ts`
 - `items/HeldTool.test.ts`
+- `items/compactWeaponsAndMasterworkBow.test.ts`
 - `items/heldToolVisual.ts`
 - `items/highQualityWeapons.test.ts`
 - `items/itemCapabilities.test.ts`
@@ -145,6 +146,7 @@ Generated from TypeScript imports.
 - `items/campfireCooking.test.ts`
 - `items/campfireCooking.ts`
 - `items/coin.test.ts`
+- `items/compactWeaponsAndMasterworkBow.test.ts`
 - `items/constructionMaterials.test.ts`
 - `items/constructionMaterials.ts`
 - `items/createDroppedItems.test.ts`
@@ -381,6 +383,18 @@ Generated from TypeScript imports.
 - `items/Inventory.ts`
 - `items/itemCatalog.ts`
 - `items/items.ts`
+
+## `items/compactWeaponsAndMasterworkBow.test.ts`
+
+**Imports**
+
+- `fauna/faunaCombat.ts`
+- `items/HeldTool.ts`
+- `items/Inventory.ts`
+- `items/itemCatalog.ts`
+- `items/itemInstances.ts`
+- `items/items.ts`
+- `items/weaponMaintenance.ts`
 
 ## `items/constructionMaterials.test.ts`
 
@@ -904,6 +918,7 @@ Generated from TypeScript imports.
 - `items/books.ts`
 - `items/campRepair.ts`
 - `items/coin.test.ts`
+- `items/compactWeaponsAndMasterworkBow.test.ts`
 - `items/createPlacedTents.ts`
 - `items/equipment.test.ts`
 - `items/equipment.ts`
@@ -1029,6 +1044,7 @@ Generated from TypeScript imports.
 - `items/Inventory.test.ts`
 - `items/Inventory.ts`
 - `items/armorItemInstances.ts`
+- `items/compactWeaponsAndMasterworkBow.test.ts`
 - `items/createDroppedItems.test.ts`
 - `items/equipment.test.ts`
 - `items/equipment.ts`
@@ -1184,6 +1200,7 @@ Generated from TypeScript imports.
 - `items/campRepair.ts`
 - `items/campfireCooking.ts`
 - `items/coin.test.ts`
+- `items/compactWeaponsAndMasterworkBow.test.ts`
 - `items/constructionMaterials.test.ts`
 - `items/constructionMaterials.ts`
 - `items/createDroppedItems.ts`
@@ -1653,6 +1670,7 @@ Generated from TypeScript imports.
 - `app/inventoryWiring.ts`
 - `items/HeldTool.test.ts`
 - `items/Inventory.test.ts`
+- `items/compactWeaponsAndMasterworkBow.test.ts`
 - `items/highQualityWeapons.test.ts`
 - `items/inventoryTransfer.test.ts`
 - `items/inventoryView.test.ts`
