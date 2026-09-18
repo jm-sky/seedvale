@@ -9,6 +9,7 @@
 **Subdomains:** `quests` `world-problems` `settlement`
 **Tags:** `boar` `herbs` `fauna` `npc` `world-state`
 **Roadmap:** -
+**Model:** Sonnet, Composer
 
 ## Goal
 
