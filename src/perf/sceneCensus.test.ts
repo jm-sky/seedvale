@@ -7,7 +7,13 @@ import {
   Scene,
 } from 'three'
 import { describe, expect, it } from 'vitest'
-import { censusScene, classifyObject, hideBuckets, restoreVisibility } from './sceneCensus'
+import {
+  censusScene,
+  censusShadowCasters,
+  classifyObject,
+  hideBuckets,
+  restoreVisibility,
+} from './sceneCensus'
 
 function namedMesh(name: string): Mesh {
   const mesh = new Mesh(new BoxGeometry(1, 1, 1), new MeshBasicMaterial())
@@ -45,6 +51,66 @@ describe('censusScene', () => {
     expect(census.grass.instances).toBe(10)
     expect(census.grass.drawCalls).toBe(1)
     expect(census.grass.triangles).toBeGreaterThan(census.terrain.triangles)
+  })
+})
+
+describe('censusShadowCasters', () => {
+  it('skips meshes with castShadow=false', () => {
+    const scene = new Scene()
+    const mesh = namedMesh('settlement')
+    mesh.castShadow = false
+    scene.add(mesh)
+    const census = censusShadowCasters(scene)
+    expect(census.settlement.meshes).toBe(0)
+    expect(census.settlement.drawCalls).toBe(0)
+  })
+
+  it('counts a normal mesh with castShadow=true into its bucket', () => {
+    const scene = new Scene()
+    const mesh = namedMesh('house:cottage')
+    mesh.castShadow = true
+    scene.add(mesh)
+    const census = censusShadowCasters(scene)
+    expect(census.settlement.meshes).toBe(1)
+    expect(census.settlement.instances).toBe(1)
+    expect(census.settlement.drawCalls).toBe(1)
+    expect(census.settlement.triangles).toBeGreaterThan(0)
+  })
+
+  it('counts InstancedMesh instances when castShadow=true', () => {
+    const scene = new Scene()
+    const group = new Group()
+    group.name = 'chunk-vegetation-tree-living'
+    const mesh = new InstancedMesh(new BoxGeometry(1, 1, 1), new MeshBasicMaterial(), 8)
+    mesh.count = 8
+    mesh.castShadow = true
+    group.add(mesh)
+    scene.add(group)
+    const census = censusShadowCasters(scene)
+    expect(census.vegetation.instancedMeshes).toBe(1)
+    expect(census.vegetation.instances).toBe(8)
+    expect(census.vegetation.drawCalls).toBe(1)
+    expect(census.vegetation.triangles).toBeGreaterThan(0)
+  })
+
+  it('inherits classification from ancestors and fauna userData', () => {
+    const scene = new Scene()
+    const vegetation = new Group()
+    vegetation.name = 'chunk-vegetation-bush'
+    const leaf = namedMesh('leaf')
+    leaf.castShadow = true
+    vegetation.add(leaf)
+    scene.add(vegetation)
+
+    const fauna = namedMesh('wolf')
+    fauna.userData.animalKind = 'wolf'
+    fauna.castShadow = true
+    scene.add(fauna)
+
+    const census = censusShadowCasters(scene)
+    expect(census.vegetation.meshes).toBe(1)
+    expect(census.fauna.meshes).toBe(1)
+    expect(census.other.meshes).toBe(0)
   })
 })
 

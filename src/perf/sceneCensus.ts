@@ -82,22 +82,43 @@ function isRenderableMesh(object: Object3D): object is Mesh {
   return mesh.isMesh === true || mesh instanceof InstancedMesh || mesh instanceof SkinnedMesh
 }
 
+function accumulateMesh(census: SceneCensus, mesh: Mesh): void {
+  const bucket = census[classifyObject(mesh)]
+  const instances = mesh instanceof InstancedMesh ? Math.max(1, mesh.count) : 1
+  bucket.meshes += 1
+  if (mesh instanceof InstancedMesh) {
+    bucket.instancedMeshes += 1
+    bucket.instances += instances
+  } else {
+    bucket.instances += 1
+  }
+  bucket.drawCalls += drawCallsFor(mesh)
+  bucket.triangles += triangleCount(mesh)
+}
+
 /** Estimated one-pass scene submission (no shadow map, no mirror, no post). */
 export function censusScene(scene: Scene): SceneCensus {
   const census = emptyCensus()
   scene.traverse((object) => {
     if (!isRenderableMesh(object)) return
-    const bucket = census[classifyObject(object)]
-    const instances = object instanceof InstancedMesh ? Math.max(1, object.count) : 1
-    bucket.meshes += 1
-    if (object instanceof InstancedMesh) {
-      bucket.instancedMeshes += 1
-      bucket.instances += instances
-    } else {
-      bucket.instances += 1
-    }
-    bucket.drawCalls += drawCallsFor(object)
-    bucket.triangles += triangleCount(object)
+    accumulateMesh(census, object)
+  })
+  return census
+}
+
+/**
+ * Upper-bound estimate of content that participates in the shadow map:
+ * visible renderable meshes with `castShadow === true`, classified into the
+ * same buckets as {@link censusScene}. Content estimate only — not GPU time.
+ *
+ * @domain world-terrain
+ */
+export function censusShadowCasters(scene: Scene): SceneCensus {
+  const census = emptyCensus()
+  scene.traverse((object) => {
+    if (!isRenderableMesh(object)) return
+    if (!object.castShadow) return
+    accumulateMesh(census, object)
   })
   return census
 }

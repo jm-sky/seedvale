@@ -249,6 +249,8 @@ export type PerfReportJson = {
     textures?: number
   }
   scene?: SceneCensus
+  /** Visible `castShadow` meshes by scene bucket (content estimate, not GPU time). */
+  shadowCasters?: SceneCensus
   hitches?: HitchReportRow[]
   isolation?: IsolationProbeRow[]
   systems: Partial<Record<PerfCategory, number>>

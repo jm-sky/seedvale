@@ -1,7 +1,7 @@
 # Plan: Shadow caster/content budget v2
 
 **Created:** 2026-09-17
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** optimization
 **Priority:** high · **Effort:** M
 **Depends on:** -

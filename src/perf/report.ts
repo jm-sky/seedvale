@@ -21,6 +21,7 @@ export function buildReport(input: {
   totals: SessionTotals
   context?: PerfContext
   scene?: SceneCensus
+  shadowCasters?: SceneCensus
   isolation?: IsolationProbeRow[]
   agentCpu?: AgentCpuReport | null
   grassFinalization?: GrassFinalizationReport | null
@@ -120,6 +121,7 @@ export function buildReport(input: {
       textures: ctx.textures ?? totals.texturesLast,
     },
     scene: input.scene,
+    shadowCasters: input.shadowCasters,
     hitches,
     isolation: input.isolation,
     systems,
@@ -147,16 +149,8 @@ export function formatReport(report: PerfReportJson): string {
   const hitchLines = (report.hitches ?? [])
     .map((h) => `  ${h.label.padEnd(22)} n=${h.count} avg=${h.avgMs.toFixed(1)} max=${h.maxMs.toFixed(1)}`)
     .join('\n')
-  const sceneLines = report.scene
-    ? SCENE_BUCKETS
-      .map((bucket) => {
-        const row = report.scene![bucket]
-        if (row.drawCalls <= 0) return null
-        return `  ${bucket.padEnd(14)} draws=${row.drawCalls} tris=${formatTriangles(row.triangles)} meshes=${row.meshes} inst=${row.instances}`
-      })
-      .filter((line): line is string => line !== null)
-      .join('\n')
-    : ''
+  const sceneLines = formatCensusLines(report.scene)
+  const shadowCasterLines = formatCensusLines(report.shadowCasters)
   const isolationLines = (report.isolation ?? [])
     .map((row) => `  ${row.id.padEnd(18)} render=${row.renderMsAvg.toFixed(1)} ms draws=${row.drawCallsAvg} tris=${formatTriangles(row.trianglesAvg)}`)
     .join('\n')
@@ -212,6 +206,9 @@ export function formatReport(report: PerfReportJson): string {
     '',
     'Scene (one-pass estimate):',
     sceneLines || '  (not sampled)',
+    '',
+    'Shadow casters (one-pass estimate):',
+    shadowCasterLines || '  (not sampled)',
     '',
     'Systems:',
     sysLines || '  (no per-system CPU samples)',
@@ -283,4 +280,16 @@ function formatTriangles(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`
   if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
   return String(n)
+}
+
+function formatCensusLines(census: SceneCensus | undefined): string {
+  if (!census) return ''
+  return SCENE_BUCKETS
+    .map((bucket) => {
+      const row = census[bucket]
+      if (row.drawCalls <= 0) return null
+      return `  ${bucket.padEnd(14)} draws=${row.drawCalls} tris=${formatTriangles(row.triangles)} meshes=${row.meshes} inst=${row.instances}`
+    })
+    .filter((line): line is string => line !== null)
+    .join('\n')
 }

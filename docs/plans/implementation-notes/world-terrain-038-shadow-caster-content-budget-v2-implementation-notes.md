@@ -189,4 +189,34 @@ At minimum:
 
 Do not run browser verification. User owns the before/after `settlement-heavy` benchmark and visual check of near building/fence/NPC/livestock/vegetation shadows.
 
+## Implementation log — 2026-09-18 (Gate A diagnostics only)
+
+Shipped diagnostic plumbing; **no production shadow-content rule**.
+
+### Code
+
+- `censusShadowCasters(scene)` in `src/perf/sceneCensus.ts` — same buckets/counting as `censusScene`, filtered to visible renderables with `castShadow === true`. Shared `accumulateMesh` helper. JSDoc `@domain world-terrain`.
+- Benchmark wires `shadowCasters` beside `scene` (`src/perf/benchmark.ts`).
+- Report field `shadowCasters?: SceneCensus` (`types.ts`); text section `Shadow casters (one-pass estimate):` (`report.ts`).
+- Unit tests: `sceneCensus.test.ts` (false/true/instanced/classification) + `report.test.ts` (section + JSON).
+
+### Not changed
+
+- `shadowBudget.ts` / shadow-map cadence, NPC/fauna distance constants, settlement/vegetation `castShadow`/`noShadow`, no per-frame scene traversal in the game loop.
+
+### Gate / recon
+
+- Gate A **not decided** — requires user runtime report from `?benchmark=settlement-heavy`.
+- Needed fields: full `Shadow casters (one-pass estimate):` block; context: `Scene (one-pass estimate):` plus Isolation `full` and `no-shadows` `render=` lines.
+- After that measurement: either one content rule at create/load ownership, or close as diagnostic-only if no clear winner.
+
+### Automated checks (this stage)
+
+- `sceneCensus` + `report` unit tests: pass.
+- `pnpm type-check`: pass.
+- `pnpm lint`: pass.
+- `pnpm test`: one unrelated failure in `src/world/clouds.test.ts` (fog tint vs clear); not touched by this change.
+- `pnpm build`: pass.
+- No browser verification; no `pnpm docs:sync`.
+
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

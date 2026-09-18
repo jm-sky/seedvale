@@ -422,4 +422,51 @@ describe('buildReport', () => {
     })
     expect(formatReport(report)).not.toContain('settlement:')
   })
+
+  it('includes shadow casters census in text and JSON', () => {
+    const categoryMsSum = new Float64Array(PERF_CATEGORY_COUNT)
+    const shadowCasters = {
+      terrain: { meshes: 0, instancedMeshes: 0, instances: 0, drawCalls: 0, triangles: 0 },
+      grass: { meshes: 0, instancedMeshes: 0, instances: 0, drawCalls: 0, triangles: 0 },
+      vegetation: { meshes: 2, instancedMeshes: 1, instances: 40, drawCalls: 2, triangles: 8000 },
+      environment: { meshes: 0, instancedMeshes: 0, instances: 0, drawCalls: 0, triangles: 0 },
+      settlement: { meshes: 10, instancedMeshes: 4, instances: 120, drawCalls: 10, triangles: 50000 },
+      water: { meshes: 0, instancedMeshes: 0, instances: 0, drawCalls: 0, triangles: 0 },
+      npc: { meshes: 3, instancedMeshes: 0, instances: 3, drawCalls: 3, triangles: 9000 },
+      fauna: { meshes: 0, instancedMeshes: 0, instances: 0, drawCalls: 0, triangles: 0 },
+      items: { meshes: 0, instancedMeshes: 0, instances: 0, drawCalls: 0, triangles: 0 },
+      other: { meshes: 0, instancedMeshes: 0, instances: 0, drawCalls: 0, triangles: 0 },
+    }
+    const report = buildReport({
+      durationSec: 30,
+      scenario: 'settlement-heavy',
+      totals: {
+        frames: 10,
+        frameMsSum: 170,
+        frameMsMin: 14,
+        frameMsMax: 22,
+        frameMs: [14, 15, 16, 16, 17, 17, 18, 18, 19, 22],
+        drawCallsSum: 10000,
+        drawCallsMax: 1200,
+        trianglesSum: 10_000_000,
+        renderCategoryMs: [],
+        categoryMsSum,
+        spikeCounts: new Int32Array(PERF_CATEGORY_COUNT),
+        hitchCounts: new Int32Array(PERF_CATEGORY_COUNT),
+        hitchByLabel: new Map(),
+        longFrameCount: 0,
+        longFrames: [],
+        mirrorDrawCallsSum: 0,
+        geometriesLast: 0,
+        texturesLast: 0,
+      },
+      shadowCasters,
+    })
+    expect(report.shadowCasters?.settlement.drawCalls).toBe(10)
+    const text = formatReport(report)
+    expect(text).toContain('Shadow casters (one-pass estimate):')
+    expect(text).toContain('settlement     draws=10')
+    expect(text).toContain('vegetation     draws=2')
+    expect(text).not.toContain('grass          draws=')
+  })
 })
