@@ -276,3 +276,41 @@ Evidence from updated `docs/performance/results/2026-09-18--023--benchmark-settl
 - User re-runs `?benchmark=settlement-heavy` to measure shadow/render impact of storageGoods cut.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
+
+
+## Implementation log — 2026-09-18 (storage + fireLight ROI diagnostics)
+
+Follow-up recon after benchmark 024:
+
+- `storage = 474 shadow draws / ~535.4k tris` is an aggregate, not one oversized wood pile. It mixes wood piles, storage containers/chests, barrels, hay and troughs.
+- Settlement wood presentation still has a plausible independent simplification opportunity: one progressive `wood_pile_progressive.glb` already encodes five quantity bands (`Pile_01/05/10/18/29`), while `createWoodPileVisual` can additionally show up to three full overflow piles above 20/40/60 units. LG/XL also has `stockpileSecondary`; household wood piles represent separate household state and should not be removed casually.
+- `fireLight = 320 draws / ~21.6k tris` is submission-heavy relative to geometry. The bucket includes house exterior fixtures, interior table-lamp meshes, village torches and settlement campfire presentation; PointLight objects themselves are not mesh draw calls, so this needs mesh-source attribution rather than light-count guesses.
+
+Diagnostic split added to the existing settlement shadow census:
+
+Storage:
+- `storageWood`
+- `storageContainer`
+- `storageBarrel`
+- `storageHay`
+- `storageTrough`
+- `storageGoods` (already no-shadow; retained for diagnostic completeness)
+- `storage` remains only as fallback for still-unclassified storage content.
+
+Fire/light:
+- `fireHouseExteriorLamp`
+- `fireHouseInteriorLamp`
+- `fireVillageTorch`
+- `fireCampfire`
+- `fireLight` remains only as fallback.
+
+Classification uses the same existing create-time tag / instanced-name mechanism; no runtime registry and no per-frame traversal were added.
+
+Next user measurement: rerun `?benchmark=settlement-heavy`. The decision should be based on the largest concrete subcategory by shadow draws / triangles and the visual/system cost of reducing it. In particular:
+
+1. if `storageWood` dominates, evaluate removing settlement overflow piles first while preserving the single five-stage progressive pile and household-owned piles;
+2. if `storageBarrel` / `storageHay` / `storageTrough` dominate, prefer template/category shadow cuts or count reduction rather than changing storage semantics;
+3. if `fireVillageTorch` or house lamp fixtures dominate, inspect their child-mesh hierarchy and shadow eligibility before reducing light/gameplay presence;
+4. do not stack production cuts before the next benchmark.
+
+No production shadow rule was added in this diagnostic step.
