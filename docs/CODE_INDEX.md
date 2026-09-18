@@ -220,6 +220,7 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [Prey alert](../src/fauna/preyAlertPerception.ts) — extra-range threat-alert relevance.
 - [Livestock production](../src/fauna/livestockProduction.ts) — absolute-day egg/milk/wool readiness math.
 - [Shepherd flock](../src/fauna/shepherdFlock.ts) — owned-sheep lookup, flock size, and flock-threat query.
+- [Domestic safe flee](../src/fauna/domesticFlee.ts) — pure shepherd/home/settlement flee-anchor preference and directional safety gate for household livestock fleeing a live predator threat (plan fauna-037).
 
 <!-- AI_NAVIGATION_INDEX_START -->
 

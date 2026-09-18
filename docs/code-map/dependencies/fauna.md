@@ -49,6 +49,7 @@ Generated from TypeScript imports.
 - `fauna/animalVariants.ts`
 - `fauna/animalWalkSpeed.ts`
 - `fauna/dogGuard.ts`
+- `fauna/domesticFlee.ts`
 - `fauna/faunaCombat.ts`
 - `fauna/faunaDecision.ts`
 - `fauna/herdCohesion.ts`
@@ -865,6 +866,19 @@ Generated from TypeScript imports.
 
 - `fauna/AnimalAgent.ts`
 - `fauna/dogGuard.test.ts`
+
+## `fauna/domesticFlee.test.ts`
+
+**Imports**
+
+- `fauna/domesticFlee.ts`
+
+## `fauna/domesticFlee.ts`
+
+**Imported by**
+
+- `fauna/AnimalAgent.ts`
+- `fauna/domesticFlee.test.ts`
 
 ## `fauna/dungeonResidents.test.ts`
 

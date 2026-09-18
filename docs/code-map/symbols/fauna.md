@@ -16,31 +16,31 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/AnimalAgent.ts`
 
-- `AnimalAgent` — class — line 1141
+- `AnimalAgent` — class — line 1145
   - domain: fauna
   - system: animal-agent
   - role: Central per-animal behaviour integration point: predator/prey AI, needs, health, production (livestock) and riding (mounts).
   - uses: HealthState, StaminaState
   - simulation: tick
-- `AnimalAgentDebugInfo` — type — line 582
-- `AnimalAgentDeps` — type — line 937
-- `AnimalSaveState` — type — line 715
-- `AnimalUpdateContext` — type — line 1001
-- `BURY_DURATION_SEC` — const — line 395
-- `canPredatorPursueIntoVillage` — function — line 795
-- `FAUNA_SHADOW_DISTANCE` — const — line 364
-- `FaunaAiBranch` — type — line 519
-- `FaunaNavRescueDebugInfo` — type — line 566
-- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 454
-- `FrenzyWolfCandidate` — type — line 872
-- `HARVEST_MEAT_DURATION_SEC` — const — line 398
-- `isWithinVillageRadius` — function — line 776
-- `NearbyNpcCandidate` — type — line 867
-- `pickNearestEligibleWolf` — function — line 881
-- `pickRabidTarget` — function — line 906
-- `RABIES_BITE_INFECTION_CHANCE` — const — line 382
-- `villageFleeBiasFalloff` — function — line 803
-- `VillageInfo` — type — line 770
+- `AnimalAgentDebugInfo` — type — line 583
+- `AnimalAgentDeps` — type — line 938
+- `AnimalSaveState` — type — line 716
+- `AnimalUpdateContext` — type — line 1002
+- `BURY_DURATION_SEC` — const — line 396
+- `canPredatorPursueIntoVillage` — function — line 796
+- `FAUNA_SHADOW_DISTANCE` — const — line 365
+- `FaunaAiBranch` — type — line 520
+- `FaunaNavRescueDebugInfo` — type — line 567
+- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 455
+- `FrenzyWolfCandidate` — type — line 873
+- `HARVEST_MEAT_DURATION_SEC` — const — line 399
+- `isWithinVillageRadius` — function — line 777
+- `NearbyNpcCandidate` — type — line 868
+- `pickNearestEligibleWolf` — function — line 882
+- `pickRabidTarget` — function — line 907
+- `RABIES_BITE_INFECTION_CHANCE` — const — line 383
+- `villageFleeBiasFalloff` — function — line 804
+- `VillageInfo` — type — line 771
 
 ## `fauna/animalAreaBound.ts`
 
@@ -529,6 +529,16 @@ Generated from exported TypeScript symbols.
 - `resolveDogGuardTarget` — function — line 88
 - `resolveDogPestTarget` — function — line 132
 - `StrangerNpcCandidate` — type — line 159
+
+## `fauna/domesticFlee.ts`
+
+- `DomesticFleeTargetInput` — type — line 15
+- `fleeAnchorIsSafe` — function — line 43
+  - domain: fauna
+- `FleeAnchorPoint` — type — line 13
+  - domain: fauna
+- `resolveDomesticFleeTarget` — function — line 65
+  - domain: fauna
 
 ## `fauna/dungeonResidents.ts`
 

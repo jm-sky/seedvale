@@ -225,6 +225,7 @@ import {
   resolveDogPestTarget,
   type StrangerNpcCandidate,
 } from './dogGuard'
+import { resolveDomesticFleeTarget } from './domesticFlee'
 import { createHealthState, damageFor, damageVsHuman, MAX_HP } from './faunaCombat'
 import {
   decideFaunaBehaviour,
@@ -1062,12 +1063,15 @@ export type AnimalUpdateContext = {
    *  a per-dog scan (see that call site's doc). Defaults to none so every
    *  existing caller/test keeps prior behaviour. */
   nearbyPredators?: readonly AnimalAgent[]
-  /** Bounded/local same-settlement NPCs (plan fauna-011 §7) — only
-   *  consulted by a `dog`'s stranger-bark check
-   *  (`resolveBarkStimulus`), deliberately the settlement's own
-   *  already-updated `agents` list (cheap, already in scope at the call
-   *  site) rather than the global cross-settlement `nearbyNpcs` wolves use.
-   *  Defaults to none so every existing caller/test keeps prior behaviour. */
+  /** Bounded/local same-settlement NPCs (plan fauna-011 §7) — consulted by a
+   *  `dog`'s stranger-bark check (`resolveBarkStimulus`) and, for any
+   *  household-owned domestic animal fleeing a live predator threat, as the
+   *  "responsible household member" tier of `resolveDomesticFleeTarget()`
+   *  (`nearestHouseholdMemberAnchor`, plan fauna-037). Deliberately the
+   *  settlement's own already-updated `agents` list (cheap, already in scope
+   *  at the call site) rather than the global cross-settlement `nearbyNpcs`
+   *  wolves use. Defaults to none so every existing caller/test keeps prior
+   *  behaviour. */
   nearbySettlementNpcs?: readonly NearbyNpcCandidate[]
   /** Currently active attraction sources (plan fauna-023 §11) — a small,
    *  world-owned snapshot assembled once per fauna pass, not a per-animal
@@ -1350,6 +1354,12 @@ export class AnimalAgent {
   private scareOriginX = 0
   private scareOriginZ = 0
   private scareEvaluatedEventId: string | null = null
+  /** Recomputed every tick (plan fauna-037) — true only while this tick's
+   *  `fleeFromThreat()` committed to a resolved contextual safe anchor, so
+   *  `clampBounds()` can let a real escape run past the ordinary home/roam
+   *  bound without a second persisted flee-episode registry. Never read or
+   *  written outside the same tick it's set in. */
+  private domesticFleeEscapeActive = false
   private isNight = false
   /** This tick's routine time-of-day/stamina rest desire (plan fauna-034
    *  §2/§6) — recomputed every `update()` call at full rate (never gated by
@@ -3347,6 +3357,7 @@ export class AnimalAgent {
       this.behaviourAccumSec = 0
       this.moving = false
       this.sprinting = false
+      this.domesticFleeEscapeActive = false
       if (diagOn) {
         agentCpuDiag.recordAnimalBehaviourExecution()
         if (isFaunaExpensiveBranch(branch)) agentCpuDiag.recordFaunaExpensiveBehaviourAgent()
@@ -3494,7 +3505,7 @@ export class AnimalAgent {
           }
           case 'prey-normal': {
             this.resetHumanThreatState()
-            this.updatePrey(behaviourDt, others, attractionSources, nearbyPredators, nearbyRats)
+            this.updatePrey(behaviourDt, others, attractionSources, nearbyPredators, nearbyRats, nearbySettlementNpcs)
             break
           }
           case 'scare-flee': {
@@ -4118,6 +4129,30 @@ export class AnimalAgent {
       }
     }
 
+    this.stepFleeDirection(dt)
+  }
+
+  /** Sprints toward a resolved contextual safe anchor (plan fauna-037)
+   *  instead of merely away from the threat — same movement primitive as
+   *  `fleeFrom()` (sprint decision, `fleeNav`, watchdog/water/slope
+   *  semantics via `stepFleeDirection()`), just a different direction. Only
+   *  reached once `resolveDomesticFleeTarget()` has already accepted the
+   *  anchor's initial direction as not approaching the threat. */
+  private fleeToward(target: { x: number, z: number }, dt: number): void {
+    this.tmp.set(target.x - this.mesh.position.x, 0, target.z - this.mesh.position.z)
+    if (this.tmp.lengthSq() < 1e-4) {
+      this.tmp.set(1, 0, 0)
+    }
+    this.tmp.normalize()
+    this.stepFleeDirection(dt)
+  }
+
+  /** Shared flee-execution tail (plan fauna-037) — sprint decision,
+   *  `fleeTarget` extrapolation and the nav step, factored out of
+   *  `fleeFrom()` so `fleeToward()`'s resolved contextual direction reuses
+   *  the exact same movement primitive rather than a second implementation.
+   *  Assumes `this.tmp` already holds a normalized flee direction. */
+  private stepFleeDirection(dt: number): void {
     this.sprinting = !isExhausted(this.life.stamina)
     this.fleeTarget.set(
       this.mesh.position.x + this.tmp.x * FLEE_DISTANCE,
@@ -4127,6 +4162,62 @@ export class AnimalAgent {
     const speed = (this.sprinting ? this.sprintSpeedNow() : this.walkSpeedNow())
       * straySurvivalFleeSpeedMultiplier(this._stray)
     this.stepNavRescue(this.fleeNav, this.fleeTarget, speed, dt)
+  }
+
+  /** Nearest present member of the owning household among caller-bounded
+   *  `nearbySettlementNpcs` (plan fauna-037) — the "responsible shepherd/
+   *  handler" tier of `resolveDomesticFleeTarget()`'s anchor preference.
+   *  Mirrors `scareCaretakerNearby()`'s `homeId` match but returns a
+   *  position instead of a boolean proximity gate. Never a global NPC scan
+   *  — the caller already bounds this to the current settlement's own live
+   *  NPCs, and this only ever matches this animal's own household. */
+  private nearestHouseholdMemberAnchor(
+    nearbySettlementNpcs: readonly NearbyNpcCandidate[],
+  ): { x: number, z: number } | null {
+    const houseId = this.ownerHouseId
+    if (!houseId) return null
+    let best: { x: number, z: number } | null = null
+    let bestDSq = Infinity
+    for (const npc of nearbySettlementNpcs) {
+      if (npc.homeId !== houseId) continue
+      const dSq = (npc.x - this.mesh.position.x) ** 2 + (npc.z - this.mesh.position.z) ** 2
+      if (dSq < bestDSq) {
+        bestDSq = dSq
+        best = { x: npc.x, z: npc.z }
+      }
+    }
+    return best
+  }
+
+  /** Domestic-livestock contextual escape (plan fauna-037): for a household-
+   *  owned, non-player-owned domestic animal, tries a safe anchor (present
+   *  household member → home → nearest settlement, each gated by
+   *  `resolveDomesticFleeTarget()`'s directional safety check) before
+   *  falling back to the ordinary away-from-threat `fleeFrom()`. Wild fauna
+   *  and player-owned livestock always take the plain fallback — a
+   *  player-owned animal's own Follow/Stay context already governs it (plan
+   *  fauna-020/fauna-030), and this plan is scoped to household ownership. */
+  private fleeFromThreat(
+    threatX: number,
+    threatZ: number,
+    dt: number,
+    nearbySettlementNpcs: readonly NearbyNpcCandidate[],
+  ): void {
+    if (this.def.sociability === 'domestic' && this.ownerHouseId && !this.isPlayerOwned()) {
+      const anchor = resolveDomesticFleeTarget({
+        animalPosition: { x: this.mesh.position.x, z: this.mesh.position.z },
+        threatPosition: { x: threatX, z: threatZ },
+        shepherdAnchor: this.nearestHouseholdMemberAnchor(nearbySettlementNpcs),
+        homeAnchor: { x: this.home.x, z: this.home.z },
+        settlementAnchor: this.nearestVillage(),
+      })
+      if (anchor) {
+        this.domesticFleeEscapeActive = true
+        this.fleeToward(anchor, dt)
+        return
+      }
+    }
+    this.fleeFrom(threatX, threatZ, dt)
   }
 
   /** Prey move slower at night; predators are unaffected. Variant speed
@@ -4253,6 +4344,7 @@ export class AnimalAgent {
     sources: readonly AnimalAttractionSource[],
     nearbyPredators: readonly AnimalAgent[],
     nearbyRats: readonly AnimalAgent[] = [],
+    nearbySettlementNpcs: readonly NearbyNpcCandidate[] = [],
   ): void {
     const threat = this.nearest(
       others,
@@ -4263,7 +4355,7 @@ export class AnimalAgent {
       this.lastPreyAlertThreat = null
       this.cancelSourceTarget()
       this.setIntent('flee', copyVec3(threat.mesh.position))
-      this.fleeFrom(threat.mesh.position.x, threat.mesh.position.z, dt)
+      this.fleeFromThreat(threat.mesh.position.x, threat.mesh.position.z, dt, nearbySettlementNpcs)
       return
     }
     const alert = this.resolveAlertThreat(others, nearbyPredators)
@@ -4271,7 +4363,7 @@ export class AnimalAgent {
     if (alert) {
       this.cancelSourceTarget()
       this.setIntent('flee', { x: alert.x, z: alert.z })
-      this.fleeFrom(alert.x, alert.z, dt)
+      this.fleeFromThreat(alert.x, alert.z, dt, nearbySettlementNpcs)
       return
     }
     if (this.pursueLead(dt)) return
@@ -5672,6 +5764,12 @@ export class AnimalAgent {
     // Thunder scare is a short committed flee impulse (plan world-026):
     // clamp would cancel the displacement the impulse is meant to cause.
     if (this.scareRemainingSec > 0) return
+    // A committed contextual safe-anchor escape (plan fauna-037) may
+    // legitimately carry household livestock past the local roam band on
+    // its way to a shepherd/home/settlement anchor — same reasoning as the
+    // thunder-scare bypass above, recomputed fresh every tick rather than a
+    // persisted flee-episode registry (see `domesticFleeEscapeActive`'s doc).
+    if (this.domesticFleeEscapeActive) return
     if (this.shouldUsePastureRoam()) return
     if (this._pastureRoam && this.ownerHouseId && !this.isPlayerOwned()) {
       const dist = Math.hypot(this.mesh.position.x - this.home.x, this.mesh.position.z - this.home.z)

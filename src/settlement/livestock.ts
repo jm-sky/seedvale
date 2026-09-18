@@ -968,10 +968,12 @@ export function tickSettlementLivestock(
      *  per-frame filter over `Fauna.getAgents()`, not a scan per dog). */
     nearbyPredators?: readonly AnimalAgent[]
     /** This settlement's own live NPCs, as bounded bark-perception
-     *  candidates (plan fauna-011 §7) — only meaningful for an owned `dog`'s
-     *  stranger-bark check (`resolveBarkStimulus`). Cheaper than the global
-     *  cross-settlement `nearbyNpcs` wolves use: a dog only cares about
-     *  strangers right by its own house. */
+     *  candidates (plan fauna-011 §7) — used by an owned `dog`'s
+     *  stranger-bark check (`resolveBarkStimulus`) and by any
+     *  household-owned domestic animal's contextual flee-anchor resolution
+     *  when fleeing a live predator threat (plan fauna-037). Cheaper than
+     *  the global cross-settlement `nearbyNpcs` wolves use: this settlement's
+     *  own animals only ever care about their own household's members. */
     nearbySettlementNpcs?: readonly NearbyNpcCandidate[]
     /** This settlement's own live rats (plan fauna-016 §9) — only meaningful
      *  for an owned `dog`'s idle pest-chase (`AnimalAgent.pursuePest`), same

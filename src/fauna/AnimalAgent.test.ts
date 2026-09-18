@@ -1560,6 +1560,150 @@ describe('AnimalAgent', () => {
     })
   })
 
+  describe('domestic livestock safe flee (plan fauna-037)', () => {
+    const FAR_OBSERVER = new THREE.Vector3(1000, 0, 1000)
+
+    function makeHorse(overrides: Partial<AnimalAgentDeps> = {}): AnimalAgent {
+      return new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.horse, ownerHouseId: 'house-1', ...overrides }))
+    }
+
+    function makeWolfAt(x: number, z: number): AnimalAgent {
+      return new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.wolf, animalId: 'wolf-safe-flee', x, z }))
+    }
+
+    it('prefers a present household member (shepherd/handler) anchor over the plain away vector', () => {
+      const horse = makeHorse({ animalId: 'horse-shepherd', x: 10, z: 0 })
+      const wolf = makeWolfAt(15, 0) // east, inside fleeRange — plain fallback would flee due west (z unchanged)
+      horse.update({
+        dt: 1,
+        others: [horse, wolf],
+        observerPos: FAR_OBSERVER,
+        dayFactor: 1,
+        forestFactor: 0,
+        litFires: [],
+        nearbySettlementNpcs: [{ id: 'npc-shepherd', x: 0, z: 10, homeId: 'house-1' }],
+      })
+      expect(horse.getDebugInfo().intent).toBe('flee')
+      // Anchor is north-west of the horse — a pure away-from-threat vector
+      // would keep z at 0; heading toward the shepherd moves z upward too.
+      expect(horse.mesh.position.z).toBeGreaterThan(0)
+      expect(horse.mesh.position.x).toBeLessThan(10)
+    })
+
+    it('ignores a settlement NPC belonging to a different household', () => {
+      const horse = makeHorse({ animalId: 'horse-stranger', x: 10, z: 0 })
+      const wolf = makeWolfAt(15, 0)
+      horse.update({
+        dt: 1,
+        others: [horse, wolf],
+        observerPos: FAR_OBSERVER,
+        dayFactor: 1,
+        forestFactor: 0,
+        litFires: [],
+        nearbySettlementNpcs: [{ id: 'npc-stranger', x: 0, z: 10, homeId: 'house-2' }],
+      })
+      // No shepherd anchor from a foreign household, no home anchor (home
+      // coincides with the current position) ⇒ plain away-from-threat flee.
+      expect(horse.mesh.position.z).toBeCloseTo(0, 5)
+      expect(horse.mesh.position.x).toBeLessThan(10)
+    })
+
+    it('falls back to the household home when no shepherd is present', () => {
+      // Home is set from the constructor's spawn point (0, 10); repositioning
+      // the mesh afterward leaves `home` behind at that original point.
+      const horse = makeHorse({ animalId: 'horse-home', x: 0, z: 10 })
+      horse.mesh.position.set(10, 0, 0)
+      const wolf = makeWolfAt(15, 0) // east, inside fleeRange — plain fallback would flee due west (z unchanged)
+      horse.update({
+        dt: 1,
+        others: [horse, wolf],
+        observerPos: FAR_OBSERVER,
+        dayFactor: 1,
+        forestFactor: 0,
+        litFires: [],
+      })
+      // A pure away-from-threat vector would keep z at 0; heading toward
+      // home (north-west) moves z upward too.
+      expect(horse.mesh.position.z).toBeGreaterThan(0)
+      expect(horse.mesh.position.x).toBeLessThan(10)
+    })
+
+    it('falls back to the ordinary away-from-threat flee when no valid anchor exists', () => {
+      const horse = makeHorse({ animalId: 'horse-fallback', x: 0, z: 0 }) // home === position: degenerate
+      const wolf = makeWolfAt(5, 0)
+      horse.update({
+        dt: 1,
+        others: [horse, wolf],
+        observerPos: FAR_OBSERVER,
+        dayFactor: 1,
+        forestFactor: 0,
+        litFires: [],
+      })
+      expect(horse.getDebugInfo().intent).toBe('flee')
+      expect(horse.getDebugInfo().sprinting).toBe(true)
+      // Pure away-from-threat: moves west, stays on the threat's axis (z ≈ 0).
+      expect(horse.mesh.position.x).toBeLessThan(0)
+      expect(horse.mesh.position.z).toBeCloseTo(0, 5)
+    })
+
+    it('never targets a global/foreign NPC — an unowned animal never resolves a contextual anchor', () => {
+      const horse = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.horse, animalId: 'horse-wild', x: 0, z: 0 }))
+      const wolf = makeWolfAt(5, 0)
+      horse.update({
+        dt: 1,
+        others: [horse, wolf],
+        observerPos: FAR_OBSERVER,
+        dayFactor: 1,
+        forestFactor: 0,
+        litFires: [],
+        nearbySettlementNpcs: [{ id: 'npc-someone', x: 0, z: 50, homeId: 'house-9' }],
+      })
+      // No `ownerHouseId` ⇒ plain away-from-threat flee, unaffected by any NPC.
+      expect(horse.mesh.position.x).toBeLessThan(0)
+      expect(horse.mesh.position.z).toBeCloseTo(0, 5)
+    })
+
+    it('does not let the ordinary home-roam clamp cancel a live contextual escape, and resumes it once the threat clears', () => {
+      const horse = makeHorse({ animalId: 'horse-escape', x: 0, z: 0 }) // home = (0, 0)
+      const village = { x: 1000, z: 0, radius: 10 }
+      for (let i = 0; i < 12; i++) {
+        // Threat kept due west of the horse's current position every tick,
+        // so the away-from-threat direction (east, toward the village) stays
+        // valid throughout — a real chase, not a single static snapshot.
+        const wolf = makeWolfAt(horse.mesh.position.x - 5, horse.mesh.position.z)
+        horse.update({
+          dt: 1,
+          others: [horse, wolf],
+          observerPos: FAR_OBSERVER,
+          dayFactor: 1,
+          forestFactor: 0,
+          litFires: [],
+          villages: [village],
+        })
+      }
+      const distanceFromHomeWhileFleeing = Math.hypot(horse.mesh.position.x, horse.mesh.position.z)
+      // Ordinary local wander/home bound (`ROAM_RADIUS`) is 50 — the escape
+      // must be allowed to run well past it while the threat is live.
+      expect(distanceFromHomeWhileFleeing).toBeGreaterThan(50)
+
+      // Threat gone: the very next tick's ordinary home clamp is authoritative again.
+      horse.update({
+        dt: 1,
+        others: [horse],
+        observerPos: FAR_OBSERVER,
+        dayFactor: 1,
+        forestFactor: 0,
+        litFires: [],
+        villages: [village],
+      })
+      const distanceFromHomeAfterClear = Math.hypot(horse.mesh.position.x, horse.mesh.position.z)
+      // The movement tail's own water/slope resolution can nudge position by
+      // a hair past the exact clamp boundary within the same tick — allow a
+      // small epsilon rather than asserting an exact `<= 50`.
+      expect(distanceFromHomeAfterClear).toBeLessThanOrEqual(50.1)
+    })
+  })
+
   describe('corpse linger pose (Death last frame; tip only without a clip)', () => {
     const deadTick = (
       agent: AnimalAgent,
