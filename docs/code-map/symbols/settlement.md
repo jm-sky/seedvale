@@ -686,7 +686,7 @@ Generated from exported TypeScript symbols.
 
 - `BlacksmithWorkplace` — type — line 342
 - `buildSettlementProps` — function — line 753
-- `disposeSettlementGroup` — function — line 2158
+- `disposeSettlementGroup` — function — line 2161
 - `SettlementHouseBed` — type — line 162
 - `SettlementHouseLandmark` — type — line 128
 - `SettlementLandmarks` — type — line 178

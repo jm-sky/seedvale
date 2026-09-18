@@ -364,6 +364,7 @@ Generated from TypeScript imports.
 - `perf/sceneCensus.test.ts`
 - `perf/types.ts`
 - `settlement/propUtils.ts`
+- `settlement/storageVisuals.test.ts`
 
 ## `perf/types.ts`
 

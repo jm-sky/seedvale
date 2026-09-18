@@ -2318,6 +2318,7 @@ Generated from TypeScript imports.
 - `economy/settlementEconomy.ts`
 - `items/Inventory.ts`
 - `items/foodItems.ts`
+- `perf/sceneCensus.ts`
 - `settlement/household.ts`
 - `settlement/storageVisuals.ts`
 
