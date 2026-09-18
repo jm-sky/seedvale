@@ -77,6 +77,9 @@ export type NpcTraceEvent =
       hasMeleeCapability: boolean
       hasRangedCapability: boolean
       neuroticism: number
+      /** Settlement-protection responsibility bias applied to this decision
+       *  (plan npc-048, currently: guard). */
+      guardResponsibility: boolean
     }
   /** Persistent Plan lifecycle (plan ai-004) — recorded at establishment,
    *  every lifecycle-state transition, real progress, and completion. Never

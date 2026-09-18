@@ -181,38 +181,40 @@ Generated from exported TypeScript symbols.
 
 ## `ai/NpcAgent.ts`
 
-- `classifyPendingActivity` — function — line 740
-- `configureNpcPlayerReactionAudio` — function — line 988
-- `CurrentActivity` — type — line 550
-- `CurrentActivityKind` — type — line 543
-- `HUNT_RESUPPLY_ARROW_TARGET` — const — line 857
-- `NPC_HEIGHT` — const — line 482
-- `NPC_SHADOW_DISTANCE` — const — line 487
-- `NpcAgent` — class — line 1120
+- `classifyPendingActivity` — function — line 741
+- `configureNpcPlayerReactionAudio` — function — line 989
+- `CurrentActivity` — type — line 551
+- `CurrentActivityKind` — type — line 544
+- `HUNT_RESUPPLY_ARROW_TARGET` — const — line 858
+- `NPC_HEIGHT` — const — line 483
+- `NPC_SHADOW_DISTANCE` — const — line 488
+- `NpcAgent` — class — line 1121
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcAgentDeps` — type — line 1005
-- `NpcInspectionSnapshot` — type — line 565
-- `NpcWhy` — type — line 715
-- `projectNpcWhy` — function — line 782
-- `promoteChainKind` — function — line 732
+- `NpcAgentDeps` — type — line 1006
+- `NpcInspectionSnapshot` — type — line 566
+- `NpcWhy` — type — line 716
+- `projectNpcWhy` — function — line 783
+- `promoteChainKind` — function — line 733
 
 ## `ai/npcAnimalThreat.ts`
 
-- `AnimalThreatArbitration` — type — line 115
-- `AnimalThreatDecisionInput` — type — line 76
-- `AnimalThreatResponse` — type — line 74
-- `arbitrateAnimalThreat` — function — line 125
-- `decideAnimalThreatResponse` — function — line 150
+- `AnimalThreatArbitration` — type — line 162
+- `AnimalThreatDecisionInput` — type — line 111
+- `AnimalThreatResponse` — type — line 109
+- `arbitrateAnimalThreat` — function — line 173
+- `decideAnimalThreatResponse` — function — line 199
+- `GUARD_LOCAL_THREAT_ASSISTANCE_RADIUS` — const — line 56
 - `IMMEDIATE_ANIMAL_THREAT_RADIUS` — const — line 48
 - `ImmediateAnimalThreat` — type — line 35
-- `scoreAnimalThreatIntents` — function — line 97
-- `senseImmediateAnimalThreat` — function — line 54
-- `serializableDefendScore` — function — line 141
+- `scoreAnimalThreatIntents` — function — line 143
+- `senseImmediateAnimalThreat` — function — line 62
+- `senseLocalThreatAssistance` — function — line 89
+- `serializableDefendScore` — function — line 190
 - `ThreateningAnimalCandidate` — type — line 16
 
 ## `ai/npcAppearance.ts`

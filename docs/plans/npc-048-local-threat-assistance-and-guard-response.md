@@ -1,7 +1,7 @@
 # Plan: Local threat assistance and guard response
 
 **Created:** 2026-09-17
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** high · **Effort:** M
 **Depends on:** npc-046, npc-047

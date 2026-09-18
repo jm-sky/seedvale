@@ -184,20 +184,20 @@ Generated from exported TypeScript symbols.
 
 ## `debug/npcDecisionReport.ts`
 
-- `buildNpcDecisionDiagnostics` — function — line 232
+- `buildNpcDecisionDiagnostics` — function — line 234
 - `NPC_TRACE_LIFETIME_NOTE` — const — line 14
   - domain: tools
-- `NpcAnimalThreatProjection` — type — line 40
+- `NpcAnimalThreatProjection` — type — line 41
 - `NpcAnimalThreatResponseProjection` — type — line 28
-- `NpcCombatSummaryProjection` — type — line 58
-- `NpcContractEvaluationProjection` — type — line 52
+- `NpcCombatSummaryProjection` — type — line 59
+- `NpcContractEvaluationProjection` — type — line 53
 - `NpcDecisionCycleProjection` — type — line 20
-- `NpcDecisionDiagnostics` — type — line 65
-- `projectNpcAnimalThreat` — function — line 153
-- `projectNpcCombatSummary` — function — line 197
-- `projectNpcContractEvaluations` — function — line 209
-- `projectNpcDecisionCycles` — function — line 100
-- `SettlementDecisionReport` — type — line 74
+- `NpcDecisionDiagnostics` — type — line 66
+- `projectNpcAnimalThreat` — function — line 155
+- `projectNpcCombatSummary` — function — line 199
+- `projectNpcContractEvaluations` — function — line 211
+- `projectNpcDecisionCycles` — function — line 101
+- `SettlementDecisionReport` — type — line 75
 
 ## `debug/npcInspector.ts`
 
@@ -231,11 +231,11 @@ Generated from exported TypeScript symbols.
 
 ## `debug/npcTrace.ts`
 
-- `createNpcTraceBuffer` — function — line 154
-- `NPC_TRACE_CAPACITY` — const — line 152
-- `NpcTraceBuffer` — type — line 145
+- `createNpcTraceBuffer` — function — line 157
+- `NPC_TRACE_CAPACITY` — const — line 155
+- `NpcTraceBuffer` — type — line 148
 - `NpcTraceEvent` — type — line 15
-- `NpcTraceEventType` — type — line 137
+- `NpcTraceEventType` — type — line 140
 
 ## `debug/playerGroundTrace.ts`
 

@@ -35,6 +35,7 @@ export type NpcAnimalThreatResponseProjection = {
   neuroticism: number
   hasMeleeCapability: boolean
   hasRangedCapability: boolean
+  guardResponsibility: boolean
 }
 
 export type NpcAnimalThreatProjection = {
@@ -146,6 +147,7 @@ function mapThreatResponse(event: NpcTraceEvent & { type: 'animalThreat.response
     neuroticism: event.neuroticism,
     hasMeleeCapability: event.hasMeleeCapability,
     hasRangedCapability: event.hasRangedCapability,
+    guardResponsibility: event.guardResponsibility,
   }
 }
 

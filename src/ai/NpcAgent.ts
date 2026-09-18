@@ -272,6 +272,7 @@ import {
   arbitrateAnimalThreat,
   type ImmediateAnimalThreat,
   senseImmediateAnimalThreat,
+  senseLocalThreatAssistance,
   serializableDefendScore,
   type ThreateningAnimalCandidate,
 } from './npcAnimalThreat'
@@ -2604,6 +2605,10 @@ export class NpcAgent {
       hasRangedCapability: hasRanged,
       healthRatio,
       neuroticism: this.personality.neuroticism,
+      // Settlement-protection responsibility bias (plan npc-048) — never
+      // bypasses the hard `canFight`/health floor above; only firms up an
+      // already-capable guard's lean toward defend.
+      guardResponsibility: this.role === 'guard',
     })
     const decision = arbitration.response
     this.lastAnimalThreatResponse = decision
@@ -2618,6 +2623,7 @@ export class NpcAgent {
       hasMeleeCapability: arbitration.hasMeleeCapability,
       hasRangedCapability: arbitration.hasRangedCapability,
       neuroticism: arbitration.neuroticism,
+      guardResponsibility: arbitration.guardResponsibility,
     })
     if (isNpcCombatDebugMode()) {
       console.log(
@@ -2640,7 +2646,18 @@ export class NpcAgent {
           started ? `combat.started mode=${mode}` : 'combat.startFailed (target invalid or no weapon at beginCombat time)',
         )
       }
-      if (started) return
+      if (started) {
+        if (this.role === 'guard') {
+          // Emergency locomotion (plan npc-046) for this specific guard
+          // assistance response only — npc-046 deliberately does not make
+          // all combat movement run; `tickMeleeCombat`/`tickRangedCombat`'s
+          // own `steerTo` already reads `locomotionMode`, so no separate
+          // movement path is needed. `endCombat()` resets it back to `walk`.
+          this.locomotionMode = 'run'
+          this.requestBark('guard_response', `guard-response:${threat.animalId}`)
+        }
+        return
+      }
       // Capability was just checked but `beginCombat` still rejected it
       // (e.g. target went invalid between the check and here) — flee rather
       // than leaving the NPC idle next to an active threat.
@@ -2698,6 +2715,9 @@ export class NpcAgent {
     this.combatIntent = null
     this.combatMeleeWeapon = null
     this.combatRangedWeapon = null
+    // Clears the guard-assistance emergency run (plan npc-048) — a no-op for
+    // any other combat, which never sets `run` in the first place.
+    this.locomotionMode = 'walk'
     this.combatAttack.reset()
     this.combatRangedAttack.reset()
     this.combatProjectile = null
@@ -2963,6 +2983,19 @@ export class NpcAgent {
           }
           flockThreatApplied = true
         }
+      }
+    }
+    // Guard local threat assistance (plan npc-048) — a wider, still bounded
+    // awareness radius than the personal-threat sense above, and (unlike it)
+    // also counts a predator committed against nearby livestock as real local
+    // danger. Lets a guard notice and respond to danger threatening someone
+    // else, or someone else's flock, before it reaches the guard personally.
+    // Only ever narrows to the nearest live candidate; never a second target
+    // lookup/registry, and never overrides a closer personal/flock threat.
+    if (this.role === 'guard') {
+      const assistanceThreat = senseLocalThreatAssistance(this.mesh.position.x, this.mesh.position.z, nearbyAnimalThreats)
+      if (assistanceThreat && (!this.currentAnimalThreat || assistanceThreat.distance < this.currentAnimalThreat.distance)) {
+        this.currentAnimalThreat = assistanceThreat
       }
     }
     if (this.currentAnimalThreat !== null) {

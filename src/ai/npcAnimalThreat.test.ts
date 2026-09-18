@@ -3,9 +3,11 @@ import type { CombatTargetHandle } from '../combat/combatIntent'
 import {
   arbitrateAnimalThreat,
   decideAnimalThreatResponse,
+  GUARD_LOCAL_THREAT_ASSISTANCE_RADIUS,
   IMMEDIATE_ANIMAL_THREAT_RADIUS,
   scoreAnimalThreatIntents,
   senseImmediateAnimalThreat,
+  senseLocalThreatAssistance,
   type ThreateningAnimalCandidate,
 } from './npcAnimalThreat'
 
@@ -59,6 +61,70 @@ describe('senseImmediateAnimalThreat (plan 179 §7/§10/§12)', () => {
       preyOwnerHouseId: 'home:0',
     }
     expect(senseImmediateAnimalThreat(0, 0, [flockOnly])).toBeNull()
+  })
+})
+
+describe('senseLocalThreatAssistance (plan npc-048)', () => {
+  it('perceives a candidate beyond the immediate-threat radius but within the wider guard radius', () => {
+    const distant: ThreateningAnimalCandidate = {
+      animalId: 'distant',
+      kind: 'wolf',
+      x: IMMEDIATE_ANIMAL_THREAT_RADIUS + 5,
+      z: 0,
+      target: fakeTarget(),
+    }
+    expect(senseImmediateAnimalThreat(0, 0, [distant])).toBeNull()
+    const threat = senseLocalThreatAssistance(0, 0, [distant])
+    expect(threat?.animalId).toBe('distant')
+  })
+
+  it('ignores a candidate outside the wider guard radius', () => {
+    const outside: ThreateningAnimalCandidate = {
+      animalId: 'outside',
+      kind: 'wolf',
+      x: GUARD_LOCAL_THREAT_ASSISTANCE_RADIUS + 5,
+      z: 0,
+      target: fakeTarget(),
+    }
+    expect(senseLocalThreatAssistance(0, 0, [outside])).toBeNull()
+  })
+
+  it('counts a predator committed against livestock as local danger, unlike senseImmediateAnimalThreat', () => {
+    const flockOnly: ThreateningAnimalCandidate = {
+      animalId: 'wolf-sheep',
+      kind: 'wolf',
+      x: 5,
+      z: 0,
+      target: fakeTarget(),
+      threateningHuman: false,
+      preyAnimalId: 'sheep-1',
+      preyOwnerHouseId: 'home:0',
+    }
+    expect(senseImmediateAnimalThreat(0, 0, [flockOnly])).toBeNull()
+    expect(senseLocalThreatAssistance(0, 0, [flockOnly])?.animalId).toBe('wolf-sheep')
+  })
+
+  it('ignores a dead candidate', () => {
+    const dead: ThreateningAnimalCandidate = { animalId: 'dead', kind: 'wolf', x: 1, z: 0, target: fakeTarget(false) }
+    expect(senseLocalThreatAssistance(0, 0, [dead])).toBeNull()
+  })
+
+  it('ignores a candidate that is neither threatening a human nor hunting livestock', () => {
+    const irrelevant: ThreateningAnimalCandidate = {
+      animalId: 'irrelevant',
+      kind: 'deer',
+      x: 2,
+      z: 0,
+      target: fakeTarget(),
+      threateningHuman: false,
+    }
+    expect(senseLocalThreatAssistance(0, 0, [irrelevant])).toBeNull()
+  })
+
+  it('returns the nearest of several live local dangers', () => {
+    const near: ThreateningAnimalCandidate = { animalId: 'near', kind: 'wolf', x: 4, z: 0, target: fakeTarget() }
+    const far: ThreateningAnimalCandidate = { animalId: 'far', kind: 'wolf', x: 20, z: 0, target: fakeTarget() }
+    expect(senseLocalThreatAssistance(0, 0, [far, near])?.animalId).toBe('near')
   })
 })
 
@@ -146,5 +212,54 @@ describe('decideAnimalThreatResponse neuroticism bias (plan ai-002)', () => {
         neuroticism: 0,
       }),
     ).toBe('flee')
+  })
+})
+
+describe('guardResponsibility bias (plan npc-048)', () => {
+  it('raises defendScore for a capable guard without changing fleeScore', () => {
+    const base = { hasMeleeCapability: true, hasRangedCapability: false, healthRatio: 0.5 }
+    const plain = arbitrateAnimalThreat(base)
+    const guard = arbitrateAnimalThreat({ ...base, guardResponsibility: true })
+    expect(guard.defendScore).toBeGreaterThan(plain.defendScore)
+    expect(guard.fleeScore).toBe(plain.fleeScore)
+  })
+
+  it('never turns an unarmed guard into a fighter', () => {
+    const arbitration = arbitrateAnimalThreat({
+      hasMeleeCapability: false,
+      hasRangedCapability: false,
+      healthRatio: 1,
+      guardResponsibility: true,
+    })
+    expect(arbitration.defendScore).toBe(-Infinity)
+    expect(arbitration.response).toBe('flee')
+  })
+
+  it('a critically hurt guard still flees despite the bias', () => {
+    const arbitration = arbitrateAnimalThreat({
+      hasMeleeCapability: true,
+      hasRangedCapability: false,
+      healthRatio: 0.05,
+      guardResponsibility: true,
+    })
+    expect(arbitration.response).toBe('flee')
+  })
+
+  it('a healthy armed guard defends', () => {
+    const arbitration = arbitrateAnimalThreat({
+      hasMeleeCapability: true,
+      hasRangedCapability: false,
+      healthRatio: 1,
+      guardResponsibility: true,
+    })
+    expect(arbitration.response).toBe('defend')
+    expect(arbitration.guardResponsibility).toBe(true)
+  })
+
+  it('defaults guardResponsibility to false when omitted', () => {
+    expect(
+      arbitrateAnimalThreat({ hasMeleeCapability: true, hasRangedCapability: false, healthRatio: 0.5 })
+        .guardResponsibility,
+    ).toBe(false)
   })
 })

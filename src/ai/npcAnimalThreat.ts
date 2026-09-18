@@ -47,6 +47,14 @@ export type ImmediateAnimalThreat = {
  *  an immediate concern, not general wildlife awareness. */
 export const IMMEDIATE_ANIMAL_THREAT_RADIUS = 10
 
+/** Bounded local-assistance awareness radius for a role responsible for
+ *  settlement protection (currently: guard, plan npc-048) — wider than
+ *  `IMMEDIATE_ANIMAL_THREAT_RADIUS` so a guard can notice and respond to live
+ *  danger threatening a nearby human or committed against nearby livestock
+ *  without being personally attacked first. Still spatially bounded, never a
+ *  settlement-wide scan. */
+export const GUARD_LOCAL_THREAT_ASSISTANCE_RADIUS = 30
+
 /** Nearest currently-threatening animal within range, or `null`. Pure/
  *  deterministic given `candidates` — the caller (`NpcAgent`) is
  *  responsible for keeping `candidates` small (bounded to animals actively
@@ -71,6 +79,33 @@ export function senseImmediateAnimalThreat(
   return best
 }
 
+/** Nearest live local danger within `radius` that a settlement-protection
+ *  role (guard, plan npc-048) should notice and may go assist — unlike
+ *  `senseImmediateAnimalThreat`, this also counts a predator committed
+ *  against nearby livestock (`preyAnimalId` set, see `fauna/shepherdFlock.ts`)
+ *  as a real local danger, not only one actively threatening a human. Pure/
+ *  deterministic given `candidates`; the caller keeps `candidates` bounded
+ *  (same `nearbyAnimalThreats` list every consumer already receives). */
+export function senseLocalThreatAssistance(
+  npcX: number,
+  npcZ: number,
+  candidates: readonly ThreateningAnimalCandidate[],
+  radius: number = GUARD_LOCAL_THREAT_ASSISTANCE_RADIUS,
+): ImmediateAnimalThreat | null {
+  let best: ImmediateAnimalThreat | null = null
+  let bestD = radius
+  for (const c of candidates) {
+    if (c.threateningHuman === false && !c.preyAnimalId) continue
+    if (!c.target.isAlive()) continue
+    const d = Math.hypot(c.x - npcX, c.z - npcZ)
+    if (d < bestD) {
+      bestD = d
+      best = { animalId: c.animalId, kind: c.kind, x: c.x, z: c.z, distance: d, target: c.target }
+    }
+  }
+  return best
+}
+
 export type AnimalThreatResponse = 'defend' | 'flee'
 
 export type AnimalThreatDecisionInput = {
@@ -82,6 +117,13 @@ export type AnimalThreatDecisionInput = {
    *  existing risk/threat signal. Optional, defaults to 0.5 (neutral, no
    *  bias) so every existing caller/test keeps its exact prior behaviour. */
   neuroticism?: number
+  /** Settlement-protection role responsibility (plan npc-048, currently:
+   *  guard) — shifts `defend` score up when combat capability is actually
+   *  usable. Never turns an unarmed/critically-hurt guard into a fighter:
+   *  `defend` still requires `canFight`, and the health-driven swing still
+   *  dominates. Optional, defaults to `false` so every existing caller/test
+   *  keeps its exact prior behaviour. */
+  guardResponsibility?: boolean
 }
 
 const DEFEND_BASELINE = 0.5
@@ -93,15 +135,20 @@ const FLEE_HEALTH_WEIGHT = 0.6
  *  unarmed NPC still flees regardless of personality, and a healthy armed
  *  one still defends unless neuroticism is meaningfully above average. */
 const NEUROTICISM_RISK_WEIGHT = 0.5
+/** Modest next to the health-driven swing above so a critically hurt or
+ *  unarmed guard still flees, and a healthy armed one already leans defend
+ *  without the bias — this only firms up an existing lean. */
+const GUARD_RESPONSIBILITY_DEFEND_BIAS = 0.15
 
 export function scoreAnimalThreatIntents(
   input: AnimalThreatDecisionInput,
 ): ScoredAction<AnimalThreatResponse>[] {
   const canFight = input.hasMeleeCapability || input.hasRangedCapability
   const riskBias = ((input.neuroticism ?? 0.5) - 0.5) * NEUROTICISM_RISK_WEIGHT
+  const guardBias = canFight && input.guardResponsibility ? GUARD_RESPONSIBILITY_DEFEND_BIAS : 0
   // No usable weapon → defend is not a real option at all (`-Infinity`, not
   // just a low score) so `flee` always wins regardless of health/personality.
-  const defendScore = canFight ? DEFEND_BASELINE + input.healthRatio * DEFEND_HEALTH_WEIGHT - riskBias : -Infinity
+  const defendScore = canFight ? DEFEND_BASELINE + input.healthRatio * DEFEND_HEALTH_WEIGHT - riskBias + guardBias : -Infinity
   const fleeScore = FLEE_BASELINE + (1 - input.healthRatio) * FLEE_HEALTH_WEIGHT + (canFight ? 0 : 1) + riskBias
   return [
     { kind: 'defend', score: defendScore },
@@ -120,6 +167,7 @@ export type AnimalThreatArbitration = {
   hasRangedCapability: boolean
   healthRatio: number
   neuroticism: number
+  guardResponsibility: boolean
 }
 
 export function arbitrateAnimalThreat(input: AnimalThreatDecisionInput): AnimalThreatArbitration {
@@ -134,6 +182,7 @@ export function arbitrateAnimalThreat(input: AnimalThreatDecisionInput): AnimalT
     hasRangedCapability: input.hasRangedCapability,
     healthRatio: input.healthRatio,
     neuroticism: input.neuroticism ?? 0.5,
+    guardResponsibility: input.guardResponsibility ?? false,
   }
 }
 

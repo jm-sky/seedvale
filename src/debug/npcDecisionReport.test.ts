@@ -66,6 +66,7 @@ describe('buildNpcDecisionDiagnostics', () => {
         hasMeleeCapability: false,
         hasRangedCapability: false,
         neuroticism: 0.5,
+        guardResponsibility: false,
       },
       { simTime: 3, type: 'queue.joined', queueId: 'well' },
     ]

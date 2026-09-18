@@ -187,51 +187,47 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `M` · **Score:**  35  
    → **unlocks:** 0/0
 
-29. `npc-048` — **Local threat assistance and guard response**  
-  🔴 `M` · **Score:**  31  
-   → **unlocks:** 0/0
-
-30. `npc-054` — **NPC desired gifts, gift acceptance and relationship rewards**  
+29. `npc-054` — **NPC desired gifts, gift acceptance and relationship rewards**  
   🔴 `L` · **Score:**  30  
    → **unlocks:** 0/0
 
-31. `items-player-014` — **Rope-pullable resource transport**  
+30. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-32. `settlements-019` — **Settlement render submission budget**  
+31. `settlements-019` — **Settlement render submission budget**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-33. `tools-005` — **Seedvale Character Preparation Panel**  
+32. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-34. `world-terrain-039` — **N8AO / post-process cost budget**  
+33. `world-terrain-039` — **N8AO / post-process cost budget**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-35. `world-terrain-040` — **Vegetation render budget v2**  
+34. `world-terrain-040` — **Vegetation render budget v2**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-36. `items-player-044` — **Shoulder and forearm equipment slots**  
+35. `items-player-044` — **Shoulder and forearm equipment slots**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-37. `world-terrain-041` — **Agent presentation render LOD**  
+36. `world-terrain-041` — **Agent presentation render LOD**  
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-38. `settlements-npcs-046` — **Pasture Well & Trough Local Water Use**  
+37. `settlements-npcs-046` — **Pasture Well & Trough Local Water Use**  
   🟡 `S` · **Score:**  21  
    → **unlocks:** 0/0
 
-39. `items-player-032` — **NPC player-storage resource and context rules**  
+38. `items-player-032` — **NPC player-storage resource and context rules**  
   🟡 `L` · **Score:**  20  
    → **unlocks:** 0/0
 
-40. `quests-progression-061` — **Builder — Complete an Unfinished Palisade Segment**  
+39. `quests-progression-061` — **Builder — Complete an Unfinished Palisade Segment**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
