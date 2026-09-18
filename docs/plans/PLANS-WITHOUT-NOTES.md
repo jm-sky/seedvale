@@ -1,7 +1,7 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-18 10:19:17  
+> Date: 2026-09-18 12:59:18  
 
 ## PLANS
 
@@ -12,7 +12,6 @@
 - `quests-progression-046-lost-treasure-chronicles-integration-legacy-catch-up-and-superseded-quest-cleanup.md`
 - `quests-progression-053-hunters-brotherhood-competing-hunting-strategies.md`
 - `quests-progression-054-hunters-brotherhood-exceptional-animal-finale.md`
-- `settlements-npcs-046-pasture-well-trough-local-water-use.md`
 - `settlements-npcs-047-merchant-transport-capacity-infrastructure.md`
 - `settlements-npcs-048-merchant-pack-animal-assignment-and-journey-continuity.md`
 - `settlements-npcs-049-merchant-wealth-tiers-and-travel-party-profile.md`
@@ -272,43 +271,6 @@ Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną
 Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
 
 Po ukończeniu implementation notes zaktualizuj też `docs/plans/quests-progression-054-hunters-brotherhood-exceptional-animal-finale.md` i dodaj/ustaw metadata:
-`**Model:** <best>, <cheaper-safe-fallback>`
-Wybierz dokładnie dwa modele spośród: Composer, Grok, Sonnet, Opus.
-Pierwszy ma być najlepszym wyborem do implementacji, drugi tańszym wariantem o minimalnym dodatkowym ryzyku.
-Dobierz modele na podstawie wykonanego reconu i implementation notes, zgodnie z `docs/plans/PLANNING.md`.
-
-Pliki dodaj na branch `main` w repozytorium.
-```
-
-### `settlements-npcs-046-pasture-well-trough-local-water-use.md`
-
-Prompt:
-
-```
-Zrób review planu `settlements-npcs-046-pasture-well-trough-local-water-use.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/settlements-npcs-046-pasture-well-trough-local-water-use.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/settlements-npcs-046-pasture-well-trough-local-water-use-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
-
-Po ukończeniu implementation notes zaktualizuj też `docs/plans/settlements-npcs-046-pasture-well-trough-local-water-use.md` i dodaj/ustaw metadata:
 `**Model:** <best>, <cheaper-safe-fallback>`
 Wybierz dokładnie dwa modele spośród: Composer, Grok, Sonnet, Opus.
 Pierwszy ma być najlepszym wyborem do implementacji, drugi tańszym wariantem o minimalnym dodatkowym ryzyku.
