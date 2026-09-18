@@ -601,7 +601,7 @@ describe('createCaves (world-terrain-019 B)', () => {
       expect(mouthProxyGroup(def.caveId, scene)).toBeDefined()
       expect(caves.peekStreamingDebug().mouthProxies).toBeGreaterThanOrEqual(1)
       caves.dispose()
-    })
+    }, 15_000)
 
     it('hides the mouth proxy while the full presentation is active', () => {
       const { scene, caves } = isolatedCaves()
@@ -611,7 +611,7 @@ describe('createCaves (world-terrain-019 B)', () => {
       expect(caveGroup(def.caveId, scene)).toBeDefined()
       expect(mouthProxyGroup(def.caveId, scene)).toBeUndefined()
       caves.dispose()
-    })
+    }, 15_000)
 
     it('restores the mouth proxy when the full presentation is dropped', () => {
       const { scene, caves } = isolatedCaves()

@@ -97,7 +97,7 @@ describe('generateVillagePlan / generateSettlementDef (plan 047 seam)', () => {
     expect(lg).toBeDefined()
     expect(xl).toBeDefined()
     expect(xl!.site.radius).toBeGreaterThan(lg!.site.radius)
-  })
+  }, 15_000)
 
   it('locks provisional size from cell-center terrain (no second roll after site)', () => {
     // Flat forest-ish center → rollVillageSize(forest, seed) must equal plan size

@@ -60,9 +60,10 @@ export const WEATHER_SEVERE_SHELTER_THRESHOLD = 0.65
  * Pure — same `WeatherState` always yields the same score, no exposure
  * duration/body-temperature/clothing modelling (out of scope, plan §9/§out
  * of scope). `clear`/`cloudy`/`fog` never produce shelter pressure regardless
- * of temperature (plan acceptance §1). Storm uses the rain path via
- * `isRainWeather`. Bounded to `[0, 1]`, same convention
- * as `Needs.ts`'s pressure scores, so it can compete directly against them.
+ * of temperature (plan acceptance §1). Storm uses its own profile (lower
+ * intensity threshold, higher multiplier than rain). Bounded to `[0, 1]`,
+ * same convention as `Needs.ts`'s pressure scores, so it can compete
+ * directly against them.
  */
 export function weatherShelterPressure(weather: WeatherState): number {
   const profile =

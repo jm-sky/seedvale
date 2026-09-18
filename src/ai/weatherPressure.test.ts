@@ -19,10 +19,10 @@ describe('weatherShelterPressure', () => {
     expect(weatherShelterPressure(weather({ type: 'fog', intensity: 1, temperature: -20 }))).toBe(0)
   })
 
-  it('treats storm as rain-like shelter pressure', () => {
+  it('scores storm higher than rain at the same intensity', () => {
     const rain = weatherShelterPressure(weather({ type: 'rain', intensity: 0.8, temperature: 10 }))
     const storm = weatherShelterPressure(weather({ type: 'storm', intensity: 0.8, temperature: 10 }))
-    expect(storm).toBe(rain)
+    expect(storm).toBeGreaterThan(rain)
     expect(storm).toBeGreaterThan(0)
   })
 

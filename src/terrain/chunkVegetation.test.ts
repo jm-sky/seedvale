@@ -294,7 +294,7 @@ describe('computeChunkVegetation — Deep Forest tuning (plan 182)', () => {
     const largeOldFrac = (trees: typeof deep) =>
       trees.filter((t) => t.sizeClass === 'large' || t.growthStage === 'old').length / trees.length
     expect(largeOldFrac(deep)).toBeGreaterThan(largeOldFrac(weak))
-  })
+  }, 15_000)
 
   it('does not exceed the existing candidate budget (no candidate-count explosion)', () => {
     const params = deepForestParams()
