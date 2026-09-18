@@ -1,7 +1,7 @@
 # Plan: Chatterbox local voice generation pipeline
 
 **Created:** 2026-09-16
-**Status:** `draft` 📋
+**Status:** `draft` 📝
 **Priority:** high · **Effort:** M
 **Depends on:** npc-041, npc-042
 **Domain:** `tools`
