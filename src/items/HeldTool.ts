@@ -78,7 +78,7 @@ export function createHeldTool(
   let currentInstanceId: string | null = null
 
   function hasQuantity(kind: ItemKind): boolean {
-    return isWeaponMaintenanceKind(kind) ? inventory.countInstances(kind) > 0 : inventory.has(kind, 1)
+    return inventory.holdsAny(kind)
   }
 
   function resolveInstanceId(kind: ToolKind, preferId?: string | null): string | null {

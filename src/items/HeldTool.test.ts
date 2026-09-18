@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { createHeldTool } from './HeldTool'
+import { createHeldTool, isToolKind } from './HeldTool'
 import { Inventory } from './Inventory'
+import { createItemInstanceId } from './itemInstances'
 import { createWeaponInstance } from './weaponMaintenance'
 
 describe('createHeldTool', () => {
@@ -74,5 +75,42 @@ describe('createHeldTool', () => {
     held.syncWithInventory()
     expect(held.held()).toBe('knife')
     expect(held.heldInstanceId()).toBe(b.id)
+  })
+
+  it('equips identity-only hunting_bow from instances without tracking heldInstanceId', () => {
+    const inventory = new Inventory({}, undefined, [{ id: createItemInstanceId(), kind: 'hunting_bow' }])
+    const held = createHeldTool(inventory)
+    expect(isToolKind('hunting_bow')).toBe(true)
+    expect(held.equip('hunting_bow')).toBe(true)
+    expect(held.held()).toBe('hunting_bow')
+    expect(held.heldInstanceId()).toBeNull()
+    held.syncWithInventory()
+    expect(held.held()).toBe('hunting_bow')
+    expect(held.heldInstanceId()).toBeNull()
+  })
+
+  it('equips count-based bows without setting heldInstanceId', () => {
+    const inventory = new Inventory({ short_bow: 1, long_bow: 1, masterwork_hunting_bow: 1 })
+    const held = createHeldTool(inventory)
+    for (const kind of ['short_bow', 'long_bow', 'masterwork_hunting_bow'] as const) {
+      expect(held.equip(kind)).toBe(true)
+      expect(held.held()).toBe(kind)
+      expect(held.heldInstanceId()).toBeNull()
+    }
+  })
+
+  it('equips compact weapon-maintenance kinds with a concrete instance id', () => {
+    const inventory = new Inventory({}, undefined, [
+      createWeaponInstance('dagger'),
+      createWeaponInstance('hatchet'),
+      createWeaponInstance('knife'),
+      createWeaponInstance('short_sword'),
+    ])
+    const held = createHeldTool(inventory)
+    for (const kind of ['dagger', 'hatchet', 'knife', 'short_sword'] as const) {
+      expect(held.equip(kind)).toBe(true)
+      expect(held.held()).toBe(kind)
+      expect(held.heldInstanceId()).not.toBeNull()
+    }
   })
 })
