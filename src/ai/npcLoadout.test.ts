@@ -39,28 +39,28 @@ describe('seedDefaultRoleWeapon', () => {
     const carried = new Inventory(undefined, 5)
     seedDefaultRoleWeapon(carried, 'woodcutter')
     expect(carried.holdsAny('axe')).toBe(true)
-    expect(resolveNpcMeleeWeapon(carried)?.kind).toBe('axe')
+    expect(resolveNpcMeleeWeapon(carried, 'woodcutter')?.kind).toBe('axe')
   })
 
   it('seeds a guard with a long sword', () => {
     const carried = new Inventory(undefined, 5)
     seedDefaultRoleWeapon(carried, 'guard')
     expect(carried.holdsAny('long_sword')).toBe(true)
-    expect(resolveNpcMeleeWeapon(carried)?.kind).toBe('long_sword')
+    expect(resolveNpcMeleeWeapon(carried, 'guard')?.kind).toBe('long_sword')
   })
 
   it('seeds a farmer with a knife', () => {
     const carried = new Inventory(undefined, 5)
     seedDefaultRoleWeapon(carried, 'farmer')
     expect(carried.holdsAny('knife')).toBe(true)
-    expect(resolveNpcMeleeWeapon(carried)?.kind).toBe('knife')
+    expect(resolveNpcMeleeWeapon(carried, 'farmer')?.kind).toBe('knife')
   })
 
   it('falls back to a knife for a trader/miner/fisher (animal-threat diagnostics task)', () => {
     const carried = new Inventory(undefined, 5)
     seedDefaultRoleWeapon(carried, 'trader')
     expect(carried.holdsAny('knife')).toBe(true)
-    expect(resolveNpcMeleeWeapon(carried)?.kind).toBe('knife')
+    expect(resolveNpcMeleeWeapon(carried, 'trader')?.kind).toBe('knife')
   })
 
   it('does not add a second weapon when the default is already carried', () => {
@@ -74,7 +74,7 @@ describe('seedDefaultRoleWeapon', () => {
     const carried = new Inventory(undefined, 5)
     seedDefaultRoleWeapon(carried, 'hunter')
     expect(carried.holdsAny('hunting_bow')).toBe(true)
-    expect(resolveNpcRangedWeapon(carried)?.kind).toBe('hunting_bow')
+    expect(resolveNpcRangedWeapon(carried, 'hunter')?.kind).toBe('hunting_bow')
   })
 })
 
@@ -84,7 +84,7 @@ describe('seedHunterSupplies (plan 178)', () => {
     seedDefaultRoleWeapon(carried, 'hunter')
     seedHunterSupplies(carried)
     expect(carried.hasCapability('meat_harvesting')).toBe(true)
-    const ranged = resolveNpcRangedWeapon(carried)
+    const ranged = resolveNpcRangedWeapon(carried, 'hunter')
     expect(ranged).not.toBeNull()
     expect(resolveNpcAmmoKind(carried, ranged!.ranged)).toBe('arrow')
   })

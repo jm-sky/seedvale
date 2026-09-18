@@ -1,7 +1,7 @@
 # Plan: NPC profession-aware weapon choice and armor use
 
 **Created:** 2026-09-18
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** medium · **Effort:** M
 **Depends on:** items-player-027, items-player-029, items-player-047
 **Domain:** `npc`

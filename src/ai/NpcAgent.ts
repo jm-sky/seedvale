@@ -2277,8 +2277,8 @@ export class NpcAgent {
    *  `reactToAnimalThreat`/`beginCombat` already use, exposed read-only for
    *  `?debug=1&debugNpcCombat=1` combat logging (no side effect). */
   canFightBack(): boolean {
-    if (resolveNpcMeleeWeapon(this.personalInventory)) return true
-    const rangedWeapon = resolveNpcRangedWeapon(this.personalInventory)
+    if (resolveNpcMeleeWeapon(this.personalInventory, this.role)) return true
+    const rangedWeapon = resolveNpcRangedWeapon(this.personalInventory, this.role)
     return rangedWeapon != null && this.resolveRangedAmmo(rangedWeapon.ranged) != null
   }
 
@@ -2356,10 +2356,10 @@ export class NpcAgent {
     let meleeWeapon: NpcMeleeWeapon | null = null
     let rangedWeapon: NpcRangedWeapon | null = null
     if (intent.mode === 'melee') {
-      meleeWeapon = resolveNpcMeleeWeapon(this.personalInventory)
+      meleeWeapon = resolveNpcMeleeWeapon(this.personalInventory, this.role)
       if (!meleeWeapon) return false
     } else {
-      rangedWeapon = resolveNpcRangedWeapon(this.personalInventory)
+      rangedWeapon = resolveNpcRangedWeapon(this.personalInventory, this.role)
       if (!rangedWeapon || !this.resolveRangedAmmo(rangedWeapon.ranged)) return false
     }
 
@@ -2596,8 +2596,8 @@ export class NpcAgent {
    *  177 `beginCombat()`; `flee` reuses the existing `wander` phase/movement
    *  pipeline — no new combat or flee system. */
   private reactToAnimalThreat(threat: ImmediateAnimalThreat): void {
-    const meleeWeapon = resolveNpcMeleeWeapon(this.personalInventory)
-    const rangedWeapon = resolveNpcRangedWeapon(this.personalInventory)
+    const meleeWeapon = resolveNpcMeleeWeapon(this.personalInventory, this.role)
+    const rangedWeapon = resolveNpcRangedWeapon(this.personalInventory, this.role)
     const hasRanged = rangedWeapon != null && this.resolveRangedAmmo(rangedWeapon.ranged) != null
     const healthRatio = this.health.maxHp > 0 ? this.health.currentHp / this.health.maxHp : 0
     const arbitration = arbitrateAnimalThreat({
@@ -4838,7 +4838,7 @@ export class NpcAgent {
         this.carried.add('arrow', available)
       }
     }
-    const rangedWeapon = resolveNpcRangedWeapon(this.personalInventory)
+    const rangedWeapon = resolveNpcRangedWeapon(this.personalInventory, this.role)
     if (!rangedWeapon || !this.resolveRangedAmmo(rangedWeapon.ranged)) return false
     const target = hunting.queryTarget(this.mesh.position.x, this.mesh.position.z, HUNT_SEARCH_RADIUS)
     if (!target) return false

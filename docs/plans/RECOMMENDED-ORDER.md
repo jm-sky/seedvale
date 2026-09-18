@@ -54,10 +54,10 @@
    🔴 `L` · ✅ ready · unlocks 2/6
 3. `items-player-028` — **NPC player-storage access policies**  
    🔴 `M` · ✅ ready · unlocks 3/5
-4. `npc-053` — **NPC profession-aware weapon choice and armor use**  
-   🟡 `M` · ✅ ready · unlocks 3/6
-5. `settlements-003` — **Colony settlement bootstrap**  
+4. `settlements-003` — **Colony settlement bootstrap**  
    🔴 `L` · ✅ ready · unlocks 1/1
+5. `world-031` — **Authored Persistent World Consequences**  
+   🔴 `M` · ✅ ready · unlocks 3/3
 
 ---
 
@@ -91,143 +91,139 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `L` · **Score:** 118  
    → **unlocks:** 3/5
 
-5. `quests-progression-042` — **Lost Treasure Chronicles — expedition remains, journal and missing-key trail**  
-  🔴 `L` · **Score:** 110  
-   → **unlocks:** 3/4
-
-6. `quests-progression-043` — **Lost Treasure Chronicles — survivor site, missing key and final dungeon access**  
-  🔴 `L` · **Score:**  98  
-   → **unlocks:** 2/3
-
-7. `items-player-028` — **NPC player-storage access policies**  
-  🔴 `M` · **Score:**  93  
-   → **unlocks:** 3/5
-
-8. `npc-053` — **NPC profession-aware weapon choice and armor use**  
-  🟡 `M` · **Score:**  93  
-   → **unlocks:** 3/6
-
-9. `settlements-npcs-049` — **Merchant wealth tiers and travel party profile**  
+5. `settlements-npcs-049` — **Merchant wealth tiers and travel party profile**  
   🔴 `L` · **Score:** 114  
    → **unlocks:** 1/4
 
-10. `quests-progression-044` — **Lost Treasure Chronicles — final treasure claims and resolution**  
+6. `quests-progression-042` — **Lost Treasure Chronicles — expedition remains, journal and missing-key trail**  
+  🔴 `L` · **Score:** 110  
+   → **unlocks:** 3/4
+
+7. `quests-progression-043` — **Lost Treasure Chronicles — survivor site, missing key and final dungeon access**  
+  🔴 `L` · **Score:**  98  
+   → **unlocks:** 2/3
+
+8. `items-player-028` — **NPC player-storage access policies**  
+  🔴 `M` · **Score:**  93  
+   → **unlocks:** 3/5
+
+9. `quests-progression-044` — **Lost Treasure Chronicles — final treasure claims and resolution**  
   🔴 `L` · **Score:**  90  
    → **unlocks:** 2/2
 
-11. `quests-progression-045` — **Lost Treasure Chronicles — property grant deed and persistent land reward**  
+10. `quests-progression-045` — **Lost Treasure Chronicles — property grant deed and persistent land reward**  
   🔴 `L` · **Score:**  78  
    → **unlocks:** 1/1
 
-12. `settlements-003` — **Colony settlement bootstrap**  
+11. `settlements-003` — **Colony settlement bootstrap**  
   🔴 `L` · **Score:**  70  
    → **unlocks:** 1/1
 
-13. `world-031` — **Authored Persistent World Consequences**  
+12. `world-031` — **Authored Persistent World Consequences**  
   🔴 `M` · **Score:**  69  
    → **unlocks:** 3/3
 
-14. `quests-progression-049` — **Hunters Brotherhood — hunting-ground investigation**  
+13. `quests-progression-049` — **Hunters Brotherhood — hunting-ground investigation**  
   🟡 `M` · **Score:**  67  
    → **unlocks:** 1/2
 
-15. `quests-progression-046` — **Lost Treasure Chronicles — integration, legacy catch-up and superseded quest cleanup**  
+14. `quests-progression-046` — **Lost Treasure Chronicles — integration, legacy catch-up and superseded quest cleanup**  
   🔴 `L` · **Score:**  66  
    → **unlocks:** 0/0
 
-16. `settlements-npcs-022` — **Household help and age-based work participation**  
+15. `settlements-npcs-022` — **Household help and age-based work participation**  
   🔴 `M` · **Score:**  57  
    → **unlocks:** 1/1
 
-17. `quests-progression-053` — **Hunters Brotherhood — competing hunting strategies**  
+16. `quests-progression-053` — **Hunters Brotherhood — competing hunting strategies**  
   🟡 `L` · **Score:**  56  
    → **unlocks:** 1/1
 
-18. `settlements-npcs-043` — **Settlement Cultivation Hydration, Rain & Farmer Watering**  
+17. `settlements-npcs-043` — **Settlement Cultivation Hydration, Rain & Farmer Watering**  
   🔴 `L` · **Score:**  56  
    → **unlocks:** 1/1
 
-19. `quests-progression-057` — **Injured cow Medicine alternative**  
+18. `quests-progression-057` — **Injured cow Medicine alternative**  
   🟡 `M` · **Score:**  49  
    → **unlocks:** 1/1
 
-20. `quests-progression-063` — **Healer — Injured Resident**  
+19. `quests-progression-063` — **Healer — Injured Resident**  
   🟡 `M` · **Score:**  49  
    → **unlocks:** 1/1
 
-21. `settlements-004` — **Gold Economic Realization & Source Entitlements**  
+20. `settlements-004` — **Gold Economic Realization & Source Entitlements**  
   🔴 `M` · **Score:**  49  
    → **unlocks:** 1/1
 
-22. `quests-progression-010` — **Abandoned gold mine → mining colony integration**  
+21. `quests-progression-010` — **Abandoned gold mine → mining colony integration**  
   🔴 `M` · **Score:**  61  
    → **unlocks:** 0/0
 
-23. `quests-progression-060` — **Builder — Finish the Local Well**  
+22. `quests-progression-060` — **Builder — Finish the Local Well**  
   🔴 `M` · **Score:**  47  
    → **unlocks:** 0/0
 
-24. `quests-progression-054` — **Hunters Brotherhood — exceptional animal finale**  
+23. `quests-progression-054` — **Hunters Brotherhood — exceptional animal finale**  
   🟡 `L` · **Score:**  44  
    → **unlocks:** 0/0
 
-25. `settlements-npcs-044` — **Authored Outpost Occupants & Construction Lifecycle**  
+24. `settlements-npcs-044` — **Authored Outpost Occupants & Construction Lifecycle**  
   🔴 `L` · **Score:**  40  
    → **unlocks:** 1/1
 
-26. `npc-050` — **NPC-initiated player follow-ups and proactive dialogue**  
+25. `npc-050` — **NPC-initiated player follow-ups and proactive dialogue**  
   🔴 `M` · **Score:**  39  
    → **unlocks:** 0/0
 
-27. `quests-progression-058` — **Injured dog discovery thread**  
+26. `quests-progression-058` — **Injured dog discovery thread**  
   🟡 `M` · **Score:**  37  
    → **unlocks:** 0/0
 
-28. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
+27. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
   🔴 `M` · **Score:**  35  
    → **unlocks:** 0/0
 
-29. `npc-054` — **NPC desired gifts, gift acceptance and relationship rewards**  
+28. `npc-054` — **NPC desired gifts, gift acceptance and relationship rewards**  
   🔴 `L` · **Score:**  30  
    → **unlocks:** 0/0
 
-30. `items-player-014` — **Rope-pullable resource transport**  
+29. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-31. `settlements-019` — **Settlement render submission budget**  
+30. `settlements-019` — **Settlement render submission budget**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-32. `tools-005` — **Seedvale Character Preparation Panel**  
+31. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-33. `world-terrain-039` — **N8AO / post-process cost budget**  
+32. `world-terrain-039` — **N8AO / post-process cost budget**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-34. `world-terrain-040` — **Vegetation render budget v2**  
+33. `world-terrain-040` — **Vegetation render budget v2**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-35. `items-player-044` — **Shoulder and forearm equipment slots**  
+34. `items-player-044` — **Shoulder and forearm equipment slots**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-36. `world-terrain-041` — **Agent presentation render LOD**  
+35. `world-terrain-041` — **Agent presentation render LOD**  
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-37. `settlements-npcs-046` — **Pasture Well & Trough Local Water Use**  
+36. `settlements-npcs-046` — **Pasture Well & Trough Local Water Use**  
   🟡 `S` · **Score:**  21  
    → **unlocks:** 0/0
 
-38. `items-player-032` — **NPC player-storage resource and context rules**  
+37. `items-player-032` — **NPC player-storage resource and context rules**  
   🟡 `L` · **Score:**  20  
    → **unlocks:** 0/0
 
-39. `quests-progression-061` — **Builder — Complete an Unfinished Palisade Segment**  
+38. `quests-progression-061` — **Builder — Complete an Unfinished Palisade Segment**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
@@ -238,9 +234,6 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
 - [`items-player-032-npc-player-storage-resource-and-context-rules.md`](items-player-032-npc-player-storage-resource-and-context-rules.md)  
   is blocked by:
   - [`items-player-028-npc-player-storage-access-policies.md`](items-player-028-npc-player-storage-access-policies.md)
-- [`npc-054-npc-desired-gifts-gift-acceptance-and-relationship-rewards.md`](npc-054-npc-desired-gifts-gift-acceptance-and-relationship-rewards.md)  
-  is blocked by:
-  - [`npc-053-profession-aware-weapon-choice-and-armor-use.md`](npc-053-profession-aware-weapon-choice-and-armor-use.md)
 - [`quests-progression-010-abandoned-gold-mine-colony.md`](quests-progression-010-abandoned-gold-mine-colony.md)  
   is blocked by:
   - [`settlements-003-colony-bootstrap.md`](settlements-003-colony-bootstrap.md)
@@ -294,7 +287,6 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
 - [`settlements-npcs-049-merchant-wealth-tiers-and-travel-party-profile.md`](settlements-npcs-049-merchant-wealth-tiers-and-travel-party-profile.md)  
   is blocked by:
   - [`settlements-npcs-048-merchant-pack-animal-assignment-and-journey-continuity.md`](settlements-npcs-048-merchant-pack-animal-assignment-and-journey-continuity.md)
-  - [`npc-053-profession-aware-weapon-choice-and-armor-use.md`](npc-053-profession-aware-weapon-choice-and-armor-use.md)
 
 ---
 

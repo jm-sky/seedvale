@@ -257,6 +257,8 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `ai/npcCombat.test.ts`
+- `ai/npcCombat.ts`
 - `app/createApp.ts`
 - `app/inventoryWiring.ts`
 - `items/Inventory.test.ts`
@@ -584,6 +586,8 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `ai/npcCombat.test.ts`
+- `ai/npcCombat.ts`
 - `app/actions/actionContext.ts`
 - `app/actions/containerActions.ts`
 - `app/actions/mountActions.ts`
@@ -1145,6 +1149,7 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `ai/npcAssistance.ts`
+- `ai/npcCombat.test.ts`
 - `ai/npcCombat.ts`
 - `ai/npcLoadout.ts`
 - `ai/npcLogistics.ts`

@@ -4,7 +4,7 @@
 
 **Not:** the per-item stat tables (damage/range/timings — that's [items/WEAPONS.md](../items/WEAPONS.md) and [items/CATALOG.md](../items/CATALOG.md)), NPC life/economy outside of combat (that's [SETTLEMENTS.md](../state/settlements.md)), or a plan. Combat spans the `items-player`, `settlements-npcs` and `fauna` plan domains at once, which is why it lives here rather than folded into one of them.
 
-**Last verified:** 2026-09-12
+**Last verified:** 2026-09-18
 
 When this file and the code disagree, the code wins — update this file.
 
@@ -57,11 +57,15 @@ Multi-piece composition multiplies remaining-damage factors (never sums `damageR
 
 Persistence: `SaveData.playerEquipment?: Partial<Record<EquipmentSlot, string>>` — instance IDs per occupied slot. Armor instances persist `quality`. Older count-backed leather/chainmail + `body: ItemKind` saves migrate at v37→v38. Out of scope: durability/repair, crafting/loot quality generation, shields, NPC equipment, character-attachment worn visuals (current kinds are ground/inventory-pickup GLBs only — see [MODELS.md](../assets/MODELS.md) M79).
 
-## NPC combat (plan 177)
+## NPC combat (plan 177, weapon/armor selection extended by plan npc-053)
 
 `NpcAgent` gained a `combat` `Phase`, driven from its own `update()` cadence — there is no second `NpcCombatManager`/loop. `beginCombat(intent: CombatIntent)`/`cancelCombat()` starts/stops it; `NpcAgent` never picks its own target, reason to fight, or weapon mode — `CombatIntent { target, mode: 'melee' | 'ranged' }` is always supplied by an external decision system (below). `src/ai/npcCombat.ts` resolves the attacking/defending item straight from `NpcAgent.personalInventory` and ammo from transient `NpcAgent.carried` — there is no separate NPC equipment-slot system. Each `NpcAgent` owns at most one in-flight `Projectile` on itself for ranged attacks (mirrors `combatAttack` already being a per-agent field), so it needs no camera/player/gameLoop involvement and no shared world projectile registry.
 
 NPC role-based personal weapons (plan 185 / settlements-npcs-026): `src/ai/npcLoadout.ts`'s `seedInitialPersonalBelongingsIfNeeded()` seeds `personalInventory` once at genuine first creation of authoritative NPC state — `woodcutter → axe` (+ knife), `guard → long_sword`, `hunter → hunting_bow` (+ knife), other roles → knife. Reconstruction and legacy saves never reseed from role/profession. Hunter starting arrows remain transient `carried` work supply.
+
+**Profession-aware weapon selection (plan npc-053):** `resolveNpcMeleeWeapon(inventory, role)`/`resolveNpcRangedWeapon(inventory, role)` no longer pick the first catalog-ordered owned kind — they score every melee/ranged-capable kind actually held in `personalInventory` (`damage / (windUp + hitWindow + recovery)` for melee, `damage / (drawTime + recovery)` for ranged), apply a `×1.5` bonus when `npcMeleeWeaponFamily()`/`npcRangedWeaponFamily()`'s small closed classification matches the role's preferred family/families (`NPC_MELEE_FAMILY_PREFERENCE`/`NPC_RANGED_FAMILY_PREFERENCE`, a `Record<Role, ...>` in `npcCombat.ts`), then pick the highest `effectiveScore` with a fully order-independent deterministic tie-break (higher `baseScore`, then lexical `ItemKind`). A weapon outside the preferred family still wins if it's genuinely ~50%+ stronger by base score. `beginCombat()`/`canFightBack()`/`reactToAnimalThreat()`/`attemptHuntKill()` all pass `this.role` through; selection is still cached per encounter (`combatMeleeWeapon`/`combatRangedWeapon`) exactly as before, and re-resolves fresh (including any inventory change) at the next `beginCombat()`.
+
+**Derived NPC worn armor (plan npc-053):** an NPC has no persistent `EquipmentState` — `resolveNpcArmorEquipment(inventory)` derives one on demand from owned armor instances (best `resolveArmorInstanceEffective()` piece per `EquipmentSlot`, deterministic tie-break by `ItemKind` then instance id), reusing `createEquipmentState()`/`resolveEquipmentModifiers()` exactly as the player's own equipment does. `resolveIncomingNpcDamage()` applies this derived `incomingDamageMultiplier` to whatever damage remains after the existing active held-item block/defense (same order as `player/playerDamage.ts`), so a transferred/removed armor instance stops mitigating on the very next hit with no invalidation cache. Movement/stamina/melee-recovery armor restrictions are not wired for NPCs (out of scope for npc-053).
 
 ## Fauna outgoing attacks
 

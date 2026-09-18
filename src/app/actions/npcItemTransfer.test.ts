@@ -94,7 +94,7 @@ describe('giveItemInstanceToNpc', () => {
     expect(player.getInstance(knife.id)).toBeNull()
     const owned = npc.personalInventory.getInstance(knife.id)
     expect(owned).toEqual(knife)
-    expect(resolveNpcMeleeWeapon(npc.personalInventory)?.kind).toBe('knife')
+    expect(resolveNpcMeleeWeapon(npc.personalInventory, 'trader')?.kind).toBe('knife')
   })
 
   it('preserves liquid container contents', () => {
@@ -124,7 +124,7 @@ describe('gifted belongings and combat/ammo', () => {
       { playerInventory: player, getNpcState: () => npc },
       { npcId: 'npc:1', kind: 'short_bow', amount: 1, nowDays: 0 },
     )
-    expect(resolveNpcRangedWeapon(npc.personalInventory)?.kind).toBe('short_bow')
+    expect(resolveNpcRangedWeapon(npc.personalInventory, 'hunter')?.kind).toBe('short_bow')
   })
 
   it('resolves and consumes gifted personal ammo without touching carried', () => {

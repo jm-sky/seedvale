@@ -321,6 +321,8 @@ Generated from TypeScript imports.
 - `ai/nameCultures.test.ts`
 - `ai/nameCultures.ts`
 - `ai/npcAppearance.ts`
+- `ai/npcCombat.test.ts`
+- `ai/npcCombat.ts`
 - `ai/npcLoadout.ts`
 - `ai/npcProfessionWork.ts`
 - `ai/npcSocialTitle.test.ts`
@@ -777,24 +779,31 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `ai/characters.ts`
 - `ai/npcCombat.ts`
 - `combat/combatIntent.ts`
 - `combat/criticalHit.ts`
 - `combat/meleeStrength.ts`
 - `combat/projectile.ts`
 - `items/Inventory.ts`
+- `items/armorItemInstances.ts`
+- `items/equipment.ts`
 - `items/itemCatalog.ts`
+- `items/items.ts`
 
 ## `ai/npcCombat.ts`
 
 **Imports**
 
+- `ai/characters.ts`
 - `combat/combatIntent.ts`
 - `combat/criticalHit.ts`
 - `combat/defenseResolver.ts`
 - `combat/meleeStrength.ts`
 - `combat/projectile.ts`
 - `items/Inventory.ts`
+- `items/armorItemInstances.ts`
+- `items/equipment.ts`
 - `items/itemCatalog.ts`
 - `items/items.ts`
 

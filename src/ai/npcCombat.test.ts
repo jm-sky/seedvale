@@ -1,16 +1,23 @@
 import { describe, expect, it } from 'vitest'
 import type { CombatTargetHandle } from '../combat/combatIntent'
 import type { Projectile } from '../combat/projectile'
+import type { ItemKind } from '../items/items'
+import type { Role } from './characters'
 import { MELEE_CRITICAL_MULTIPLIER } from '../combat/criticalHit'
 import { MELEE_STRENGTH_NEUTRAL } from '../combat/meleeStrength'
+import { createArmorInstance } from '../items/armorItemInstances'
+import { NEUTRAL_EQUIPMENT_MODIFIERS, resolveEquipmentModifiers } from '../items/equipment'
 import { Inventory } from '../items/Inventory'
 import { ITEM_CATALOG } from '../items/itemCatalog'
 import {
   applyNpcMeleeHit,
   applyNpcRangedHit,
+  npcMeleeWeaponFamily,
+  npcRangedWeaponFamily,
   resolveIncomingNpcDamage,
   resolveNpcAmmo,
   resolveNpcAmmoKind,
+  resolveNpcArmorEquipment,
   resolveNpcDefenseConfig,
   resolveNpcMeleeWeapon,
   resolveNpcRangedWeapon,
@@ -18,6 +25,9 @@ import {
 
 const KNIFE = ITEM_CATALOG.knife.melee!
 const SHORT_BOW = ITEM_CATALOG.short_bow.ranged!
+
+const ALL_CURRENT_MELEE_KINDS: readonly ItemKind[] = (Object.keys(ITEM_CATALOG) as ItemKind[])
+  .filter((kind) => ITEM_CATALOG[kind].melee != null)
 
 function fakeTarget(overrides: Partial<CombatTargetHandle> = {}): CombatTargetHandle & { damages: number[] } {
   const damages: number[] = []
@@ -35,15 +45,102 @@ describe('resolveNpcMeleeWeapon', () => {
   it('returns null when carrying nothing melee-capable', () => {
     const carried = new Inventory(undefined, 5)
     carried.add('stone', 1)
-    expect(resolveNpcMeleeWeapon(carried)).toBeNull()
+    expect(resolveNpcMeleeWeapon(carried, 'trader')).toBeNull()
   })
 
   it('resolves a melee-capable carried kind straight from ITEM_CATALOG', () => {
     const carried = new Inventory(undefined, 5)
     carried.add('knife', 1)
-    const weapon = resolveNpcMeleeWeapon(carried)
+    const weapon = resolveNpcMeleeWeapon(carried, 'trader')
     expect(weapon?.kind).toBe('knife')
     expect(weapon?.melee).toBe(KNIFE)
+  })
+
+  it('guard picks the best owned sword rather than a higher-raw-damage battle_axe', () => {
+    const carried = new Inventory(undefined, 20)
+    carried.add('short_sword', 1)
+    carried.add('long_sword', 1)
+    carried.add('masterwork_sword', 1)
+    carried.add('battle_axe', 1)
+    expect(resolveNpcMeleeWeapon(carried, 'guard')?.kind).toBe('masterwork_sword')
+  })
+
+  it('trader picks the best owned compact weapon', () => {
+    const carried = new Inventory(undefined, 20)
+    carried.add('knife', 1)
+    carried.add('dagger', 1)
+    carried.add('damascus_knife', 1)
+    expect(resolveNpcMeleeWeapon(carried, 'trader')?.kind).toBe('damascus_knife')
+  })
+
+  it('applies the ×1.5 preferred-family bonus over a higher-base non-preferred weapon', () => {
+    // guard prefers `sword`. short_sword baseScore = 18/(0.18+0.1+0.26) ≈ 33.33,
+    // effective ≈ 50. dagger (`compact`, not preferred) baseScore
+    // = 14/(0.11+0.08+0.17) ≈ 38.89 — a genuinely higher *base* score than
+    // short_sword, but well short of short_sword's bonused 50.
+    const carried = new Inventory(undefined, 20)
+    carried.add('short_sword', 1)
+    carried.add('dagger', 1)
+    expect(resolveNpcMeleeWeapon(carried, 'guard')?.kind).toBe('short_sword')
+  })
+
+  it('lets a clearly superior non-preferred weapon win once it beats the ×1.5 threshold', () => {
+    // trader prefers `compact`. damascus_knife baseScore
+    // = 16/(0.11+0.08+0.16) ≈ 45.71, effective ≈ 68.57. obsidian_sword
+    // (`sword`, not preferred) baseScore = 46/(0.24+0.11+0.32) ≈ 68.66 — just
+    // over that bonused threshold, so it wins despite being outside trader's
+    // preferred family.
+    const carried = new Inventory(undefined, 20)
+    carried.add('damascus_knife', 1)
+    carried.add('obsidian_sword', 1)
+    expect(resolveNpcMeleeWeapon(carried, 'trader')?.kind).toBe('obsidian_sword')
+  })
+
+  it('is deterministic for the same role/inventory regardless of add order', () => {
+    const roles: Role[] = ['guard', 'trader', 'hunter', 'woodcutter', 'farmer', 'blacksmith', 'miner', 'fisher', 'shepherd', 'textile_worker', 'herbalist']
+    for (const role of roles) {
+      const a = new Inventory(undefined, 10000)
+      const b = new Inventory(undefined, 10000)
+      for (const kind of ALL_CURRENT_MELEE_KINDS) {
+        a.add(kind, 1)
+      }
+      for (const kind of [...ALL_CURRENT_MELEE_KINDS].reverse()) {
+        b.add(kind, 1)
+      }
+      expect(resolveNpcMeleeWeapon(a, role)?.kind).toBe(resolveNpcMeleeWeapon(b, role)?.kind)
+    }
+  })
+})
+
+describe('npcMeleeWeaponFamily', () => {
+  it('classifies every current melee-capable ItemKind intentionally (explicit family or tool fallback)', () => {
+    const expectedTool = new Set<ItemKind>(['shears', 'shovel', 'sickle'])
+    for (const kind of ALL_CURRENT_MELEE_KINDS) {
+      const family = npcMeleeWeaponFamily(kind)
+      expect(family).toBeTruthy()
+      if (expectedTool.has(kind)) expect(family).toBe('tool')
+    }
+  })
+
+  it('classifies items-player-047 additions (dagger, hatchet) and the ranged masterwork bow', () => {
+    expect(npcMeleeWeaponFamily('dagger')).toBe('compact')
+    expect(npcMeleeWeaponFamily('hatchet')).toBe('axe')
+    expect(npcRangedWeaponFamily('masterwork_hunting_bow')).toBe('bow')
+  })
+
+  it('classifies known families as documented in the plan', () => {
+    expect(npcMeleeWeaponFamily('knife')).toBe('compact')
+    expect(npcMeleeWeaponFamily('damascus_knife')).toBe('compact')
+    expect(npcMeleeWeaponFamily('short_sword')).toBe('sword')
+    expect(npcMeleeWeaponFamily('long_sword')).toBe('sword')
+    expect(npcMeleeWeaponFamily('damascus_short_sword')).toBe('sword')
+    expect(npcMeleeWeaponFamily('damascus_long_sword')).toBe('sword')
+    expect(npcMeleeWeaponFamily('masterwork_sword')).toBe('sword')
+    expect(npcMeleeWeaponFamily('obsidian_sword')).toBe('sword')
+    expect(npcMeleeWeaponFamily('axe')).toBe('axe')
+    expect(npcMeleeWeaponFamily('battle_axe')).toBe('axe')
+    expect(npcMeleeWeaponFamily('spear')).toBe('spear')
+    expect(npcMeleeWeaponFamily('pitchfork')).toBe('spear')
   })
 })
 
@@ -51,15 +148,35 @@ describe('resolveNpcRangedWeapon', () => {
   it('returns null when carrying no bow', () => {
     const carried = new Inventory(undefined, 5)
     carried.add('arrow', 5)
-    expect(resolveNpcRangedWeapon(carried)).toBeNull()
+    expect(resolveNpcRangedWeapon(carried, 'hunter')).toBeNull()
   })
 
   it('resolves a carried bow straight from ITEM_CATALOG, regardless of ammo', () => {
     const carried = new Inventory(undefined, 5)
     carried.add('short_bow', 1)
-    const weapon = resolveNpcRangedWeapon(carried)
+    const weapon = resolveNpcRangedWeapon(carried, 'hunter')
     expect(weapon?.kind).toBe('short_bow')
     expect(weapon?.ranged).toBe(SHORT_BOW)
+  })
+
+  it('hunter picks the best owned bow by score, not catalog/insertion order', () => {
+    const carried = new Inventory(undefined, 20)
+    carried.add('short_bow', 1)
+    carried.add('hunting_bow', 1)
+    carried.add('masterwork_hunting_bow', 1)
+    carried.add('long_bow', 1)
+    // scores: short_bow 14/0.54≈25.9, hunting_bow 20/0.75≈26.7,
+    // masterwork_hunting_bow 24/0.63≈38.1, long_bow 28/1.05≈26.7
+    expect(resolveNpcRangedWeapon(carried, 'hunter')?.kind).toBe('masterwork_hunting_bow')
+  })
+
+  it('is deterministic regardless of add order', () => {
+    const bows: ItemKind[] = ['short_bow', 'hunting_bow', 'masterwork_hunting_bow', 'long_bow']
+    const a = new Inventory(undefined, 20)
+    const b = new Inventory(undefined, 20)
+    for (const kind of bows) a.add(kind, 1)
+    for (const kind of [...bows].reverse()) b.add(kind, 1)
+    expect(resolveNpcRangedWeapon(a, 'hunter')?.kind).toBe(resolveNpcRangedWeapon(b, 'hunter')?.kind)
   })
 })
 
@@ -176,6 +293,65 @@ describe('applyNpcRangedHit', () => {
   })
 })
 
+describe('resolveNpcArmorEquipment', () => {
+  it('resolves no armor modifiers when personalInventory holds no armor instances', () => {
+    const inventory = new Inventory(undefined, 20)
+    const equipment = resolveNpcArmorEquipment(inventory)
+    expect(resolveEquipmentModifiers(equipment, inventory)).toEqual(NEUTRAL_EQUIPMENT_MODIFIERS)
+  })
+
+  it('picks up a single worn armor instance and reduces incoming damage', () => {
+    const inventory = new Inventory(undefined, 20)
+    inventory.addInstance(createArmorInstance('leather_armor', 'common'))
+    const equipment = resolveNpcArmorEquipment(inventory)
+    const modifiers = resolveEquipmentModifiers(equipment, inventory)
+    expect(modifiers.incomingDamageMultiplier).toBeLessThan(1)
+  })
+
+  it('chainmail reduces damage more than leather at the same quality', () => {
+    const leatherInventory = new Inventory(undefined, 20)
+    leatherInventory.addInstance(createArmorInstance('leather_armor', 'common'))
+    const chainmailInventory = new Inventory(undefined, 20)
+    chainmailInventory.addInstance(createArmorInstance('chainmail', 'common'))
+    const leatherModifiers = resolveEquipmentModifiers(resolveNpcArmorEquipment(leatherInventory), leatherInventory)
+    const chainmailModifiers = resolveEquipmentModifiers(resolveNpcArmorEquipment(chainmailInventory), chainmailInventory)
+    expect(chainmailModifiers.incomingDamageMultiplier).toBeLessThan(leatherModifiers.incomingDamageMultiplier)
+  })
+
+  it('picks the best of two owned pieces for the same slot', () => {
+    const inventory = new Inventory(undefined, 20)
+    inventory.addInstance(createArmorInstance('leather_armor', 'common'))
+    inventory.addInstance(createArmorInstance('chainmail', 'common'))
+    const soloChainmail = new Inventory(undefined, 20)
+    soloChainmail.addInstance(createArmorInstance('chainmail', 'common'))
+    const bothModifiers = resolveEquipmentModifiers(resolveNpcArmorEquipment(inventory), inventory)
+    const chainmailOnlyModifiers = resolveEquipmentModifiers(resolveNpcArmorEquipment(soloChainmail), soloChainmail)
+    // Same body slot, one piece wins — owning the weaker leather piece too
+    // must not stack additional reduction on top of chainmail.
+    expect(bothModifiers.incomingDamageMultiplier).toBeCloseTo(chainmailOnlyModifiers.incomingDamageMultiplier, 10)
+  })
+
+  it('composes multiple slots (body + arms) instead of only the best single piece', () => {
+    const inventory = new Inventory(undefined, 20)
+    inventory.addInstance(createArmorInstance('leather_armor', 'common'))
+    inventory.addInstance(createArmorInstance('ranger_pauldron', 'common'))
+    const bodyOnly = new Inventory(undefined, 20)
+    bodyOnly.addInstance(createArmorInstance('leather_armor', 'common'))
+    const combined = resolveEquipmentModifiers(resolveNpcArmorEquipment(inventory), inventory)
+    const bodyOnlyModifiers = resolveEquipmentModifiers(resolveNpcArmorEquipment(bodyOnly), bodyOnly)
+    expect(combined.incomingDamageMultiplier).toBeLessThan(bodyOnlyModifiers.incomingDamageMultiplier)
+  })
+
+  it('stops mitigating the instant the armor instance is removed from personalInventory', () => {
+    const inventory = new Inventory(undefined, 20)
+    const armor = createArmorInstance('chainmail', 'common')
+    inventory.addInstance(armor)
+    expect(resolveEquipmentModifiers(resolveNpcArmorEquipment(inventory), inventory).incomingDamageMultiplier).toBeLessThan(1)
+    inventory.removeInstance(armor.id)
+    expect(resolveEquipmentModifiers(resolveNpcArmorEquipment(inventory), inventory)).toEqual(NEUTRAL_EQUIPMENT_MODIFIERS)
+  })
+})
+
 describe('resolveIncomingNpcDamage', () => {
   const baseParams = {
     amount: 20,
@@ -191,6 +367,32 @@ describe('resolveIncomingNpcDamage', () => {
   it('deals full damage with no carried defense item', () => {
     const result = resolveIncomingNpcDamage(baseParams)
     expect(result).toEqual({ outcome: 'none', finalDamage: 20, attempted: false })
+  })
+
+  it('applies derived armor mitigation on top of the (unblocked) active defense result', () => {
+    const carried = new Inventory(undefined, 20)
+    carried.addInstance(createArmorInstance('chainmail', 'common'))
+    const result = resolveIncomingNpcDamage({ ...baseParams, carried })
+    expect(result.outcome).toBe('none')
+    expect(result.attempted).toBe(false)
+    expect(result.finalDamage).toBeLessThan(20)
+    expect(result.finalDamage).toBeGreaterThan(0)
+  })
+
+  it('active block happens before passive armor: a full block still leaves zero final damage with armor worn', () => {
+    const carried = new Inventory(undefined, 20)
+    carried.add('long_sword', 1)
+    carried.addInstance(createArmorInstance('chainmail', 'common'))
+    let attempt = 1
+    let result = resolveIncomingNpcDamage({
+      ...baseParams, carried, attackerX: 0, attackerZ: 2, attempt,
+    })
+    while (result.outcome !== 'full' && attempt < 500) {
+      attempt += 1
+      result = resolveIncomingNpcDamage({ ...baseParams, carried, attackerX: 0, attackerZ: 2, attempt })
+    }
+    expect(result.outcome).toBe('full')
+    expect(result.finalDamage).toBe(0)
   })
 
   it('converts steerTo facing convention correctly — an attacker ahead of a forward-facing NPC is in arc', () => {
