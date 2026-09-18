@@ -321,6 +321,8 @@ Generated from TypeScript imports.
 - `ai/npcAppearance.ts`
 - `ai/npcLoadout.ts`
 - `ai/npcProfessionWork.ts`
+- `ai/npcSocialTitle.test.ts`
+- `ai/npcSocialTitle.ts`
 - `ai/npcTradeAvailability.ts`
 - `ai/npcVendor.ts`
 - `ai/npcVoiceLines.ts`
@@ -351,6 +353,7 @@ Generated from TypeScript imports.
 - `settlement/professionStaffing.ts`
 - `settlement/settlementAgriculture.test.ts`
 - `terrain/naturalResources.ts`
+- `ui-vue/npcDialogueOpen.test.ts`
 - `world/expeditionParty.test.ts`
 
 ## `ai/decisionModifiers.test.ts`
@@ -398,10 +401,13 @@ Generated from TypeScript imports.
 - `ai/dialogueTemplates.ts`
 - `ai/npcAssistance.test.ts`
 - `ai/npcAssistance.ts`
+- `ai/npcSocialTitle.test.ts`
+- `ai/npcSocialTitle.ts`
 - `ai/reactionChance.test.ts`
 - `ai/reactionChance.ts`
 - `ai/socialBehaviour.ts`
 - `ai/voluntaryExpeditionJoin.ts`
+- `ui-vue/npcDialogueOpen.test.ts`
 - `world/expeditionParty.test.ts`
 
 ## `ai/dialogueTemplates.test.ts`
@@ -1177,6 +1183,28 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `ai/npcProfessionWork.test.ts`
 - `settlements-npcs-007.test.ts`
+
+## `ai/npcSocialTitle.test.ts`
+
+**Imports**
+
+- `ai/characters.ts`
+- `ai/dialogue.ts`
+- `ai/npcSocialTitle.ts`
+
+## `ai/npcSocialTitle.ts`
+
+**Imports**
+
+- `ai/characters.ts`
+- `ai/dialogue.ts`
+- `quests/quests.ts`
+- `settlement/npcPhysicalProfile.ts`
+
+**Imported by**
+
+- `ai/npcSocialTitle.test.ts`
+- `ui-vue/store.ts`
 
 ## `ai/npcStamina.test.ts`
 

@@ -208,6 +208,8 @@ Generated from TypeScript imports.
 **Imports**
 
 - `ai/NpcAgent.ts`
+- `ai/characters.ts`
+- `ai/dialogue.ts`
 - `items/Inventory.ts`
 - `quests/QuestManager.ts`
 - `quests/quests.ts`
@@ -277,6 +279,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `ai/NpcAgent.ts`
+- `ai/npcSocialTitle.ts`
 - `ai/npcVoiceLines.ts`
 - `ai/voluntaryExpeditionJoin.ts`
 - `app/actions/actionContracts.ts`

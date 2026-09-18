@@ -21,7 +21,8 @@ describe('cloudAppearanceFor', () => {
     const fog = cloudAppearanceFor(weather({ type: 'fog', intensity: 1 }), NOON)
     const clear = cloudAppearanceFor(weather({ type: 'clear', intensity: 0 }), NOON)
     expect(fog.coverage).toBeCloseTo(clear.coverage)
-    expect(fog.tint).toBe(clear.tint)
+    // Fog keeps clear coverage; tint is the profile's near-white (0xf5f6f7), not identical to clear.
+    expect(fog.tint).toBe(0xf5f6f7)
   })
 
   it('increases coverage and darkens tint for rain, scaled by intensity above the floor', () => {

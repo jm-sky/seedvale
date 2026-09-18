@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import type { Trait } from '../ai/characters'
+import type { BigFivePersonality } from '../ai/dialogue'
 import type { NpcAgent } from '../ai/NpcAgent'
 import type { QuestDef } from '../quests/quests'
 import type { Settlement } from '../settlement/createSettlement'
@@ -35,6 +37,15 @@ function quest(
 const ANNA_ID = 'anna-id'
 const PIOTR_ID = 'piotr-id'
 const WRONG_JAN_ID = 'other-settlement:npc:7'
+const ELDER_ID = 'elder-kazimierz-id'
+
+const NEUTRAL_PERSONALITY: BigFivePersonality = {
+  openness: 0.5,
+  conscientiousness: 0.5,
+  extraversion: 0.5,
+  agreeableness: 0.5,
+  neuroticism: 0.5,
+}
 
 const talkToPiotrQuest = quest({
   id: 'relay',
@@ -65,14 +76,23 @@ function stubNpc(
   id: string,
   dialogueLine = 'generic greeting',
   paymentClaim: { contractId: string, npcId: string, coins: number } | null = null,
+  extras: {
+    displayName?: string
+    age?: number
+    gender?: 'male' | 'female'
+    personality?: BigFivePersonality
+    traits?: readonly Trait[]
+  } = {},
 ): NpcAgent {
   return {
     id,
     name,
-    displayName: name,
-    gender: 'male',
+    displayName: extras.displayName ?? name,
+    gender: extras.gender ?? 'male',
     role: 'farmer',
-    age: 40,
+    age: extras.age ?? 40,
+    personality: extras.personality ?? NEUTRAL_PERSONALITY,
+    traits: extras.traits ?? [],
     getDialogueLine: () => dialogueLine,
     preparePaymentRequest: () => paymentClaim,
     pendingVoluntaryJoinProposal: () => null,
@@ -330,6 +350,47 @@ describe('openNpcDialogueMenu quest preview seam (plan ui-input-024)', () => {
     expect(resolveNpcDialogueOpenTopic()).toBe('payment')
     expect(getNpcDialogueQuestPreview().some((entry) => entry.kind === 'required-action')).toBe(true)
     expect(ui.npcDialogueMenu.helpResult).toBeNull()
+    closeNpcDialogueMenu()
+  })
+})
+
+describe('openNpcDialogueMenu elder social heading (plan npc-052)', () => {
+  it('keeps non-elder heading as canonical displayName', () => {
+    const qm = new QuestManager([], undefined, new Inventory())
+    openNpcDialogueMenu(
+      stubNpc('Piotr', PIOTR_ID, 'hello', null, { displayName: 'Piotr Zieliński', age: 40 }),
+      stubSettlement,
+      qm,
+      12,
+    )
+    expect(ui.npcDialogueMenu.npcHeading).toBe('Piotr Zieliński')
+    expect(ui.npcDialogueMenu.npc?.displayName).toBe('Piotr Zieliński')
+    closeNpcDialogueMenu()
+    expect(ui.npcDialogueMenu.npcHeading).toBe('')
+  })
+
+  it('uses formal elder title for strangers and recomputes after relation changes', () => {
+    const qm = new QuestManager([], undefined, new Inventory())
+    const elder = stubNpc('Kazimierz', ELDER_ID, 'hello', null, {
+      displayName: 'Kazimierz Nowak',
+      age: 74,
+      personality: { ...NEUTRAL_PERSONALITY, agreeableness: 0.8 },
+    })
+
+    openNpcDialogueMenu(elder, stubSettlement, qm, 12)
+    expect(ui.npcDialogueMenu.npcHeading).toBe('Pan Kazimierz Nowak')
+    expect(ui.npcDialogueMenu.npc?.displayName).toBe('Kazimierz Nowak')
+    // Quest/help paths still key by stable id, not the titled heading.
+    expect(ui.npcDialogueMenu.resolveQuestHelp).not.toBeNull()
+    closeNpcDialogueMenu()
+
+    qm.adjustRelation(ELDER_ID, 3)
+    openNpcDialogueMenu(elder, stubSettlement, qm, 12)
+    expect(ui.npcDialogueMenu.npcHeading).toBe('Dziadek Kazimierz')
+    expect(ui.npcDialogueMenu.npc?.displayName).toBe('Kazimierz Nowak')
+
+    openNpcDialogueMenu(elder, stubSettlement, qm, 12)
+    expect(ui.npcDialogueMenu.npcHeading).toBe('Dziadek Kazimierz')
     closeNpcDialogueMenu()
   })
 })

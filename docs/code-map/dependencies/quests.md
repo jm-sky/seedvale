@@ -792,6 +792,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/npcAssistance.ts`
+- `ai/npcSocialTitle.ts`
 - `ai/reactionChance.ts`
 - `ai/voluntaryExpeditionJoin.ts`
 - `app/createApp.ts`

@@ -1184,6 +1184,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `ai/npcSocialTitle.ts`
 - `ai/npcStamina.test.ts`
 - `ai/npcVoiceLines.ts`
 - `settlement/createSettlement.ts`

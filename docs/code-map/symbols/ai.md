@@ -504,6 +504,15 @@ Generated from exported TypeScript symbols.
 - `planProfessionWork` — function — line 1127
 - `selectTraderCollectionGoods` — function — line 456
 
+## `ai/npcSocialTitle.ts`
+
+- `ELDER_FAMILIAR_AGREEABLENESS` — const — line 14
+  - domain: npc
+- `ELDER_ROUGH_AGREEABLENESS` — const — line 16
+- `elderSocialDisplayName` — function — line 56
+  - domain: npc
+- `NpcSocialTitleInput` — type — line 18
+
 ## `ai/npcStrategies.ts`
 
 - `FoodStrategyContext` — type — line 35

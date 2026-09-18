@@ -32,6 +32,7 @@ import type { ToastVariant } from '../ui/createToast'
 import type { TrapKind } from '../world/animalTraps'
 import type { CropId } from '../world/cropLifecycle'
 import type { SeedChoice, SeedRecord } from '../world/seedLibrary'
+import { elderSocialDisplayName } from '../ai/npcSocialTitle'
 import { resolveNpcVoiceLine } from '../ai/npcVoiceLines'
 import {
   type AudioVolumeKey,
@@ -58,6 +59,9 @@ export type VillagerContainerOption = { id: string, label: string }
 type NpcDialogueMenuState = {
   open: boolean
   npc: NpcAgent | null
+  /** Presentation-only dialogue heading (plan npc-052). Canonical
+   *  `npc.displayName` is unchanged; elders may get a contextual social title. */
+  npcHeading: string
   settlement: Settlement | null
   timeOfDay: number
   helpResult: QuestDialogOverride | null
@@ -761,7 +765,7 @@ export function emitUiClick(): void {
 }
 
 export const ui = reactive({
-  npcDialogueMenu: { open: false, npc: null, settlement: null, timeOfDay: 0, helpResult: null, resolveQuestHelp: null, resolveQuestPreview: null, canClaimGuardReward: false, getCanClaimGuardReward: null, onClaimGuardReward: null, canTrade: false, getCanTrade: null, onOpenTrade: null, onRequestFood: null, onRequestWater: null, onAskAboutArea: null, paymentClaim: null, onPayWage: null, onGiveItem: null, joinProposal: null, onRespondToJoinProposal: null, onProposeJoin: null } as NpcDialogueMenuState,
+  npcDialogueMenu: { open: false, npc: null, npcHeading: '', settlement: null, timeOfDay: 0, helpResult: null, resolveQuestHelp: null, resolveQuestPreview: null, canClaimGuardReward: false, getCanClaimGuardReward: null, onClaimGuardReward: null, canTrade: false, getCanTrade: null, onOpenTrade: null, onRequestFood: null, onRequestWater: null, onAskAboutArea: null, paymentClaim: null, onPayWage: null, onGiveItem: null, joinProposal: null, onRespondToJoinProposal: null, onProposeJoin: null } as NpcDialogueMenuState,
   villagers: { open: false, entries: [] as VillagerEntry[], page: 0, containers: [] as VillagerContainerOption[] },
   inventory: { open: false, counts: {}, groups: [], totalWeight: 0, maxWeight: 0, totalSize: 0, maxSize: 0, heldTool: null, heldInstanceId: null, primaryMelee: null, primaryRanged: null, onDrop: null, onEquip: null, onUnequip: null, equippedSlots: {}, onEquipArmor: null, onUnequipArmor: null, onConsume: null, onRead: null, onPlaceTrap: null, onSellInstances: null, onSharpen: null, onPlaceContainer: null, onPlaceTent: null, onSetPrimaryMelee: null, onSetPrimaryRanged: null } as InventoryState,
   pauseMenu: {
@@ -1029,6 +1033,15 @@ export function setVillagersPage(page: number): void { ui.villagers.page = page 
 export function openNpcDialogueMenu(npc: NpcAgent, settlement: Settlement, questManager: QuestManager, timeOfDay: number): void {
   const state = ui.npcDialogueMenu
   state.npc = markRaw(npc)
+  state.npcHeading = elderSocialDisplayName({
+    name: npc.name,
+    displayName: npc.displayName,
+    age: npc.age,
+    gender: npc.gender,
+    personality: npc.personality,
+    traits: npc.traits,
+    relationLevel: questManager.getRelationLevel(npc.id),
+  })
   state.settlement = settlement
   state.timeOfDay = timeOfDay
   state.helpResult = null
@@ -1110,6 +1123,7 @@ function resetNpcDialogueMenu(): void {
   const state = ui.npcDialogueMenu
   state.open = false
   state.npc = null
+  state.npcHeading = ''
   state.settlement = null
   state.helpResult = null
   state.resolveQuestHelp = null

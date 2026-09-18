@@ -383,7 +383,7 @@ watch(() => state.open, (open) => {
       style="touch-action: pan-y"
     >
       <h2 class="mb-3 text-base font-semibold tracking-wide">
-        {{ state.npc?.displayName }}
+        {{ state.npcHeading }}
       </h2>
       <div
         v-if="topic === null && group === null"

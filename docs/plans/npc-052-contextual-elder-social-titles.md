@@ -1,7 +1,7 @@
 # Plan: Contextual Elder Social Titles
 
 **Created:** 2026-09-18
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — implemented 2026-09-18 (`vitest` npcSocialTitle + npcDialogueOpen; typecheck/lint/test/build). Browser/manual verification not performed — belongs to the User.
 **Type:** polish
 **Priority:** low · **Effort:** S
 **Depends on:** settlements-npcs-045
