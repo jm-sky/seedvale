@@ -50,6 +50,8 @@ Format: `- [ ] YYYY-MM-DD — opis (plan/plik, jeśli istotne)`
 - [ ] 2026-09-15 — UAL2 (combat/work: `TreeChopping_Loop`, `Consume`, `Walk_Carry_Loop`, `Farm_*`, `LayToIdle`) is on the same UBC rig as UAL1; extract a second subset after `items-player-035` locomotion/combat clips. No retarget.
 - [ ] 2026-09-15 — Remaining NPC roles (blacksmith, …) and children still use Ultimate Modular Men/Women (different skeleton from UBC). Adult farmer/woodcutter/trader/hunter are UBC + UAL1 with seeded hair/beard/clothing-hue variants (`npc-039` / `npc-040`). Adult male `guard` is a single unhelmeted Knight GLB (`male_knight_unhelmeted.glb` + `T_Knight_3`), not an npc-040 matrix; female guards stay Modular. Do not mix UAL clips onto Modular rigs. Female traders always use `Hair_Long` (`Female_Wizard` has no hat). Male Wizard-hat vs Long/Buns and Ranger-hood vs Long/Buns clipping is a browser check, not a resolver filter.
 
+- [ ] 2026-09-18 — Campfire social seating: add a bench / explicit seat anchors near settlement campfires so existing NPC seated presentation can use `Sitting_Idle_Loop` / `Sitting_Talking_Loop` without inventing fake sitting positions. Reuse settlement place/social state rather than adding an animation-only seating system; discovered while scoping `npc-055`.
+
 ## Off-screen simulation
 
 - [ ] 2026-09-11 — off-screen `TransportOrder.execution` nie przesuwa potrzeb/vigoru/injury carrier NPC w czasie podróży. To ten sam brak co dla innych unloaded NPC, ale staje się istotny dla generic long-distance travel (`settlements-npcs-028` / `npc-029`). Naturalny seam: stanowy survival catch-up obok `resolveOffscreenTransportArrivals`, reuse istniejących `tickNeeds` / `tickVigorForSimulatedStep` / injury recovery helpers.
