@@ -826,6 +826,8 @@ Generated from TypeScript imports.
 - `terrain/grass.ts`
 - `terrain/grassBounds.test.ts`
 - `terrain/grassPlacement.test.ts`
+- `terrain/vegetationRegionBatcher.test.ts`
+- `terrain/vegetationRegionBatcher.ts`
 
 ## `terrain/fbm.ts`
 
@@ -1332,6 +1334,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `render/instancedProps.ts`
+- `terrain/distanceLod.ts`
 - `terrain/vegetationRegionBatcher.ts`
 
 ## `terrain/vegetationRegionBatcher.ts`
@@ -1341,6 +1344,7 @@ Generated from TypeScript imports.
 - `debug/debugMode.ts`
 - `render/instancedProps.ts`
 - `terrain/chunkGrid.ts`
+- `terrain/distanceLod.ts`
 - `world/waterMirror.ts`
 
 **Imported by**

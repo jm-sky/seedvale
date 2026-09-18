@@ -353,10 +353,11 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/distanceLod.ts`
 
-- `densityLodFraction` — function — line 6
-- `grassFillerLodFraction` — function — line 20
-- `grassGeometryLodTier` — function — line 32
-- `GrassGeometryLodTier` — type — line 30
+- `DENSITY_LOD_FLOOR` — const — line 4
+- `densityLodFraction` — function — line 11
+- `grassFillerLodFraction` — function — line 25
+- `grassGeometryLodTier` — function — line 37
+- `GrassGeometryLodTier` — type — line 35
 
 ## `terrain/fbm.ts`
 
@@ -648,10 +649,12 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/vegetationRegionBatcher.ts`
 
-- `createVegetationRegionBatcher` — function — line 125
-- `REGION_CHUNKS` — const — line 46
-- `VegetationKind` — type — line 9
-- `VegetationRegionBatcher` — type — line 71
+- `createVegetationRegionBatcher` — function — line 183
+- `REGION_CHUNKS` — const — line 100
+- `VegetationKind` — type — line 10
+- `VegetationLodClass` — type — line 41
+- `vegetationLodFraction` — function — line 82
+- `VegetationRegionBatcher` — type — line 125
 
 ## `terrain/waterBodies.ts`
 
