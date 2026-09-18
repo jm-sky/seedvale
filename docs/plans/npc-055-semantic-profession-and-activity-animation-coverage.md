@@ -331,7 +331,7 @@ Minimum visual expectations:
 - NPC eating uses `Consume`.
 - Active conversation uses talking animation.
 - Guard combat remains functional after UBC consolidation.
-- Sleep entry uses `LayToIdle`; the existing `goSleep`/`sleep` FSM remains authoritative and the final lay pose may be held with `settleAtEnd()` when appropriate.
+- Sleep entry uses `LayToIdle`; after that one-shot completes, hold its final frame with `settleAtEnd('layToIdle')` for the existing `sleep` phase until wake-up. The existing `goSleep`/`sleep` FSM remains authoritative.
 - Fisher/miner/shepherd/blacksmith/textile/herbalist never select a nonexistent clip; they fall back deterministically.
 - Existing dry-garden watering must visibly use `Farm_Watering` through a short `waterGarden` semantic action whose completion calls the existing hydration mutation; do not add a new watering decision system.
 
