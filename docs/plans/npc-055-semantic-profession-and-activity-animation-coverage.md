@@ -6,6 +6,7 @@
 **Depends on:** ~~items-player-035~~, npc-039
 **Domain:** `npc`
 **Type:** `feature`
+**Model:** Sonnet, Composer
 **Subdomains:** `work` `animation`
 **Tags:** `ubc` `ual` `professions` `activities`
 **Roadmap:** -
