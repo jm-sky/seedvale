@@ -59,7 +59,7 @@ Add optional `pack?: AnimalPackSnapshot` to `AnimalSaveState`.
 
 Also update `src/persistence/saveData.ts::isLivestockSaveRecord()` with an explicit validator for the pack snapshot; otherwise malformed pack contents would pass through the current livestock validator unchecked. Reuse the existing inventory-snapshot validation helper.
 
-Because this adds persisted representation, follow the repository's current save-schema rule in `saveData.ts`: bump `CURRENT_SAVE_VERSION` and add the next migration. The migration should only normalize old livestock records to “no pack” semantics; do not fabricate capacity or contents.
+Current codebase precedent allows new optional persistence fields without a version bump when absence exactly preserves legacy semantics. `pack?: ...` has that property: old livestock records naturally mean “no pack”. Therefore prefer **no migration/version bump** unless implementation changes an existing required representation or validator contract beyond this optional field. Do not fabricate capacity or contents.
 
 No new top-level `SaveData` field is needed. `app/saveState.ts` should remain unchanged for equipped packs because livestock serialization already flows through `AnimalAgent.snapshot()`.
 
