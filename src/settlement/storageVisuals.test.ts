@@ -207,6 +207,7 @@ describe('woodPileVisualState', () => {
     expect(woodPileVisualState(21).extraPiles).toBe(1)
     expect(woodPileVisualState(40).extraPiles).toBe(1)
     expect(woodPileVisualState(41).extraPiles).toBe(2)
+    expect(woodPileVisualState(61).extraPiles).toBe(WOOD_PILE_MAX_EXTRA)
     expect(woodPileVisualState(1000).extraPiles).toBe(WOOD_PILE_MAX_EXTRA)
   })
 
@@ -280,7 +281,7 @@ describe('createWoodPileVisual', () => {
 
   it('reveals extra piles only once quantity overflows the last authored stage, bounded', () => {
     const main = progressivePile()
-    const extras = [new THREE.Object3D(), new THREE.Object3D(), new THREE.Object3D()]
+    const extras = [new THREE.Object3D(), new THREE.Object3D()]
     const visual = createWoodPileVisual(main, extras)
     visual.sync(20)
     expect(extras.every((e) => !e.visible)).toBe(true)

@@ -422,11 +422,29 @@ export function createGarden(scale: GardenScale = 'S'): THREE.Group {
     for (let i = 0; i < 6; i++) {
       const crop = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.5, 4), cropMat)
       crop.position.set(bx - 1.6 + (i % 3) * 1.6, 0.4, i < 3 ? -0.7 : 0.7)
-      crop.castShadow = true
+      // Match crops.glb plant no-shadow (world-terrain-038); dirt bed never cast.
+      crop.castShadow = false
       garden.add(crop)
     }
   }
   return garden
+}
+
+/**
+ * Drop shadow casting on crops.glb plant meshes; keep Dirt as a thin grounding
+ * caster. Applied once on the fitted template before `layoutCropsGarden` clones
+ * (world-terrain-038).
+ *
+ * @domain world-terrain
+ */
+export function disableGardenPlantCastShadow(root: THREE.Object3D): void {
+  root.traverse((node) => {
+    const mesh = node as THREE.Mesh
+    if (!mesh.isMesh) return
+    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+    const isDirt = materials.some((m) => m?.name === 'Dirt')
+    if (!isDirt) mesh.castShadow = false
+  })
 }
 
 /** Side-by-side clones of `crops.glb` using the same bed spacing as `createGarden`. */

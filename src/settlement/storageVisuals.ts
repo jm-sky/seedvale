@@ -26,7 +26,7 @@ export type WoodPileStage = (typeof WOOD_PILE_STAGES)[number]
  *  full pile appears per this many units, bounded by `WOOD_PILE_MAX_EXTRA`. */
 export const WOOD_PILE_OVERFLOW_START = 20
 export const WOOD_PILE_OVERFLOW_STEP = 20
-export const WOOD_PILE_MAX_EXTRA = 3
+export const WOOD_PILE_MAX_EXTRA = 2
 
 /** Deterministic offsets for the (at most `WOOD_PILE_MAX_EXTRA`) extra pile
  *  slots, relative to the main stockpile position — chosen to sit clear of
@@ -37,7 +37,6 @@ export const WOOD_PILE_MAX_EXTRA = 3
 export const WOOD_PILE_EXTRA_OFFSETS: readonly { dx: number, dz: number }[] = [
   { dx: -2.6, dz: 1.3 },
   { dx: -2.0, dz: 2.7 },
-  { dx: 0.6, dz: 2.9 },
 ]
 
 export type WoodPileVisualState = {

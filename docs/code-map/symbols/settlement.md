@@ -684,16 +684,16 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/props.ts`
 
-- `BlacksmithWorkplace` — type — line 342
-- `buildSettlementProps` — function — line 753
-- `disposeSettlementGroup` — function — line 2164
-- `SettlementHouseBed` — type — line 162
-- `SettlementHouseLandmark` — type — line 128
-- `SettlementLandmarks` — type — line 178
-- `SettlementLandPlot` — type — line 331
-- `SettlementStorageVisuals` — type — line 323
-- `SettlementTreeLandmark` — type — line 352
-- `SettlementWellLandmark` — type — line 169
+- `BlacksmithWorkplace` — type — line 343
+- `buildSettlementProps` — function — line 754
+- `disposeSettlementGroup` — function — line 2171
+- `SettlementHouseBed` — type — line 163
+- `SettlementHouseLandmark` — type — line 129
+- `SettlementLandmarks` — type — line 179
+- `SettlementLandPlot` — type — line 332
+- `SettlementStorageVisuals` — type — line 324
+- `SettlementTreeLandmark` — type — line 353
+- `SettlementWellLandmark` — type — line 170
 
 ## `settlement/propSpecs.ts`
 
@@ -1099,8 +1099,10 @@ Generated from exported TypeScript symbols.
 - `createTroughVisual` — function — line 193
 - `createVillageNamepost` — function — line 382
 - `createWell` — function — line 39
-- `createWheatField` — function — line 454
-- `layoutCropsGarden` — function — line 433
+- `createWheatField` — function — line 472
+- `disableGardenPlantCastShadow` — function — line 440
+  - domain: world-terrain
+- `layoutCropsGarden` — function — line 451
 - `preloadAnimalTroughVisual` — function — line 149
 - `TroughVisual` — type — line 139
 - `VILLAGE_NAMEPOST_BOARD_CENTER_Y` — const — line 380
@@ -1163,23 +1165,23 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/storageVisuals.ts`
 
-- `allocateFoodRepresentatives` — function — line 167
+- `allocateFoodRepresentatives` — function — line 166
   - domain: settlements-npcs
-- `createFoodStorageVisual` — function — line 277
+- `createFoodStorageVisual` — function — line 276
   - domain: settlements-npcs
-- `createWoodPileVisual` — function — line 105
-- `findWoodPileStageNodes` — function — line 76
-- `flattenFoodRepresentatives` — function — line 211
-- `FOOD_STORAGE_LOCAL_SLOTS` — const — line 236
+- `createWoodPileVisual` — function — line 104
+- `findWoodPileStageNodes` — function — line 75
+- `flattenFoodRepresentatives` — function — line 210
+- `FOOD_STORAGE_LOCAL_SLOTS` — const — line 235
   - domain: settlements-npcs
-- `FOOD_STORAGE_MAX_KINDS` — const — line 137
-- `FOOD_STORAGE_MAX_REPRESENTATIVES` — const — line 140
-- `FoodRepresentativeAllocation` — type — line 142
-- `foodRepresentativeCount` — function — line 150
+- `FOOD_STORAGE_MAX_KINDS` — const — line 136
+- `FOOD_STORAGE_MAX_REPRESENTATIVES` — const — line 139
+- `FoodRepresentativeAllocation` — type — line 141
+- `foodRepresentativeCount` — function — line 149
   - domain: settlements-npcs
-- `foodStorageAllocationSignature` — function — line 219
-- `FoodStorageLocalSlot` — type — line 223
-- `FoodStorageVisual` — type — line 261
+- `foodStorageAllocationSignature` — function — line 218
+- `FoodStorageLocalSlot` — type — line 222
+- `FoodStorageVisual` — type — line 260
 - `WOOD_PILE_EXTRA_OFFSETS` — const — line 37
 - `WOOD_PILE_MAX_EXTRA` — const — line 29
 - `WOOD_PILE_OVERFLOW_START` — const — line 27
@@ -1188,12 +1190,12 @@ Generated from exported TypeScript symbols.
   - domain: settlements-npcs
   - system: storage-visuals
   - role: Derives a bounded, deterministic Three.js visual from a storage destination's authoritative quantity/contents.
-- `woodPileOverflowCount` — function — line 62
-- `woodPileStage` — function — line 52
+- `woodPileOverflowCount` — function — line 61
+- `woodPileStage` — function — line 51
 - `WoodPileStage` — type — line 23
-- `WoodPileVisual` — type — line 88
-- `woodPileVisualState` — function — line 71
-- `WoodPileVisualState` — type — line 43
+- `WoodPileVisual` — type — line 87
+- `woodPileVisualState` — function — line 70
+- `WoodPileVisualState` — type — line 42
 
 ## `settlement/structureCondition.ts`
 

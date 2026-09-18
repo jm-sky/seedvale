@@ -101,6 +101,7 @@ import {
   createTrough,
   createWell,
   createWheatField,
+  disableGardenPlantCastShadow,
   layoutCropsGarden,
 } from './settlementStructures'
 import {
@@ -884,6 +885,9 @@ export async function buildSettlementProps(
     const hw = wellTemplate.clone(true)
     placeOnGround(hw, lm.x, lm.z, sampleHeight)
     tagSettlementShadowKind(hw, 'landmarkWellHousehold')
+    // Yard wells: keep main-pass / colliders / queues; drop shadow submission
+    // (world-terrain-038 — ~5 draws each, weak visual value vs central well).
+    disableCastShadow(hw)
     group.add(hw)
     const position = new THREE.Vector3(lm.x, sampleHeight(lm.x, lm.z), lm.z)
     wells.push({
@@ -1047,6 +1051,9 @@ export async function buildSettlementProps(
   try {
     const crops = await loadGltf(CROPS_URL)
     preparePropFitMax(crops, CROPS_FIT_MAX)
+    // Plant meshes dominate garden shadow tris (~97%); keep Dirt as a thin
+    // grounding caster. Cloned beds inherit these flags (world-terrain-038).
+    disableGardenPlantCastShadow(crops)
     cropsTemplate = crops
   } catch (err) {
     console.warn('[settlement] crops.glb unavailable — garden GLB / procedural fallback', err)
