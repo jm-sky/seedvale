@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import type { PropPlacement } from '../render/instancedProps'
 import {
   GARDEN_BED_D,
   GARDEN_BED_GAP,
@@ -432,8 +433,8 @@ export function createGarden(scale: GardenScale = 'S'): THREE.Group {
 
 /**
  * Drop shadow casting on crops.glb plant meshes; keep Dirt as a thin grounding
- * caster. Applied once on the fitted template before `layoutCropsGarden` clones
- * (world-terrain-038).
+ * caster. Applied once on the fitted template before beds are instanced via
+ * {@link cropsBedPlacements} + `buildInstancedProps` (world-terrain-038).
  *
  * @domain world-terrain
  */
@@ -447,18 +448,51 @@ export function disableGardenPlantCastShadow(root: THREE.Object3D): void {
   })
 }
 
-/** Side-by-side clones of `crops.glb` using the same bed spacing as `createGarden`. */
-export function layoutCropsGarden(template: THREE.Object3D, beds: number): THREE.Group {
-  const garden = new THREE.Group()
+/** One `PropPlacement` for a settlement well instance sharing the common
+ *  `well.glb`/`createWell` template (plan settlements-019) — replaces a
+ *  `template.clone(true)` render tree per well. `buildSettlementProps` never
+ *  rotates or rescales an individual well (only `placeOnGround` applies), so
+ *  `rotationY`/`scale` stay fixed at the template's own orientation/size.
+ *
+ * @domain settlements
+ */
+export function wellPropPlacement(x: number, z: number, groundY: number, key?: string): PropPlacement {
+  return { speciesIndex: 0, x, z, groundY, rotationY: 0, scale: 1, key }
+}
+
+/**
+ * Placement data for `beds` crop-bed instances sharing one `crops.glb`
+ * template (plan settlements-019), replacing the former
+ * `template.clone(true)` per bed. Same side-by-side spacing as
+ * `createGarden`: beds tile along local +X centered on `(gardenX, gardenZ)`.
+ * `groundY` is sampled once for the whole garden (not per bed), matching the
+ * single `placeOnGround` call the removed per-garden `THREE.Group` used to get.
+ *
+ * @domain settlements
+ */
+export function cropsBedPlacements(
+  gardenX: number,
+  gardenZ: number,
+  groundY: number,
+  beds: number,
+  keyPrefix?: string,
+): PropPlacement[] {
   const count = Math.max(1, beds)
   const totalW = count * GARDEN_BED_W + (count - 1) * GARDEN_BED_GAP
   const startX = -totalW * 0.5 + GARDEN_BED_W * 0.5
+  const placements: PropPlacement[] = []
   for (let b = 0; b < count; b++) {
-    const bed = template.clone(true)
-    bed.position.x += startX + b * (GARDEN_BED_W + GARDEN_BED_GAP)
-    garden.add(bed)
+    placements.push({
+      speciesIndex: 0,
+      x: gardenX + startX + b * (GARDEN_BED_W + GARDEN_BED_GAP),
+      z: gardenZ,
+      groundY,
+      rotationY: 0,
+      scale: 1,
+      key: keyPrefix ? `${keyPrefix}:${b}` : undefined,
+    })
   }
-  return garden
+  return placements
 }
 
 /** Golden — distinctly different from `createGarden`'s green crop cones and

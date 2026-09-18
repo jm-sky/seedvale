@@ -1,7 +1,7 @@
 # Plan: Settlement render submission budget
 
 **Created:** 2026-09-17
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** optimization
 **Priority:** high · **Effort:** M
 **Depends on:** -
