@@ -7,6 +7,7 @@
 **Domain:** `settlements-npcs`
 **Type:** `feature`
 **Roadmap:** `quests-travelling-merchant-journeys.md`
+**Model:** Sonnet, Composer
 
 ## Goal
 
