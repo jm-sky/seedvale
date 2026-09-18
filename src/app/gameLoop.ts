@@ -548,6 +548,11 @@ export type GameLoopDeps = {
   workOnStandingTorch?: (id: string) => void
   workOnPlayerTrough?: (id: string) => void
   fillPlayerTrough?: (id: string) => void
+  /** `[E]` on a generated settlement pasture trough (plan
+   *  settlements-npcs-046) — fills the paired canonical `Household.water`
+   *  to capacity via the pasture well's implicit rope bucket; no carried
+   *  bucket/waterskin required, gated by `canFill` on the candidate. */
+  fillPastureTrough?: (settlementId: string) => void
   /** `[E]` on an unfinished palisade segment (plan items-player-017 §10) —
    *  same shape as `workOnStandingTorch`. */
   workOnPalisade?: (id: string) => void
@@ -713,7 +718,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     startDestroySpawner,
     drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, sleepInHay, openTrapArmDialog, disarmTrap, collectTrap,
     startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive, harvestCrop, tidyGardenPlot, waterGardenPlot,
-    openContainer, openNpcCorpse, openHouseholdResourceTransfer, pickUpContainer, forceOpenContainer, describeWorldGeneratedContainer, workOnWell, describeWellWork, describeWellRoofRepair, workOnWellRoofRepair, describeStructureRepair, workOnStructureRepair, igniteStandingTorch, workOnStandingTorch, workOnPlayerTrough, fillPlayerTrough, workOnPalisade, removePalisadeSegment, supplyResidentialBuildingMaterials, workOnResidentialBuilding, cancelResidentialBuilding, sleepInOwnedHouse, repairSettlementStorage, destroyRatNest, openNoticeBoard, openGrindstoneSharpen,
+    openContainer, openNpcCorpse, openHouseholdResourceTransfer, pickUpContainer, forceOpenContainer, describeWorldGeneratedContainer, workOnWell, describeWellWork, describeWellRoofRepair, workOnWellRoofRepair, describeStructureRepair, workOnStructureRepair, igniteStandingTorch, workOnStandingTorch, workOnPlayerTrough, fillPlayerTrough, fillPastureTrough, workOnPalisade, removePalisadeSegment, supplyResidentialBuildingMaterials, workOnResidentialBuilding, cancelResidentialBuilding, sleepInOwnedHouse, repairSettlementStorage, destroyRatNest, openNoticeBoard, openGrindstoneSharpen,
     openAnimalPack, equipAnimalPack, unequipAnimalPack, pickUpGroundSaddlebags,
     describePalisadeWork, describeStandingTorchWork, describePlayerTroughWork, describePlayerTroughFill, describeResidentialWork,
     previewActionConsequence, previewForeignMount,
@@ -1970,6 +1975,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           if (preview && !preview.canReceive) toast.show(preview.reasonLabel, 'error')
           else if (preview) vueUi.openActionConfirm('Usuń pochodnię', preview.body, () => removeStandingTorch?.(target.id))
         }
+      } else if (target?.kind === 'pastureTrough') {
+        if (interactPressed && target.canFill) fillPastureTrough?.(target.settlementId)
       } else if (target?.kind === 'playerTrough') {
         if (interactPressed) {
           if (!target.complete) workOnPlayerTrough?.(target.id)

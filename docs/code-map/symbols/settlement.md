@@ -41,10 +41,10 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/createSettlement.ts`
 
-- `createSettlement` — function — line 462
-- `CreateSettlementDeps` — type — line 279
-- `Settlement` — type — line 153
-- `settlementSpawnPoint` — function — line 267
+- `createSettlement` — function — line 482
+- `CreateSettlementDeps` — type — line 299
+- `Settlement` — type — line 158
+- `settlementSpawnPoint` — function — line 287
 
 ## `settlement/decorProps.ts`
 
@@ -218,13 +218,13 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/household.ts`
 
-- `createHousehold` — function — line 383
-- `createHouseholdRegistry` — function — line 601
-- `FARMER_STARTING_SEED_COUNT` — const — line 264
+- `createHousehold` — function — line 390
+- `createHouseholdRegistry` — function — line 608
+- `FARMER_STARTING_SEED_COUNT` — const — line 271
 - `HayForageState` — type — line 129
-- `Household` — type — line 267
+- `Household` — type — line 274
 - `HOUSEHOLD_WOOD_RESERVE_TARGET` — const — line 99
-- `HouseholdAgricultureState` — type — line 196
+- `HouseholdAgricultureState` — type — line 203
 - `HouseholdDepositResult` — type — line 38
 - `HouseholdId` — type — line 33
   - domain: settlements-npcs
@@ -232,12 +232,12 @@ Generated from exported TypeScript symbols.
   - role: Owns one family's own food/wood/water stock, between NPC carrying and `SettlementEconomy`.
   - owns: Household
   - uses: SettlementEconomy
-- `householdIdFor` — function — line 349
-- `HouseholdRegistry` — type — line 592
+- `householdIdFor` — function — line 356
+- `HouseholdRegistry` — type — line 599
 - `HouseholdResourceKind` — type — line 56
-- `HouseholdSnapshot` — type — line 208
-- `HouseholdStartingContext` — type — line 248
-- `HouseholdTradeStockContext` — type — line 235
+- `HouseholdSnapshot` — type — line 215
+- `HouseholdStartingContext` — type — line 255
+- `HouseholdTradeStockContext` — type — line 242
   - domain: settlements-npcs
 - `resolveHayForage` — function — line 145
 - `WaterReserve` — type — line 160
@@ -337,7 +337,7 @@ Generated from exported TypeScript symbols.
 ## `settlement/livestock.ts`
 
 - `createLivestockRegistry` — function — line 327
-- `disposeLivestock` — function — line 922
+- `disposeLivestock` — function — line 928
 - `fillShepherdFlockKinds` — function — line 48
 - `isPlayerOwnedLivestockRecord` — function — line 105
 - `LIVESTOCK_KINDS` — const — line 81
@@ -347,18 +347,18 @@ Generated from exported TypeScript symbols.
 - `LivestockRegistry` — type — line 177
 - `LivestockSaveRecord` — type — line 95
 - `livestockStrayCandidateFromAgent` — function — line 135
-- `PersistentLivestockContext` — type — line 832
-- `resolveLivePersistentAnimal` — function — line 840
-- `restoreDetachedPlayerOwnedLivestock` — function — line 904
-- `setOwnedAnimalControl` — function — line 892
+- `PersistentLivestockContext` — type — line 838
+- `resolveLivePersistentAnimal` — function — line 846
+- `restoreDetachedPlayerOwnedLivestock` — function — line 910
+- `setOwnedAnimalControl` — function — line 898
 - `shouldSpawnDeterministicLivestockSlot` — function — line 114
   - domain: fauna
   - role: Household rolls and merchant-horse slots skip tombstones and player-owned records restored on the detached path (fauna-020 / fauna-030).
 - `spawnAnimalFromRecord` — function — line 222
 - `SpawnAnimalFromRecordDeps` — type — line 210
 - `spawnLivestock` — function — line 603
-- `tickSettlementLivestock` — function — line 939
-- `transferAnimalOwnership` — function — line 867
+- `tickSettlementLivestock` — function — line 945
+- `transferAnimalOwnership` — function — line 873
 
 ## `settlement/lodging.ts`
 
@@ -606,6 +606,16 @@ Generated from exported TypeScript symbols.
 - `NpcStateRegistry` — type — line 315
 - `NpcStateSnapshot` — type — line 187
 
+## `settlement/pastureWater.ts`
+
+- `PASTURE_WELL_TROUGH_BUCKET_REACH` — const — line 13
+  - domain: settlements-npcs
+  - role: Canonical pasture well ↔ pasture trough local water use contract (plan settlements-npcs-046). Single source for the "close enough for the well's rope bucket" reach shared by the pasture layout generator (`villagePasture.ts`) and pasture-trough player/runtime interaction eligibility. This is the well+trough usable reach, not a collision or terrain-clearance footprint (see `villagePasture.ts`'s `WELL_RADIUS`/ `TROUGH_RADIUS`, which stay independent obstacle-clearance radii).
+- `pastureTroughCanFill` — function — line 49
+- `pastureTroughPromptLabel` — function — line 57
+- `pastureWellTroughDistance` — function — line 16
+- `resolvePastureWaterHousehold` — function — line 36
+
 ## `settlement/pathDryness.ts`
 
 - `PATH_DRY_SAMPLES` — const — line 10
@@ -684,15 +694,15 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/props.ts`
 
-- `BlacksmithWorkplace` — type — line 350
-- `buildSettlementProps` — function — line 761
-- `disposeSettlementGroup` — function — line 2237
+- `BlacksmithWorkplace` — type — line 355
+- `buildSettlementProps` — function — line 766
+- `disposeSettlementGroup` — function — line 2247
 - `SettlementHouseBed` — type — line 164
 - `SettlementHouseLandmark` — type — line 130
 - `SettlementLandmarks` — type — line 185
-- `SettlementLandPlot` — type — line 339
-- `SettlementStorageVisuals` — type — line 331
-- `SettlementTreeLandmark` — type — line 360
+- `SettlementLandPlot` — type — line 344
+- `SettlementStorageVisuals` — type — line 336
+- `SettlementTreeLandmark` — type — line 365
 - `SettlementWellLandmark` — type — line 171
 
 ## `settlement/propSpecs.ts`
@@ -1281,13 +1291,13 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/villagePasture.ts`
 
-- `appendPasturePath` — function — line 438
-- `fenceSegmentPlacements` — function — line 485
-- `pastureFencePlacements` — function — line 514
-- `PasturePlanArgs` — type — line 79
-- `pastureRadiusFor` — function — line 72
-- `planSettlementPasture` — function — line 347
-- `settlementWantsPasture` — function — line 63
+- `appendPasturePath` — function — line 450
+- `fenceSegmentPlacements` — function — line 497
+- `pastureFencePlacements` — function — line 526
+- `PasturePlanArgs` — type — line 88
+- `pastureRadiusFor` — function — line 81
+- `planSettlementPasture` — function — line 359
+- `settlementWantsPasture` — function — line 72
 
 ## `settlement/villagePlan.ts`
 

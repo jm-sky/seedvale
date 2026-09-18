@@ -32,6 +32,7 @@ import { type FoodBatch, type FreshnessStage, getFoodBatchFreshnessStage } from 
 import { consumeVerbLabel, hasItemCapability, isRangedTool, ITEM_CATALOG } from '../items/itemCatalog'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
 import { type MeleeHitCandidate, pickCombatTarget } from '../player/playerMelee'
+import { pastureTroughCanFill, pastureTroughPromptLabel } from '../settlement/pastureWater'
 import { isPlayerPlacedFire, type PlacedFires } from '../settlement/PlacedFires'
 import {
   hasActiveStructureRepair,
@@ -916,6 +917,21 @@ export function buildInteractables(
           source: createWaterSource('well'),
         })
       }
+    }
+
+    // Plan settlements-npcs-046 — generated pasture trough only; never the
+    // household-yard/vendor-paddock trough (those get no `[E]` fill action).
+    // `resolvePastureWaterUse` re-derives the paired well/household from the
+    // planned pasture and live settlement composition, never a cached pair.
+    const pastureWaterUse = settlement.resolvePastureWaterUse()
+    if (pastureWaterUse && withinRange(pastureWaterUse.troughPosition.x, pastureWaterUse.troughPosition.z, playerPos, GAZE_RANGE)) {
+      list.push({
+        kind: 'pastureTrough',
+        position: pastureWaterUse.troughPosition,
+        promptLabel: pastureTroughPromptLabel(pastureWaterUse.household),
+        settlementId: settlement.id,
+        canFill: pastureTroughCanFill(pastureWaterUse.household),
+      })
     }
 
     // Plan 168 follow-up — the settlement's hay fallback as a real `[E]`

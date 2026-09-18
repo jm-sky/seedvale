@@ -203,6 +203,15 @@ export type InteractablePayload =
   }
   /** Player-built animal trough (plan items-player-020). */
   | { kind: 'playerTrough', position: { x: number, z: number }, promptLabel: string, id: string, complete: boolean, canFill: boolean }
+  /** Generated settlement pasture trough (plan settlements-npcs-046) — `[E]`
+   *  fills the paired canonical `Household.water` to capacity via the
+   *  pasture well's implicit rope bucket, resolved fresh at interact time
+   *  through `Settlement.resolvePastureWaterUse()` (`settlementId` +
+   *  re-resolution, never a cached household/well reference). No carried
+   *  bucket/waterskin required — distinct from `playerTrough` (no
+   *  `PlayerTroughRecord`/own storage) and never offered for a
+   *  household-yard or vendor-paddock trough. */
+  | { kind: 'pastureTrough', position: { x: number, z: number }, promptLabel: string, settlementId: string, canFill: boolean }
   /** Player-built palisade segment (plan items-player-010, incremental
    *  construction added by plan items-player-017) — `[R]` removes this one
    *  segment via the generic player-built removal/recovery seam

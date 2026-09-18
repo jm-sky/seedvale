@@ -195,6 +195,15 @@ describe('household water reserve (plan 122)', () => {
     household.depositWood('branch', 5)
     expect(household.water.current).toBe(waterBefore)
   })
+
+  it('fillToCapacity sets current exactly to capacity and is idempotent (plan settlements-npcs-046)', () => {
+    const household = createHousehold('h', 's', 'home')
+    household.water.remove(household.water.current)
+    household.water.fillToCapacity()
+    expect(household.water.current).toBe(household.water.capacity)
+    household.water.fillToCapacity()
+    expect(household.water.current).toBe(household.water.capacity)
+  })
 })
 
 describe('household.items (plan 178) — generic item storage, including concrete food since plan settlements-npcs-008', () => {

@@ -85,6 +85,11 @@ import {
   shouldSkipNpcCorpsePresentation,
 } from './npcPostDeath'
 import { createNpcRelationships, type NpcRelationships } from './npcRelationships'
+import {
+  PASTURE_WELL_TROUGH_BUCKET_REACH,
+  pastureWellTroughDistance,
+  resolvePastureWaterHousehold,
+} from './pastureWater'
 import { homePlaceId, type Place, socialPlaceFor, workplaceFor } from './places'
 import { shepherdHouseholdIndex } from './professionStaffing'
 import {
@@ -189,6 +194,21 @@ export type Settlement = {
    *  paired with its own world position. Presentation only; `household`
    *  remains the sole owner of the quantity (`Household.stock`/`.water`). */
   householdStorages: readonly { household: Household, position: Vector3 }[]
+  /**
+   * Resolves this settlement's planned pasture trough → paired well →
+   * canonical owning household (plan settlements-npcs-046), or `null` when
+   * this settlement has no pasture, no household, or the paired anchors
+   * somehow exceed `PASTURE_WELL_TROUGH_BUCKET_REACH`. Read-only: never
+   * persists a pairing/binding — both anchors and the household are always
+   * re-derived from the same planned pasture and live `households`. The one
+   * seam both the pasture-trough player fill action and (via `livestock.ts`)
+   * livestock drinking at that same trough resolve their reserve through.
+   */
+  resolvePastureWaterUse: () => {
+    troughPosition: { x: number, z: number }
+    wellPosition: { x: number, z: number }
+    household: Household
+  } | null
   /** Only present for MD/LG villages, see `props.ts`'s `buildSettlementProps`. */
   fire?: VillageFire
   /** Canonical village torch posts with stable ids (plan quests-progression-021). */
@@ -743,6 +763,12 @@ export async function createSettlement(
   const shepherdHouseIndex = shepherdFamilyIndex == null || landmarks.homes.length === 0
     ? null
     : shepherdFamilyIndex % landmarks.homes.length
+  // Canonical pasture-trough water owner (plan settlements-npcs-046) — one
+  // household backs the shared physical trough for every household's
+  // livestock and for the player fill action below, never each animal's own.
+  const pastureWaterHousehold = landmarks.pasture
+    ? resolvePastureWaterHousehold(households, shepherdFamilyIndex)
+    : undefined
 
   bootMark('spawnLivestock')
   let livestock: Awaited<ReturnType<typeof spawnLivestock>>
@@ -771,6 +797,7 @@ export async function createSettlement(
           z: landmarks.pasture.position.z,
           radius: landmarks.pasture.radius,
           trough: { x: landmarks.pasture.trough.x, z: landmarks.pasture.trough.z },
+          household: pastureWaterHousehold,
         }
         : undefined,
       landmarks.paddock
@@ -1256,6 +1283,14 @@ export async function createSettlement(
     economy,
     households,
     householdStorages,
+    resolvePastureWaterUse() {
+      const pasture = landmarks.pasture
+      if (!pasture || !pastureWaterHousehold) return null
+      const troughPosition = { x: pasture.trough.x, z: pasture.trough.z }
+      const wellPosition = { x: pasture.well.x, z: pasture.well.z }
+      if (pastureWellTroughDistance(wellPosition, troughPosition) > PASTURE_WELL_TROUGH_BUCKET_REACH) return null
+      return { troughPosition, wellPosition, household: pastureWaterHousehold }
+    },
     fire,
     villageTorches,
     setNightAutoLightPolicy(policy) {

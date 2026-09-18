@@ -167,6 +167,10 @@ export type WaterReserve = {
   shouldFetch: () => boolean
   add: (amount: number) => void
   remove: (amount: number) => void
+  /** Sets `current` to `capacity` in one step (plan settlements-npcs-046) —
+   *  the pasture well's implicit rope bucket fills straight to capacity
+   *  rather than a bounded per-visit amount. Idempotent when already full. */
+  fillToCapacity: () => void
 }
 
 function createWaterReserve(initial: number): WaterReserve {
@@ -184,6 +188,9 @@ function createWaterReserve(initial: number): WaterReserve {
     },
     remove: (amount) => {
       current = Math.max(0, current - amount)
+    },
+    fillToCapacity: () => {
+      current = WATER_POLICY.capacity
     },
   }
 }

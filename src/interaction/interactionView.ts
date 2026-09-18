@@ -189,6 +189,17 @@ function palisadeActions(
   return actions
 }
 
+/** Generated pasture trough (plan settlements-npcs-046) — no bracket parsing
+ *  of `promptLabel` ("Koryto pełne" is plain text, not `STATUS_ONLY_RE`), so
+ *  eligibility comes straight from `canFill`, same "no primary action while
+ *  full" shape as `troughActions`. No `[R]` alternate — nothing to remove. */
+function pastureTroughActions(
+  target: Extract<Interactable, { kind: 'pastureTrough' }>,
+): InteractionActionView[] {
+  if (!target.canFill) return []
+  return [{ slot: 'primary', label: 'Napełnij koryto', enabled: true, reasonLabel: '' }]
+}
+
 function troughActions(
   target: Extract<Interactable, { kind: 'playerTrough' }>,
   ctx: InteractionViewContext,
@@ -321,6 +332,8 @@ export function interactableStableKey(target: Interactable): string {
       return `npcCorpse:${target.npc.id}`
     case 'palisade':
       return `palisade:${target.id}`
+    case 'pastureTrough':
+      return `pastureTrough:${target.settlementId}`
     case 'platform':
       return `platform:${target.id}`
     case 'playerTrough':
@@ -390,6 +403,9 @@ export function buildInteractionView(
       break
     case 'palisade':
       actions = palisadeActions(target, ctx)
+      break
+    case 'pastureTrough':
+      actions = pastureTroughActions(target)
       break
     case 'playerTrough':
       actions = troughActions(target, ctx)

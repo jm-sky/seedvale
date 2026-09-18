@@ -190,6 +190,55 @@ describe('findTroughTarget / findWaterTarget (plan 122 — trough preferred over
   })
 })
 
+describe('pasture trough canonical household binding (plan settlements-npcs-046)', () => {
+  it('an anchor-owned household backs the target instead of the drinking animal\'s own', () => {
+    const ownHousehold = fakeHousehold({ waterAmount: 0 })
+    const pastureHousehold = fakeHousehold({ waterAmount: 5 })
+    const ctx = makeCtx({
+      household: ownHousehold,
+      def: ANIMAL_DEFS.sheep,
+      x: 70,
+      z: 4,
+      home: { x: 0, z: 0 },
+      householdWaterAnchors: [{ x: 70, z: 4, household: pastureHousehold }],
+    })
+    // The drinker's own household is dry — findWaterTarget would return
+    // null if the pasture anchor still resolved through `ctx.household`.
+    const target = findTroughTarget(ctx)!
+    expect(target).not.toBeNull()
+    expect(target.household).toBe(pastureHousehold)
+    expect(isSourceTargetValid(ctx, {}, target)).toBe(true)
+  })
+
+  it('two households sharing one pasture trough both mutate the same canonical reserve', () => {
+    let current = 5
+    const canonicalHousehold = {
+      water: {
+        current,
+        capacity: 10,
+        has: (amount: number) => current >= amount,
+        remove: (amount: number) => { current -= amount },
+      },
+      items: new Inventory({}, Infinity),
+      resolveHayForage: () => {},
+    } as unknown as Household
+    const householdA = fakeHousehold({ waterAmount: 3 })
+    const householdB = fakeHousehold({ waterAmount: 3 })
+    const anchors = [{ x: 70, z: 4, household: canonicalHousehold }]
+
+    const ctxA = makeCtx({ household: householdA, def: ANIMAL_DEFS.sheep, x: 70, z: 4, home: { x: 100, z: 100 }, householdWaterAnchors: anchors })
+    const ctxB = makeCtx({ household: householdB, def: ANIMAL_DEFS.cow, x: 70, z: 4, home: { x: -100, z: -100 }, householdWaterAnchors: anchors })
+
+    applySourceRelief(ctxA, findTroughTarget(ctxA)!)
+    applySourceRelief(ctxB, findTroughTarget(ctxB)!)
+
+    expect(current).toBe(3)
+    // Neither animal's own household water moved — only the canonical one did.
+    expect(householdA.water.current).toBe(3)
+    expect(householdB.water.current).toBe(3)
+  })
+})
+
 describe('isSourceTargetValid / applySourceRelief — trough (plan 122)', () => {
   it('a drained trough grants no relief and the target fails revalidation', () => {
     const household = fakeHousehold({ waterAmount: 0 })

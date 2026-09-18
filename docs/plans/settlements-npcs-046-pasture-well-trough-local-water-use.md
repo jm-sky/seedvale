@@ -1,7 +1,7 @@
 # Plan: Pasture Well & Trough Local Water Use
 
 **Created:** 2026-09-18
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** medium · **Effort:** S
 **Depends on:** ~~settlements-009~~, ~~settlements-npcs-035~~
 **Domain:** `settlements-npcs`

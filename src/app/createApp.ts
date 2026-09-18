@@ -312,6 +312,7 @@ import { createMedicalTreatmentActions } from './actions/medicalTreatmentActions
 import { createMountActions } from './actions/mountActions'
 import { giveItemCountToNpc, giveItemInstanceToNpc } from './actions/npcItemTransfer'
 import { createNpcItemTransferActions } from './actions/npcItemTransferActions'
+import { createPastureTroughActions } from './actions/pastureTroughActions'
 import { createPlacementActions } from './actions/placementActions'
 import { createPlacementPreviewActions } from './actions/placementPreviewActions'
 import { createRestActions } from './actions/restActions'
@@ -2410,6 +2411,7 @@ export async function createApp(
   })
   const gathering = createGatheringActions(actionCtx, { vueUi, fishingBait, fishingAttempts })
   const survival = createSurvivalActions(actionCtx)
+  const pastureTrough = createPastureTroughActions(actionCtx)
   const medicalTreatment = createMedicalTreatmentActions(actionCtx)
   const ground = createGroundActions(actionCtx, {
     worldFlags,
@@ -3484,6 +3486,7 @@ export async function createApp(
     describePlayerTroughWork: placement.describePlayerTroughWork,
     describePlayerTroughFill: placement.describePlayerTroughFill,
     fillPlayerTrough: placement.fillPlayerTrough,
+    fillPastureTrough: pastureTrough.fillPastureTrough,
     previewPlayerTroughRemoval: placement.previewPlayerTroughRemoval,
     removePlayerTrough: placement.removePlayerTrough,
     workOnPalisade: placement.workOnPalisade,

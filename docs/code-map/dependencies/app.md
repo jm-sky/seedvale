@@ -65,6 +65,8 @@ Generated from TypeScript imports.
 - `app/actions/mountActions.test.ts`
 - `app/actions/mountActions.ts`
 - `app/actions/npcItemTransferActions.ts`
+- `app/actions/pastureTroughActions.test.ts`
+- `app/actions/pastureTroughActions.ts`
 - `app/actions/placementActions.ts`
 - `app/actions/placementPreviewActions.ts`
 - `app/actions/restActions.ts`
@@ -508,6 +510,26 @@ Generated from TypeScript imports.
 
 - `app/createApp.ts`
 
+## `app/actions/pastureTroughActions.test.ts`
+
+**Imports**
+
+- `app/actions/actionContext.ts`
+- `app/actions/pastureTroughActions.ts`
+- `settlement/household.ts`
+
+## `app/actions/pastureTroughActions.ts`
+
+**Imports**
+
+- `app/actions/actionContext.ts`
+- `settlement/pastureWater.ts`
+
+**Imported by**
+
+- `app/actions/pastureTroughActions.test.ts`
+- `app/createApp.ts`
+
 ## `app/actions/placementActions.ts`
 
 **Imports**
@@ -932,6 +954,7 @@ Generated from TypeScript imports.
 - `app/actions/mountActions.ts`
 - `app/actions/npcItemTransfer.ts`
 - `app/actions/npcItemTransferActions.ts`
+- `app/actions/pastureTroughActions.ts`
 - `app/actions/placementActions.ts`
 - `app/actions/placementPreviewActions.ts`
 - `app/actions/restActions.ts`
@@ -1407,6 +1430,7 @@ Generated from TypeScript imports.
 - `settlement/PlacedFires.ts`
 - `settlement/createSettlement.ts`
 - `settlement/landOwnership.ts`
+- `settlement/pastureWater.ts`
 - `settlement/structureCondition.ts`
 - `terrain/chunkEnvironment.ts`
 - `terrain/chunkManager.ts`

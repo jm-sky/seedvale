@@ -10,6 +10,7 @@ import {
 import { type PropPlacement } from '../render/instancedProps'
 import { footprintOverlapsRiver } from '../terrain/riverNetwork'
 import { createSeededRandom } from '../world/parseSeed'
+import { PASTURE_WELL_TROUGH_BUCKET_REACH } from './pastureWater'
 import { pathIsDry, SETTLEMENT_WATER_MARGIN } from './pathDryness'
 import {
   PASTURE_ID,
@@ -41,6 +42,14 @@ const PLOT_RIVER_MARGIN = 1
 const PASTURE_BOUNDARY_GAP = 2.5
 const WELL_RADIUS = 2.4
 const TROUGH_RADIUS = 1.2
+/** Distance from the well anchor the trough is placed at — a fixed offset
+ *  within `PASTURE_WELL_TROUGH_BUCKET_REACH` (plan settlements-npcs-046) so
+ *  a valid pasture satisfies the reach by construction, never by a runtime
+ *  correction. `WELL_RADIUS`/`TROUGH_RADIUS` stay independent
+ *  terrain/plot/corridor clearance radii — this offset intentionally sits
+ *  well inside their sum, since well+trough are now one local pair rather
+ *  than two mutually-exclusive footprints. */
+const TROUGH_OFFSET_FROM_WELL = PASTURE_WELL_TROUGH_BUCKET_REACH * 0.8
 const FENCE_CLEARANCE = 0.9
 /** Matches `PALISADE_WALL_HALF_DEPTH` — physical fence footprint vs corridors. */
 const FENCE_CORRIDOR_CLEARANCE = 0.3
@@ -214,9 +223,15 @@ function layoutOnCandidate(
     x: cx + Math.cos(inward - 0.7) * radius * 0.28,
     z: cz + Math.sin(inward - 0.7) * radius * 0.28,
   }
+  // Trough is placed relative to the already-computed well anchor, at a
+  // fixed offset within `PASTURE_WELL_TROUGH_BUCKET_REACH` (plan
+  // settlements-npcs-046) — well+trough are one local infrastructure pair,
+  // not two independently-placed radial anchors, so a valid pasture
+  // satisfies the reach by construction rather than a runtime correction.
+  const wellTangent = inward - 0.7 + Math.PI / 2
   const troughPos = {
-    x: cx + Math.cos(inward - 2.05) * radius * 0.42,
-    z: cz + Math.sin(inward - 2.05) * radius * 0.42,
+    x: wellPos.x + Math.cos(wellTangent) * TROUGH_OFFSET_FROM_WELL,
+    z: wellPos.z + Math.sin(wellTangent) * TROUGH_OFFSET_FROM_WELL,
   }
 
   if (wetOrRiver(wellPos.x, wellPos.z, WELL_RADIUS, sampleHeight, waterLevel, riverSegments)) return null
@@ -224,9 +239,6 @@ function layoutOnCandidate(
   if (wetOrRiver(connection.x, connection.z, 1.2, sampleHeight, waterLevel, riverSegments)) return null
   if (overlapsPlots(wellPos.x, wellPos.z, WELL_RADIUS, plots)) return null
   if (overlapsPlots(troughPos.x, troughPos.z, TROUGH_RADIUS, plots)) return null
-  if (Math.hypot(wellPos.x - troughPos.x, wellPos.z - troughPos.z) < WELL_RADIUS + TROUGH_RADIUS + 0.6) {
-    return null
-  }
   if (pointHitsCorridor(wellPos.x, wellPos.z, corridors, WELL_RADIUS)) return null
   if (pointHitsCorridor(troughPos.x, troughPos.z, corridors, TROUGH_RADIUS)) return null
   if (!pathIsDry(cx, cz, wellPos.x, wellPos.z, waterLevel, sampleHeight)) return null

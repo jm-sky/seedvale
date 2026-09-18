@@ -199,27 +199,19 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-32. `world-terrain-040` — **Vegetation render budget v2**  
-  🔴 `M` · **Score:**  27  
-   → **unlocks:** 0/0
-
-33. `items-player-044` — **Shoulder and forearm equipment slots**  
+32. `items-player-044` — **Shoulder and forearm equipment slots**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-34. `world-terrain-041` — **Agent presentation render LOD**  
+33. `world-terrain-041` — **Agent presentation render LOD**  
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-35. `settlements-npcs-046` — **Pasture Well & Trough Local Water Use**  
-  🟡 `S` · **Score:**  21  
-   → **unlocks:** 0/0
-
-36. `items-player-032` — **NPC player-storage resource and context rules**  
+34. `items-player-032` — **NPC player-storage resource and context rules**  
   🟡 `L` · **Score:**  20  
    → **unlocks:** 0/0
 
-37. `quests-progression-061` — **Builder — Complete an Unfinished Palisade Segment**  
+35. `quests-progression-061` — **Builder — Complete an Unfinished Palisade Segment**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 

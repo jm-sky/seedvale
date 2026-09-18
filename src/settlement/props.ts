@@ -202,6 +202,11 @@ export type SettlementLandmarks = {
     position: THREE.Vector3
     radius: number
     trough: THREE.Vector3
+    /** Paired pasture well position (plan settlements-npcs-046) — same
+     *  anchor materialized into `landmarks.wells` via `pastureWellQueueId`.
+     *  Carried here too so player/runtime pasture-trough interaction can
+     *  resolve the paired well without scanning `landmarks.wells`. */
+    well: THREE.Vector3
   }
   /**
    * Horse-vendor paddock (plan settlements-013). Present when
@@ -949,6 +954,11 @@ export async function buildSettlementProps(
         pasturePlan.trough.x,
         sampleHeight(pasturePlan.trough.x, pasturePlan.trough.z),
         pasturePlan.trough.z,
+      ),
+      well: new THREE.Vector3(
+        pasturePlan.well.x,
+        groundY,
+        pasturePlan.well.z,
       ),
     }
   }

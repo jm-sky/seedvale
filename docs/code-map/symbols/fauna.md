@@ -16,7 +16,7 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/AnimalAgent.ts`
 
-- `AnimalAgent` — class — line 1161
+- `AnimalAgent` — class — line 1169
   - domain: fauna
   - system: animal-agent
   - role: Central per-animal behaviour integration point: predator/prey AI, needs, health, production (livestock) and riding (mounts).
@@ -25,7 +25,7 @@ Generated from exported TypeScript symbols.
 - `AnimalAgentDebugInfo` — type — line 595
 - `AnimalAgentDeps` — type — line 954
 - `AnimalSaveState` — type — line 728
-- `AnimalUpdateContext` — type — line 1018
+- `AnimalUpdateContext` — type — line 1026
 - `BURY_DURATION_SEC` — const — line 408
 - `canPredatorPursueIntoVillage` — function — line 812
 - `FAUNA_SHADOW_DISTANCE` — const — line 377
@@ -173,7 +173,7 @@ Generated from exported TypeScript symbols.
 ## `fauna/animalForaging.ts`
 
 - `AnimalWaterSourceProvider` — type — line 99
-- `applySourceRelief` — function — line 702
+- `applySourceRelief` — function — line 730
 - `canAcceptHandFeed` — function — line 146
 - `CARCASS_EAT_DURATION_SEC` — const — line 73
 - `CarcassCandidate` — type — line 231
@@ -182,22 +182,22 @@ Generated from exported TypeScript symbols.
 - `dietItemReliefScale` — function — line 136
 - `DRINK_DURATION_SEC` — const — line 69
 - `EAT_DURATION_SEC` — const — line 66
-- `findFoodTarget` — function — line 614
-- `findForageTarget` — function — line 480
-- `findGrassPatchTarget` — function — line 508
-- `findHouseholdTroughTarget` — function — line 376
-- `findTroughTarget` — const — line 394
-- `findWaterTarget` — function — line 450
+- `findFoodTarget` — function — line 641
+- `findForageTarget` — function — line 507
+- `findGrassPatchTarget` — function — line 535
+- `findHouseholdTroughTarget` — function — line 397
+- `findTroughTarget` — const — line 421
+- `findWaterTarget` — function — line 477
 - `FOOD_INTERACTION_RANGE` — const — line 60
 - `forageEdgeScore` — function — line 113
-- `ForagingContext` — type — line 299
+- `ForagingContext` — type — line 309
 - `isCarcassEdible` — function — line 173
-- `isDrinkableNaturalShorePoint` — function — line 350
-- `isSourceTargetValid` — function — line 629
+- `isDrinkableNaturalShorePoint` — function — line 366
+- `isSourceTargetValid` — function — line 656
 - `selectDietFeedKind` — function — line 124
 - `SOURCE_SEARCH_COOLDOWN_SEC` — const — line 77
 - `SOURCE_TARGET_TIMEOUT_SEC` — const — line 82
-- `sourceActionDuration` — function — line 289
+- `sourceActionDuration` — function — line 299
   - domain: fauna
 - `SourceTarget` — type — line 249
 - `SourceTargetKind` — type — line 248

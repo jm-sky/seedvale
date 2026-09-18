@@ -5,6 +5,7 @@ import type { VillageIdentity, VillagePasturePlan } from './villagePlan'
 import { directionFromYaw, pointHitsCorridor, segmentHitsCorridor, yawToward } from '../math/segment'
 import { footprintOverlapsRiver } from '../terrain/riverNetwork'
 import { generateFamilies } from './families'
+import { PASTURE_WELL_TROUGH_BUCKET_REACH, pastureWellTroughDistance } from './pastureWater'
 import { fencePlacementColliders } from './settlementPalisade'
 import {
   pastureFencePlacements,
@@ -122,7 +123,11 @@ describe('settlement pasture (plan settlements-009)', () => {
     const layout = layoutFor('LG', 15)
     const pasture = layout.pasture!
     expect(pasture.well.x).not.toBe(pasture.trough.x)
-    expect(Math.hypot(pasture.well.x - pasture.trough.x, pasture.well.z - pasture.trough.z)).toBeGreaterThan(3)
+    // Well + trough are one local infrastructure pair (plan
+    // settlements-npcs-046): close enough for the well's rope bucket, never
+    // farther apart than the canonical reach.
+    expect(pastureWellTroughDistance(pasture.well, pasture.trough))
+      .toBeLessThanOrEqual(PASTURE_WELL_TROUGH_BUCKET_REACH)
     expect(pasture.fenceSegments.length).toBeGreaterThanOrEqual(1)
     expect(pasture.fenceSegments.length).toBeLessThanOrEqual(2)
     for (const seg of pasture.fenceSegments) {
@@ -178,6 +183,21 @@ describe('settlement pasture (plan settlements-009)', () => {
     expect(footprintOverlapsRiver([river], pasture.x, pasture.z, pasture.radius + 1)).toBe(false)
     expect(footprintOverlapsRiver([river], pasture.well.x, pasture.well.z, 2.4)).toBe(false)
     expect(footprintOverlapsRiver([river], pasture.trough.x, pasture.trough.z, 1.2)).toBe(false)
+  })
+})
+
+describe('pasture well/trough local water use (plan settlements-npcs-046)', () => {
+  it('every generated pasture keeps well/trough within the canonical bucket reach', () => {
+    for (const size of ['MD', 'LG', 'XL'] as const) {
+      for (const seed of [3, 8, 15, 21, 27, 36, 42, 55]) {
+        const pasture = layoutFor(size, seed).pasture
+        if (!pasture) continue
+        expect(
+          pastureWellTroughDistance(pasture.well, pasture.trough),
+          `${size} seed ${seed}`,
+        ).toBeLessThanOrEqual(PASTURE_WELL_TROUGH_BUCKET_REACH)
+      }
+    }
   })
 })
 

@@ -269,6 +269,16 @@ export type SourceTarget = {
    *  never a re-derived one, so a completed eat always matches what was
    *  actually offered. */
   feedItemKind?: ItemKind
+  /** Set only for `kind: 'water'` with `waterSource.kind === 'household'`
+   *  (plan settlements-npcs-046) — the specific `Household` this target's
+   *  reserve resolves through, captured at selection time from whichever
+   *  `householdWaterAnchors` entry won. Defaults to `ctx.household` (the
+   *  drinker's own household, e.g. its home/yard trough) when the winning
+   *  anchor carries no explicit owner. A pasture trough anchor always
+   *  carries its settlement's one canonical owning household here, so every
+   *  household's livestock draws from the same reserve at that physical
+   *  trough instead of each animal's own. */
+  household?: Household | null
   /** Set only for `kind: 'grassPatch'` (plan fauna-010 §3/§4) — the stable
    *  `GrassForagePatch` id this target resolves through `grassForage` for
    *  live availability checks and final atomic consumption. */
@@ -319,10 +329,16 @@ export type ForagingContext = {
   waterSourceProvider?: AnimalWaterSourceProvider
   /**
    * Extra household-backed stored-water positions (plan settlements-009
-   * pasture trough). Same `Household.water` reserve as the yard trough;
-   * `findHouseholdTroughTarget` picks the closest of home + these anchors.
+   * pasture/paddock trough). `findHouseholdTroughTarget` picks the closest
+   * candidate — home (always `ctx.household`) plus these anchors — whose
+   * backing reserve currently has water. An anchor without an explicit
+   * `household` falls back to `ctx.household` (paddock trough: the animal
+   * already carries the paddock's own household as its `household`). A
+   * pasture trough anchor always carries the settlement's one canonical
+   * owning household (plan settlements-npcs-046) so every household's
+   * livestock shares that same reserve there, not each animal's own.
    */
-  householdWaterAnchors?: readonly { readonly x: number, readonly z: number }[]
+  householdWaterAnchors?: readonly { readonly x: number, readonly z: number, readonly household?: Household | null }[]
   /** Physical water at a point — same sample `AnimalAgent.isWalkable()` uses. */
   sampleLocalWater?: (x: number, z: number) => LocalWaterSample
   /** Lake/river/ocean classifier (player drink seam) — when absent, ocean
@@ -367,26 +383,37 @@ function withinNeedLeash(ctx: ForagingContext, x: number, z: number): boolean {
 }
 
 /** Household `AnimalTrough` (plan 122) — preferred over a natural
- *  shoreline search when the owning household has stored water, the same
- *  "prefer local stored water" hierarchy `NpcAgent`'s personal thirst
- *  uses. Only livestock have a `household` (wild fauna: always `undefined`,
- *  falls straight through to the shoreline search below). Extra
- *  `householdWaterAnchors` (settlement pasture trough) still consume this
- *  same reserve — they are alternate positions, not a second inventory. */
+ *  shoreline search when a reachable household-backed candidate has stored
+ *  water, the same "prefer local stored water" hierarchy `NpcAgent`'s
+ *  personal thirst uses. Only livestock have a `household` (wild fauna:
+ *  always `undefined`, falls straight through to the shoreline search
+ *  below). Each candidate (home + `householdWaterAnchors`) is checked
+ *  against its own backing household (plan settlements-npcs-046 — a pasture
+ *  trough anchor's household may differ from `ctx.household`, the drinker's
+ *  own), then the closest candidate that actually has water wins; this
+ *  keeps the existing "closest household-backed trough" priority tier
+ *  unchanged while resolving *which* reserve each physical position
+ *  actually draws from. */
 export function findHouseholdTroughTarget(ctx: ForagingContext): SourceTarget | null {
-  if (!ctx.household?.water.has(TROUGH_DRINK_AMOUNT)) return null
-  let bestX = ctx.home.x
-  let bestZ = ctx.home.z
-  let bestD = Math.hypot(bestX - ctx.x, bestZ - ctx.z)
+  const candidates: { x: number, z: number, household: Household }[] = []
+  if (ctx.household) candidates.push({ x: ctx.home.x, z: ctx.home.z, household: ctx.household })
   for (const anchor of ctx.householdWaterAnchors ?? []) {
-    const d = Math.hypot(anchor.x - ctx.x, anchor.z - ctx.z)
+    const household = anchor.household ?? ctx.household
+    if (household) candidates.push({ x: anchor.x, z: anchor.z, household })
+  }
+
+  let best: { x: number, z: number, household: Household } | null = null
+  let bestD = Infinity
+  for (const candidate of candidates) {
+    if (!candidate.household.water.has(TROUGH_DRINK_AMOUNT)) continue
+    const d = Math.hypot(candidate.x - ctx.x, candidate.z - ctx.z)
     if (d < bestD) {
-      bestX = anchor.x
-      bestZ = anchor.z
+      best = candidate
       bestD = d
     }
   }
-  return { kind: 'water', x: bestX, z: bestZ, waterSource: { kind: 'household' } }
+  if (!best) return null
+  return { kind: 'water', x: best.x, z: best.z, waterSource: { kind: 'household' }, household: best.household }
 }
 
 /** @deprecated Use `findHouseholdTroughTarget` — kept as a thin alias for
@@ -679,7 +706,8 @@ export function isSourceTargetValid(ctx: ForagingContext, eater: unknown, target
     return ctx.isWalkable(target.x, target.z)
   }
   if (target.kind === 'water' && target.waterSource?.kind === 'household') {
-    if (!ctx.household?.water.has(TROUGH_DRINK_AMOUNT)) return false
+    const household = target.household ?? ctx.household
+    if (!household?.water.has(TROUGH_DRINK_AMOUNT)) return false
     if (!ctx.isWalkable(target.x, target.z)) return false
     return withinNeedLeash(ctx, target.x, target.z)
   }
@@ -706,8 +734,12 @@ export function applySourceRelief(ctx: ForagingContext, target: SourceTarget): v
       // Household trough may have run dry while approaching (another
       // animal/NPC drank first) — no free relief; next search re-checks the
       // reserve and falls back to shoreline/player trough (plan 122).
-      if (ctx.household?.water.has(TROUGH_DRINK_AMOUNT)) {
-        ctx.household.water.remove(TROUGH_DRINK_AMOUNT)
+      // `target.household` (plan settlements-npcs-046) is the anchor's own
+      // backing household when set (e.g. the pasture trough's canonical
+      // owner), never `ctx.household` unconditionally.
+      const household = target.household ?? ctx.household
+      if (household?.water.has(TROUGH_DRINK_AMOUNT)) {
+        household.water.remove(TROUGH_DRINK_AMOUNT)
         drinkWater(ctx.life)
       }
     } else if (source.kind === 'playerTrough') {

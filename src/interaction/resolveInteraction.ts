@@ -105,15 +105,17 @@ function capitalize(text: string): string {
  *  `Inventory`-access reason — removal recovers materials, handled directly
  *  in `gameLoop.ts`/`placementActions.ts`; `noticeBoard` (plan npc-014),
  *  which opens its own physical-posting panel instead of this dialog,
- *  handled directly in `gameLoop.ts`/`workContractActions.ts`) to the
- *  right `QuestManager` call, falling back to flavor text when no active
+ *  handled directly in `gameLoop.ts`/`workContractActions.ts`; `pastureTrough`
+ *  (plan settlements-npcs-046), whose fill needs live `Household`/`Settlement`
+ *  resolution, handled directly in `gameLoop.ts`/`pastureTroughActions.ts`) to
+ *  the right `QuestManager` call, falling back to flavor text when no active
  *  quest cares. `well` still goes through here for its flavor line/quest hook
  *  — `gameLoop.ts` additionally handles its own drink/fill mechanics (plan
  *  106) alongside the call. Completed player-built wells stay `playerWell`
  *  for repair identity (plan world-021); drink still synthesizes a `well`
  *  candidate here so the existing flavor/quest hook is unchanged. */
 export function resolveInteraction(
-  target: Exclude<Interactable, { kind: 'campfire' | 'item' | 'npc' | 'npcCorpse' | 'dig' | 'corpse' | 'deposit' | 'camp' | 'tent' | 'bedroll' | 'platform' | 'trap' | 'cart' | 'waterEdge' | 'landPlot' | 'dryingRack' | 'hive' | 'crop' | 'container' | 'playerWell' | 'gardenPlot' | 'terrainPreparation' | 'hay' | 'standingTorch' | 'villageTorch' | 'playerTrough' | 'palisade' | 'residentialBuilding' | 'noticeBoard' | 'grindstone' | 'settlementStorage' | 'ratNest' }>,
+  target: Exclude<Interactable, { kind: 'campfire' | 'item' | 'npc' | 'npcCorpse' | 'dig' | 'corpse' | 'deposit' | 'camp' | 'tent' | 'bedroll' | 'platform' | 'trap' | 'cart' | 'waterEdge' | 'landPlot' | 'dryingRack' | 'hive' | 'crop' | 'container' | 'playerWell' | 'gardenPlot' | 'terrainPreparation' | 'hay' | 'standingTorch' | 'villageTorch' | 'playerTrough' | 'palisade' | 'residentialBuilding' | 'noticeBoard' | 'grindstone' | 'settlementStorage' | 'ratNest' | 'pastureTrough' }>,
   questManager: QuestManager,
 ): InteractionOutcome {
   switch (target.kind) {

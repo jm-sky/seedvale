@@ -14,19 +14,19 @@ Generated from exported TypeScript symbols.
 
 ## `interaction/Interactable.ts`
 
-- `Interactable` — type — line 239
+- `Interactable` — type — line 248
 - `InteractablePayload` — type — line 33
-- `surfaceInteractable` — function — line 244
+- `surfaceInteractable` — function — line 253
 - `WorldItemRef` — type — line 18
 
 ## `interaction/interactionView.ts`
 
-- `alternateActionState` — function — line 467
-- `buildInteractionGazePrompt` — function — line 449
-- `buildInteractionView` — function — line 363
-- `hasInspectAction` — function — line 459
-- `interactableStableKey` — function — line 274
-- `interactionActionFromSkillPrompt` — function — line 472
+- `alternateActionState` — function — line 483
+- `buildInteractionGazePrompt` — function — line 465
+- `buildInteractionView` — function — line 376
+- `hasInspectAction` — function — line 475
+- `interactableStableKey` — function — line 285
+- `interactionActionFromSkillPrompt` — function — line 488
 - `InteractionActionSlot` — type — line 6
   - domain: ui-input
 - `InteractionActionView` — type — line 12
@@ -34,15 +34,15 @@ Generated from exported TypeScript symbols.
 - `InteractionGazePrompt` — type — line 25
 - `InteractionView` — type — line 20
 - `InteractionViewContext` — type — line 29
-- `isInteractableActionable` — function — line 436
-- `primaryActionState` — function — line 463
-- `slotInputKey` — function — line 443
+- `isInteractableActionable` — function — line 452
+- `primaryActionState` — function — line 479
+- `slotInputKey` — function — line 459
 
 ## `interaction/resolveInteraction.ts`
 
 - `formatSettlementStorageLines` — function — line 58
 - `InteractionOutcome` — type — line 13
-- `resolveInteraction` — function — line 115
+- `resolveInteraction` — function — line 117
 
 ## `interaction/skillAimPick.ts`
 

@@ -231,6 +231,7 @@ Generated from TypeScript imports.
 - `settlement/npcPostDeath.ts`
 - `settlement/npcRelationships.ts`
 - `settlement/npcState.ts`
+- `settlement/pastureWater.ts`
 - `settlement/places.ts`
 - `settlement/professionStaffing.ts`
 - `settlement/props.ts`
@@ -633,6 +634,7 @@ Generated from TypeScript imports.
 - `ai/npcTradeAvailability.ts`
 - `app/actions/householdResourceTransferActions.test.ts`
 - `app/actions/householdResourceTransferActions.ts`
+- `app/actions/pastureTroughActions.test.ts`
 - `app/gameLoop.ts`
 - `app/worldBundle.ts`
 - `debug/householdHistory.ts`
@@ -663,6 +665,8 @@ Generated from TypeScript imports.
 - `settlement/householdResourceTransfer.ts`
 - `settlement/livestock.ts`
 - `settlement/npcIdentity.ts`
+- `settlement/pastureWater.test.ts`
+- `settlement/pastureWater.ts`
 - `settlement/rats.ts`
 - `settlement/settlementAgriculture.test.ts`
 - `settlement/settlementAgriculture.ts`
@@ -1337,6 +1341,28 @@ Generated from TypeScript imports.
 - `world/transportOffscreen.ts`
 - `world/transportTravelArrival.test.ts`
 - `world/transportTravelArrival.ts`
+
+## `settlement/pastureWater.test.ts`
+
+**Imports**
+
+- `settlement/household.ts`
+- `settlement/pastureWater.ts`
+
+## `settlement/pastureWater.ts`
+
+**Imports**
+
+- `settlement/household.ts`
+
+**Imported by**
+
+- `app/actions/pastureTroughActions.ts`
+- `app/interactables.ts`
+- `settlement/createSettlement.ts`
+- `settlement/pastureWater.test.ts`
+- `settlement/villagePasture.test.ts`
+- `settlement/villagePasture.ts`
 
 ## `settlement/pathDryness.ts`
 
@@ -2503,6 +2529,7 @@ Generated from TypeScript imports.
 
 - `math/segment.ts`
 - `settlement/families.ts`
+- `settlement/pastureWater.ts`
 - `settlement/settlementPalisade.ts`
 - `settlement/villagePasture.ts`
 - `settlement/villagePlan.ts`
@@ -2518,6 +2545,7 @@ Generated from TypeScript imports.
 - `player/PlayerController.ts`
 - `render/instancedProps.ts`
 - `settlement/families.ts`
+- `settlement/pastureWater.ts`
 - `settlement/pathDryness.ts`
 - `settlement/villagePlan.ts`
 - `terrain/chunkHeightmap.ts`

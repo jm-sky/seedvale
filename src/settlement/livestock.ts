@@ -639,8 +639,13 @@ export async function spawnLivestock(
   /** Death vocal at `collapse()` (S26). */
   onAnimalDeathSound?: (kind: AnimalKind, x: number, z: number) => void,
   /** Settlement pasture (plan settlements-009) — trough is a water target
-   *  for every household animal; roam is only for the shepherd house. */
-  pasture?: { x: number, z: number, radius: number, trough: { x: number, z: number } },
+   *  for every household animal; roam is only for the shepherd house.
+   *  `household` (plan settlements-npcs-046) is the trough's one canonical
+   *  owning household (`pastureWater.ts`'s `resolvePastureWaterHousehold`) —
+   *  every spawned animal's `pastureTroughHousehold` gets this same
+   *  reference regardless of its own owning `household`, so the shared
+   *  physical trough always draws from one reserve. */
+  pasture?: { x: number, z: number, radius: number, trough: { x: number, z: number }, household?: Household },
   /** Vendor paddock (plan settlements-013) — origin slots are livestock
    *  individuals; sold/dead slots stay empty. */
   paddock?: {
@@ -709,6 +714,7 @@ export async function spawnLivestock(
         onDeathSound: onAnimalDeathSound,
         household,
         pastureTrough: pasture?.trough,
+        pastureTroughHousehold: pasture?.household,
         pastureRoam: shepherdHouseIndex === i && pasture
           ? { x: pasture.x, z: pasture.z, radius: pasture.radius }
           : undefined,

@@ -998,6 +998,14 @@ export type AnimalAgentDeps = {
    */
   pastureTrough?: { x: number, z: number }
   /**
+   * Canonical owning household for `pastureTrough` (plan settlements-npcs-046,
+   * `pastureWater.ts`'s `resolvePastureWaterHousehold`) — every household's
+   * livestock drinking at the shared physical pasture trough draws from this
+   * one reserve, never this individual's own `household`. `undefined`/`null`
+   * for a settlement with no households (falls back to this animal's own).
+   */
+  pastureTroughHousehold?: Household | null
+  /**
    * Daytime roam/work area for shepherd-household livestock (plan
    * settlements-009). Does not replace `home` or ownership.
    */
@@ -1285,6 +1293,9 @@ export class AnimalAgent {
   private sourceCaveRouteIndex = 0
   /** Pasture trough world XZ (plan settlements-009) — household water only. */
   private readonly _pastureTrough?: { x: number, z: number }
+  /** Canonical pasture trough owning household (plan settlements-npcs-046) —
+   *  see `pastureTroughHousehold`'s doc on `AnimalAgentDeps`. */
+  private readonly _pastureTroughHousehold?: Household | null
   /** Daytime satellite roam for shepherd-owned livestock (plan settlements-009). */
   private readonly _pastureRoam?: { x: number, z: number, radius: number }
   private _training: HorseTrainingState | undefined
@@ -1657,6 +1668,7 @@ export class AnimalAgent {
       cave,
       variant = 'normal',
       pastureTrough,
+      pastureTroughHousehold,
       pastureRoam,
       training,
       paddockStay,
@@ -1674,6 +1686,7 @@ export class AnimalAgent {
     this.variant = variant
     this.effective = resolveAnimalVariantStats(variant)
     this._pastureTrough = pastureTrough
+    this._pastureTroughHousehold = pastureTroughHousehold
     this._pastureRoam = pastureRoam
     this._paddockTrough = paddockTrough
     this.applyPaddockStay(paddockStay)
@@ -4983,7 +4996,7 @@ export class AnimalAgent {
       naturalWaterKindAt: this.naturalWaterKindAt,
     }
     if (this._pastureTrough) {
-      ctx.householdWaterAnchors = [this._pastureTrough]
+      ctx.householdWaterAnchors = [{ ...this._pastureTrough, household: this._pastureTroughHousehold }]
     }
     if (this._paddockTrough) {
       ctx.householdWaterAnchors = [...(ctx.householdWaterAnchors ?? []), this._paddockTrough]
