@@ -104,7 +104,7 @@ Direct mappings:
 - ground food/item pickup, including berries/herbs → `interact`
 - `deposit` / `exchange` → `interact`
 - existing garden watering → new short semantic action `waterGarden` → `farmWater`; its completion calls the existing `foodSources.waterGarden(garden.id)`
-- existing sleep entry after `goSleep` reaches its destination → `layToIdle`; the existing sleep FSM remains authoritative.
+- existing sleep entry after `goSleep` reaches its destination → play `layToIdle` once; when it completes, hold the final frame with `settleAtEnd('layToIdle')` throughout the existing `sleep` phase, then ordinary animation sync resumes on wake. The existing sleep FSM remains authoritative.
 
 `PickUp_Table` is not extracted or wired in this plan.
 
