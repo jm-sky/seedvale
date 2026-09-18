@@ -5,7 +5,7 @@
 - `world-018` is implemented. Abandoned-mine gold is generated in `src/terrain/abandonedMineDeposits.ts` as ordinary `MineableDepositDefinition`s with stable deposit ids `${mineId}:gold:${slot}` and finite `initialReserve`; the definition currently carries **no economic-source identity**.
 - Mining flow changed after `settlements-npcs-021`: `src/ai/npcProfessionWork.ts::planOreGathering()` mines into `ResourceSiteInventories` keyed by deposit/resource id. It does **not** credit `SettlementEconomy` directly.
 - Ore becomes settlement-owned only after transport unload. The common conversion seam is `src/economy/oreTransportDemand.ts::creditDeliveredOreToStock()`, called by loaded Trader completion, `src/world/transportTravelArrival.ts`, and `src/world/transportOffscreen.ts`. Source attribution belongs here, after successful delivery, not at `ResourceDeposits.mine()` and not in the miner planner.
-- Current ore logistics only creates demand for iron/coal (`ORE_TRANSPORT_KINDS`). Gold can accumulate at a resource-site inventory indefinitely. This plan therefore still needs a gold-realization trigger; do not assume `settlements-npcs-037` already exports arbitrary commodities.
+- Current ore logistics only creates demand for iron/coal (`ORE_TRANSPORT_KINDS`). Gold can accumulate at a resource-site inventory indefinitely. `settlements-npcs-037` handles settlement→settlement movement and does not create resource-site gold demand. No other active plan owns this gap, so `settlements-004` must add the smallest reusable sourced-gold demand through the existing `TransportOrder` pipeline before realization.
 - `SettlementEconomySnapshot` currently persists `stock`, concrete `food`, and optional `productionShortages`; `EconomyRegistry` reconstructs directly from this snapshot and `SaveData.settlementEconomies` already owns the persistence path.
 - Pricing has changed since the plan was written: `tradeValue('gold')` is currently `20`; neutral `sellPrice('gold')` is derived from that and the sell factor. Do not copy the old planning value `10`.
 
@@ -21,6 +21,22 @@ The resource-site/transport chain must preserve this provenance until settlement
 - carry optional `economicSourceId` on the transport order/source endpoint when the order is created.
 
 Prefer the first if current lookup hooks can resolve landmark-owned deposit definitions off-screen; otherwise carry the explicit field on the order. Do not parse ids in `oreTransportDemand.ts`.
+
+## Resource-site gold delivery prerequisite
+
+The current pipeline needs one additional bounded demand path:
+
+```text
+sourced gold in ResourceSiteInventories
+→ existing carrier/order/cargo flow
+→ settlement-storage unload
+→ attributed SettlementEconomy stock
+→ realization
+```
+
+Do not blindly add `gold` to `ORE_TRANSPORT_KINDS`. Preserve iron/coal shortage-driven demand and add an explicit sourced-gold economic demand reason tied to a destination settlement. Reuse active-order commitment accounting, `TransportOrder`, `transportCargo`, and detailed/off-screen execution. Carry/resolve provenance explicitly; never parse `${mineId}:gold:${slot}`.
+
+Natural implementation area: `oreTransportDemand.ts` plus the existing Trader resource-site planning path. No new manager/cargo registry/colony courier loop.
 
 ## SettlementEconomy ownership
 
@@ -90,7 +106,7 @@ The quest/app layer grants coins first through the existing reward path, then co
 
 ## Realization trigger
 
-There is currently no generic settlement sale/export consumer for gold. Keep the trigger small and economy-owned; do not create a fake caravan or player-proximity dependency just for this plan.
+There is currently no generic settlement sale/export consumer for gold. Keep the trigger small and economy-owned; do not create a fake caravan or player-proximity dependency just for this plan. It starts only from attributed gold already present in `SettlementEconomy`, never directly from `ResourceSiteInventories`.
 
 A deterministic off-screen-capable policy may periodically realize only **attributed gold surplus**, but it should be a thin caller of `realizeAttributed()` and share the same path for loaded/unloaded settlements. If a generic commodity export mechanism lands before implementation, plug into that instead and delete the local policy idea.
 
@@ -118,15 +134,17 @@ Do not scan `ResourceSiteInventories` or `ResourceDeposits` to infer revenue. Re
 
 ## Suggested implementation order
 
-1. Add `EconomicSourceId` and propagate optional source identity from abandoned-mine deposit definitions through the resource-site transport delivery seam.
-2. Extend `SettlementEconomy` + snapshot with attributed stock and persistence, then switch `creditDeliveredOreToStock()` to the attributed mutation when provenance exists.
-3. Add realization + persistent idempotency and entitlement accrual.
-4. Add claim boundary.
-5. Add the smallest deterministic realization trigger only after the accounting core is covered by tests.
+1. Add `EconomicSourceId` + optional source identity at the canonical mineable-deposit boundary; assign one source id to all abandoned-mine slots.
+2. Extend existing resource-site transport demand/planning just enough for sourced gold to create a normal order to its settlement destination; preserve iron/coal shortage behavior.
+3. Extend `SettlementEconomy` + snapshot with attributed stock/persistence and credit only actually delivered sourced quantity.
+4. Add realization + persistent idempotency and entitlement accrual.
+5. Add the two-phase claim boundary.
+6. Add the smallest deterministic realization trigger after accounting tests pass.
 
 ## Main pitfalls
 
 - implementing against the old miner→economy direct-deposit flow;
+- adding gold unconditionally to blacksmith `ORE_TRANSPORT_KINDS` instead of an explicit sourced-gold economic demand reason;
 - parsing `mineId` back out of a deposit id;
 - losing provenance when ore sits in a resource-site inventory or moves off-screen;
 - attributing requested transport quantity instead of actually delivered quantity;

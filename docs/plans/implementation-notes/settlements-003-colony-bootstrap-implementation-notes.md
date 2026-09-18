@@ -4,6 +4,13 @@
 **Reviewed:** 2026-09-16  
 **Codebase:** `main`
 
+## Recon refresh — 2026-09-18
+
+- `createSettlement.ts` / `SettlementsManager` gained travelling visitor, vendor, pasture/water and voice integrations after the original review. Do not widen Stage 2 into a general constructor rewrite; extract only nonprocedural resident/materialization inputs.
+- `settlements-npcs-038` now materializes an existing `NpcId` at a foreign settlement through `TravellingVisitorSpawn` while reusing the same `NpcStateRegistry`. Reuse its identity and one-live-agent lessons, but not visitor semantics: founders permanently change residency and must execute ordinary destination profession/lifecycle behavior.
+- `settlements-npcs-044` explicitly prefers the founded/authored site + resident runtime seam from `settlements-003`. Keep that seam reusable for later nonprocedural sites; leave authored construction/activation/task assignment in `044`.
+- Current code still has no founded registry, residency override or `bootstrapFoundedSettlement()`; the core implementation remains outstanding.
+
 ## Review outcome
 
 Plan direction remains correct: a founded colony should become ordinary settlement-domain state, not a quest-owned runtime or `MiningColonyManager`.
@@ -43,7 +50,7 @@ Current construction is tightly coupled to `SettlementDef`:
 
 Therefore **do not create a synthetic `SettlementDef`/`VillagePlan` for the colony** and do not remap expedition NPC ids into new settlement-derived ids.
 
-The needed refactor is a narrow resident/runtime materialization seam below procedural worldgen, not a second settlement runtime.
+The needed refactor is a narrow resident/runtime materialization seam below procedural worldgen, not a second settlement runtime. Prefer explicit resident/home/work/social inputs over a broad all-purpose runtime spec. `TravellingVisitorSpawn` is only a reference for existing-identity materialization, not the permanent-residency model.
 
 ### NPC identity source
 
@@ -242,7 +249,7 @@ Goal: make ownership and persistence correct before touching the large settlemen
 
 Scope:
 
-- extract the smallest shared resident/runtime seam from `createSettlement()`;
+- extract the smallest shared procedural-independent resident/runtime seam from `createSettlement()`; do not generalize unrelated merchant/pasture/voice/visitor features;
 - procedural adapter remains behaviour-identical;
 - add resolver from sponsor `SettlementDef` + existing `NpcId` to resident descriptor;
 - support explicit existing NPC ids and explicit household ids/home anchors;

@@ -7,7 +7,7 @@
 **Depends on:** ~~world-019~~, ~~settlements-npcs-028~~
 **Domain:** `settlements`
 **Subdomains:** `population` `development` `economy`
-**Tags:** `colony` `camp` `founding` `persistence`
+**Tags:** `colony` `camp` `founding` `persistence` `authored-site`
 **Roadmap:** `quests-abandoned-gold-mine-colony.md`
 **Model:** Opus, Sonnet
 
@@ -40,6 +40,9 @@ Zweryfikowane kontrakty:
 - proceduralne `SettlementDef` nadal powstają z plan/cache/grid flow; nie istnieje persisted registry runtime-founded settlement definitions.
 - `createSettlement(...)` nadal jest mocno związane z `SettlementDef`: householdy powstają z `def.families` przez `householdIdFor(def.id, familyIndex)`, a NPC ids przez `settlementNpcId(def.id, flatMemberIndex)`.
 - `SettlementsManager` odkrywa/streamuje osady z proceduralnych grid cells; founded settlement bez grid cell wymaga osobnej manager-owned ścieżki load/unload.
+- `settlements-npcs-038` dodał manager-owned foreign-visitor materialization (`TravellingVisitorSpawn`) dla istniejącego `NpcId` poza home settlement. To potwierdza reuse identity + authoritative `NpcStateRegistry`, ale visitor zachowuje home identity i nie wykonuje destination profession work — nie jest substytutem permanent residency.
+- `settlements-npcs-044` jawnie oczekuje reuse founded/authored site record oraz shared nonprocedural resident/runtime seam z tego planu, jeśli `settlements-003` wyląduje pierwsze.
+- `createSettlement()` urósł o kolejne settlement-specific integracje. Stage 2 nie może stać się szerokim redesignem konstruktora: wydzielić tylko minimalny procedural-independent seam potrzebny do existing `NpcId`, household/home/work bindings i normalnego live `NpcAgent` lifecycle.
 
 Szczegółowy verified recon i implementacyjny podział są w:
 
@@ -190,9 +193,17 @@ FoundedSettlementRecord
 → existing-Npc resident descriptors
 ```
 
-Finalne nazwy typów dopasować do conventions kodu (`SettlementRuntimeSpec`, `SettlementResidentSpec` lub równoważne). Ekstrakcja ma objąć tylko pola rzeczywiście wspólne; proceduralny path po refactorze musi pozostać behavior-identical.
+Nie projektować z góry szerokiego `SettlementRuntimeSpec`. Najpierw wydzielić najmniejszy procedural-independent resident/materialization seam: existing `NpcId`, authoritative state, household/home/work/social anchors i zależności niezbędne do zwykłego `NpcAgent` lifecycle. Proceduralny path po refactorze musi pozostać behavior-identical.
+
+`TravellingVisitorSpawn` z `settlements-npcs-038` może być wzorcem dla reuse `NpcId` i one-live-agent invariant, ale founded resident nie jest visitor: po bootstrapie ma normalną residency/profession semantics nowej osady.
 
 Nie dodawać `if (isColony)` przez cały settlement runtime.
+
+## Cross-plan reuse boundary
+
+Ten plan jest pierwszym ownerem minimalnego founded/nonprocedural settlement foundation. `settlements-npcs-044` powinien później reuse'ować manager-owned nonprocedural site record pattern, world-space streaming path, existing-`NpcId` resident materialization seam oraz residency/home bindings.
+
+`settlements-003` nie implementuje authored-outpost construction targets, activation consequence ani worker assignment z `044`; wspólny jest fundament runtime/identity.
 
 ## Streaming
 
@@ -316,7 +327,7 @@ Może zostać w `quests-progression-010`:
 In scope:
 
 - founded settlement persistent registry/record;
-- founded settlement adapter do zwykłego `SettlementsManager` lifecycle;
+- founded settlement adapter do zwykłego `SettlementsManager` lifecycle, jako minimalny reusable nonprocedural-site foundation dla późniejszego `settlements-npcs-044`;
 - explicit residency override dla istniejących NPC;
 - shared resident materialization seam wymagany do reuse istniejących `NpcId`;
 - deterministic one-person founding households;
@@ -338,7 +349,8 @@ In scope:
 - permanent houses/upgrades;
 - population growth;
 - colony-specific mining/off-screen simulation;
-- procedural roads/signposts/cemetery generation dla colony.
+- procedural roads/signposts/cemetery generation dla colony;
+- authored-outpost construction/activation lifecycle (`settlements-npcs-044`).
 
 ## Verification
 
