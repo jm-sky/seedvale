@@ -99,6 +99,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `quests-progression-065-blacksmith-missing-tools.md`                        | 🟡 | M      | ~~settlements-npcs-002~~, ~~settlements-npcs-016~~, ~~settlements-npcs-017~~, ~~settlements-npcs-021~~, settlements-npcs-024, ~~quests-progression-015~~, ~~quests-progression-016~~, ~~quests-progression-055~~                                                                           | quests-professions-and-world-consequences |
 | ◼️ `settlements-npcs-048-merchant-pack-animal-assignment-and-journey-continuity.md` | 🟡 | L      | settlements-npcs-047, ~~settlements-npcs-038~~, ~~fauna-007~~, ~~fauna-020~~                                                                                                                                                                                                               | quests-travelling-merchant-journeys       |
 | ◼️ `settlements-npcs-049-merchant-wealth-tiers-and-travel-party-profile.md`    | 🔴 | L      | settlements-npcs-048, npc-053, ~~items-player-047~~, ~~npc-030~~                                                                                                                                                                                                                           | quests-travelling-merchant-journeys       |
+| ◼️ `fauna-039-animal-saddlebags-and-persistent-pack-inventory.md`              | 🔴 | M      | -                                                                                                                                                                                                                                                                                          | quests-travelling-merchant-journeys       |
 
 ---
 
@@ -215,7 +216,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 ## Next plan IDs
 
 - ai: `005`
-- fauna: `039`
+- fauna: `040`
 - items-player: `048`
 - npc: `054`
 - persistence: `006`
