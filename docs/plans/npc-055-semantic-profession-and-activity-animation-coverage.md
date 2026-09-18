@@ -160,12 +160,12 @@ Licensing is not the reason for the split: Quaternius marks the assets CC0. The 
 | chop tree | `chop` | `chopTree` | UAL2 `TreeChopping_Loop` | direct semantic match |
 | farmer harvest | `harvest` | `farmHarvest` | UAL2 `Farm_Harvest` | direct semantic match |
 | farmer plant | `plant` | `farmPlant` | UAL2 `Farm_PlantSeed` | direct semantic match |
-| farmer watering | future cultivation watering action | `farmWater` | UAL2 `Farm_Watering` | animation ready, but do not invent hydration gameplay in this plan |
-| carried-goods walking | existing `carried` / transport state while moving | `walkCarry` | UAL2 `Walk_Carry_Loop` | trader/logistics/hunter/shepherd transport; visual only |
-| table-height pickup | compatible existing pickup endpoints only | `pickupTable` | UAL1 `PickUp_Table` | do not use for ground pickup |
-| kneeling repair-like work | suitable existing repair/craft action | `fixKneeling` | UAL1 `Fixing_Kneeling` | fallback only where pose fits target height |
+| farmer watering | existing post-harvest dry-garden watering flow | `farmWater` | UAL2 `Farm_Watering` | represent existing `waterGarden` mutation as a short semantic action; completion performs the existing mutation |
+| bulky-cargo walking | existing carried/logistics state while moving with bulky cargo | `walkCarry` | UAL2 `Walk_Carry_Loop` | initial bulky kind is wood/beams; ordinary inventory does not trigger it; run/flee overrides carry walk |
+| table-height pickup | none in this plan | — | UAL1 `PickUp_Table` | do not extract/wire for npc-055; berries/herbs remain `Interact` |
+| generic kneeling work | generic `work` for herbalist/textile_worker/blacksmith/hunter | `fixKneeling` | UAL1 `Fixing_Kneeling` | exact role-based generic-work fallback |
 | guard sword combat | combat lifecycle | `attackMelee` / `combatIdle` | UAL1 sword clips | retain existing combat ownership |
-| chest interaction | future/current chest endpoint if action exists | `openChest` | UAL2 `Chest_Open` | no new chest gameplay |
+| chest interaction | no NPC chest action currently | — | UAL2 `Chest_Open` | include in companion asset now, but do not wire runtime until a real NPC container action exists |
 
 ### No dedicated confirmed Standard clip
 
@@ -175,13 +175,15 @@ Keep a bounded semantic fallback rather than pretending a mismatched clip is cor
 |---|---|---|---|
 | fisher | `fish` | `interact` | dedicated fishing clip after Source verification |
 | miner | `mine` | `interact` | dedicated pickaxe/mining clip if verified |
-| blacksmith | `sharpen` / generic profession work | `fixKneeling` only if spatially appropriate, else `interact` | smith/hammer/sharpen clip if verified |
+| blacksmith | `sharpen` | `interact` | smith/hammer/sharpen clip if verified |
+| blacksmith | generic `work` | `fixKneeling` | smith/hammer/crafting clip if verified |
 | shepherd | `shear` | `interact` | shearing clip if verified |
-| textile worker | production `work` | `interact` | weaving/spinning/sewing clip if verified |
-| herbalist | gathering/work | `interact` | ground gather/forage clip if verified |
-| hunter crafting | generic `work` for arrows/bows | `fixKneeling` when appropriate | bowcraft/crafting clip if verified |
+| textile worker | generic `work` | `fixKneeling` | weaving/spinning/sewing clip if verified |
+| herbalist | generic `work` | `fixKneeling` | ground gather/forage clip if verified |
+| hunter | generic crafting `work` | `fixKneeling` | bowcraft/crafting clip if verified |
 | drink | `drink` | `interact` | dedicated drink clip if verified |
-| ground pickup | logistics/food/item pickup | `interact` | dedicated ground-pickup clip if verified |
+| generic `work` — trader/miner/fisher/shepherd | `work` | `interact` | dedicated profession clips if verified |
+| ground pickup / berries / herbs | logistics/food/item pickup | `interact` | dedicated ground-pickup/forage clip if verified |
 | bury / corpse cleanup | existing action ids | `interact` | dig/bury/body-work clip if verified |
 
 ## Architecture
@@ -207,8 +209,10 @@ export type NpcAnimationIntent =
   | 'farmPlant'
   | 'farmWater'
   | 'walkCarry'
-  | 'pickupTable'
   | 'fixKneeling'
+  | 'sitIdle'
+  | 'sitTalk'
+  | 'layToIdle'
   | 'attackMelee'
   | 'attackRanged'
   | 'death'
@@ -255,7 +259,7 @@ Do not put profession decisions into `agentAnimationSet.ts`; that shared helper 
 
 Do not ship entire UAL1 + UAL2 libraries per character.
 
-Extend the existing asset-preparation pipeline so UBC NPC/player-compatible clips are extracted into a bounded shared companion GLB. Prefer one shared in-place animation asset, e.g.:
+Extend the existing asset-preparation pipeline so UBC NPC/player-compatible clips are extracted into a bounded shared companion GLB. Produce one shared in-place animation asset at exactly:
 
 `public/models/characters/ubc/ual_humanoid.glb`
 
@@ -268,7 +272,7 @@ The extraction source should be:
 
 Seedvale already moves agents from deterministic simulation/navigation code, so root motion must remain disabled for ordinary NPC locomotion and work loops.
 
-Update `companionAnimationUrl()` or replace it with a neutral humanoid companion resolver used by both player and UBC NPCs.
+Replace the player-named companion constant/API with one neutral UBC humanoid companion constant/resolver used by both player and UBC NPCs. `ual1_player.glb` must no longer be a runtime dependency after migration.
 
 Do not duplicate identical clip data into every outfit GLB.
 
@@ -278,23 +282,27 @@ Remove role dependence on the legacy Modular pool for adults.
 
 Extend `resolveNpcAppearance()` so every adult role resolves to an existing UBC-compatible outfit family. Reuse the current deterministic hair/beard/color variation system; do not create profession-specific model managers.
 
-Initial mapping should prefer existing wired families and may reuse them across professions:
+The role mapping is fixed for this plan:
 
-- farmer → Peasant
-- woodcutter → Peasant
-- trader → Wizard or other already-authored merchant-compatible UBC outfit
-- hunter → Ranger
-- guard → Knight
-- miner → Peasant / rugged existing UBC family
-- fisher → Peasant / Ranger according to visual fit
-- blacksmith → Peasant / Knight_Cloth if compatible
-- shepherd → Peasant
-- textile_worker → Peasant / Noble only if visually appropriate
-- herbalist → Ranger / Peasant
+| Role | UBC outfit family |
+|---|---|
+| farmer | Peasant |
+| woodcutter | Peasant |
+| guard | Knight |
+| trader | Wizard |
+| miner | Peasant |
+| fisher | Peasant |
+| hunter | Ranger |
+| blacksmith | Peasant |
+| shepherd | Peasant |
+| textile_worker | Peasant |
+| herbalist | Peasant |
 
-The implementing agent must use only outfit assets already present/generated by the current UBC pipeline unless this plan explicitly adds another existing Source outfit from the already-owned Quaternius Fantasy outfit source. Do not add a new paid dependency merely to make every profession visually unique.
+Peasant is the mandatory fallback family for professions without a dedicated approved outfit. This plan uses only four NPC UBC outfit families: Peasant, Wizard, Ranger and Knight. Do not introduce Noble or Knight_Cloth here.
 
-Female guard should stop falling back to Modular once a verified female UBC guard-compatible outfit is available in the current pipeline.
+Children always resolve to Peasant UBC regardless of role and keep the existing age-driven `member.scale`.
+
+Female guards resolve to Knight. If the current female Knight generation/output is broken, fix that asset pipeline/output as part of this plan; do not fall back to Modular or another outfit.
 
 ### 6. Children and temporary scaled-down UBC fallback
 
@@ -309,7 +317,7 @@ For this plan:
 
 The intended future direction is to purchase the Base Human Pack / appropriate Quaternius package containing dedicated Teen male/female models. Migration from scaled-down UBC stand-ins to real Teen bodies is a separate future asset/appearance plan and is not a dependency of this animation migration.
 
-Legacy Modular assets may be removed from runtime model pools once all current adult and child appearance paths use UBC-compatible meshes and no other runtime callers remain.
+After all adult and child appearance paths use UBC, remove the legacy Modular runtime mappings and physically delete the six legacy NPC GLBs (`Farmer.glb`, `Casual_Hoodie.glb`, `Casual_2.glb`, `Female_Casual.glb`, `Female_Medieval.glb`, `Female_Formal.glb`) in this plan. Before deletion, migrate/remove any debug or fixture references so repository references reach zero. Do not preserve these assets as fallback.
 
 ## Profession coverage requirements
 
@@ -323,8 +331,9 @@ Minimum visual expectations:
 - NPC eating uses `Consume`.
 - Active conversation uses talking animation.
 - Guard combat remains functional after UBC consolidation.
+- Sleep entry uses `LayToIdle`; the existing `goSleep`/`sleep` FSM remains authoritative and the final lay pose may be held with `settleAtEnd()` when appropriate.
 - Fisher/miner/shepherd/blacksmith/textile/herbalist never select a nonexistent clip; they fall back deterministically.
-- Future watering may use `Farm_Watering`, but this plan must not implement crop hydration or alter production.
+- Existing dry-garden watering must visibly use `Farm_Watering` through a short `waterGarden` semantic action whose completion calls the existing hydration mutation; do not add a new watering decision system.
 
 ## Integration points
 
@@ -379,8 +388,10 @@ Wire and test:
 4. `eat` → `Consume`
 5. `conversation` → `Idle_Talking_Loop`
 6. movement with relevant cargo → `Walk_Carry_Loop`
-7. appropriate repair/craft surfaces → `Fixing_Kneeling`
-8. retain deterministic `Interact` fallback for unsupported activities.
+7. generic `work` for herbalist/textile_worker/blacksmith/hunter → `Fixing_Kneeling`
+8. existing garden watering → short `waterGarden` action → `Farm_Watering`
+9. sleep entry → `LayToIdle`
+10. retain deterministic `Interact` fallback for unsupported activities.
 
 Animation duration must not become simulation duration. Existing action timers remain authoritative; loops may repeat until the action completes and one-shots may hold/return according to the existing animation lifecycle.
 
@@ -389,7 +400,7 @@ Animation duration must not become simulation duration. Existing action timers r
 1. Give every adult role a UBC appearance mapping.
 2. Reuse existing outfit/hair/beard/tint generation.
 3. Preserve deterministic appearance from `npcId`.
-4. Remove adult role branches that fall back to Modular.
+4. Remove every adult role branch that falls back to Modular, including female guard.
 5. Ensure streamed/rebuilt NPCs derive the same visual without persisted mesh state.
 
 ### Stage E — children on temporary UBC stand-ins and legacy cleanup
@@ -397,26 +408,36 @@ Animation duration must not become simulation duration. Existing action timers r
 1. Switch child appearance resolution from scaled-down legacy Modular meshes to scaled-down UBC-compatible meshes while preserving the existing `member.scale` age/family visual approximation.
 2. Do not introduce dedicated Teen assets in this plan; they are not currently owned.
 3. Keep the future Base Human Pack Teen migration explicitly out of scope and tracked as a separate asset/appearance improvement.
-4. Remove unused Modular preloads/assets only when runtime references reach zero.
+4. Migrate/remove remaining debug/test references, verify repository references reach zero, then physically delete the six legacy Modular NPC GLBs and their runtime pool/preload code in this stage.
 
-### Stage F — optional paid animation enrichment
+### Stage F — paid animation enrichment is out of scope
 
-This stage is explicitly non-blocking.
+Do not inspect, buy or wire Pro/Source clips in `npc-055`. Missing dedicated profession clips stay on the exact Standard fallbacks above. Candidate paid enhancements are tracked in `docs/plans/LOOSE-ENDS.md` for a separate future plan.
 
-If Pro/Source archives are available locally:
+## Locked implementation decisions
 
-1. inventory their exact clip names mechanically;
-2. diff against Standard;
-3. select only clips that fill actual Seedvale actions;
-4. likely candidates to investigate first: fishing, mining/pickaxe, smithing/hammering, shearing, textile work, ground gathering/pickup, drinking and digging/burying;
-5. update the semantic alias table and extraction manifest only after exact names are verified.
+These decisions are final for implementation and override any older wording elsewhere in this plan:
 
-No Source/Pro clip may be required for the free baseline.
+- Outfit mapping: farmer/woodcutter/miner/fisher/blacksmith/shepherd/textile_worker/herbalist → Peasant; trader → Wizard; hunter → Ranger; guard → Knight.
+- Only Peasant/Wizard/Ranger/Knight are allowed NPC UBC families in this plan.
+- Children → Peasant UBC + existing `member.scale`; female guard → Knight.
+- Generic `work`: herbalist/textile_worker/blacksmith/hunter → `Fixing_Kneeling`; trader/miner/fisher/shepherd → `Interact`.
+- Concrete `sharpen`, `mine`, `fish`, `shear`, drink, ground pickup/berries/herbs, bury/corpse cleanup → `Interact`.
+- `Walk_Carry_Loop` only for explicitly bulky cargo. Initial bulky kind: wood/beams. Ordinary carried inventory is not bulky. Run/flee → `Sprint_Loop` even while bulky cargo is present.
+- Standing conversation → `Idle_Talking_Loop`. Sitting clips are used only when the NPC already has a real seated state/seat anchor; this plan does not invent seats.
+- `PickUp_Table` is not extracted or wired.
+- `Chest_Open` is extracted into the companion but not wired until a real NPC chest/container action exists.
+- Existing dry-garden watering becomes a short semantic `waterGarden` action; completion calls the existing `foodSources.waterGarden(...)`; visual = `Farm_Watering`.
+- Existing sleep flow uses `LayToIdle` on entry; no new sleep FSM.
+- Shared companion path is exactly `public/models/characters/ubc/ual_humanoid.glb`; old `ual1_player.glb` ceases to be a runtime dependency.
+- Final npc-055 companion additions must include the approved runtime clips: `Idle_Loop`, `Walk_Loop`, `Jog_Fwd_Loop`, `Sprint_Loop`, `Interact`, `Fixing_Kneeling`, `Idle_Talking_Loop`, `Sitting_Enter`, `Sitting_Idle_Loop`, `Sitting_Talking_Loop`, `Sitting_Exit`, current required combat/hurt/death/player clips already present, `TreeChopping_Loop`, `Farm_Harvest`, `Farm_PlantSeed`, `Farm_Watering`, `Walk_Carry_Loop`, `Consume`, `LayToIdle`, `Chest_Open`. Do not add `PickUp_Table`, `Yes`, `Idle_No_Loop`, `Idle_FoldArms_Loop`, `Idle_Lantern_Loop` or `OverhandThrow` without another concrete runtime consumer.
+- Legacy Modular Men/Women are not retained as fallback. Migrate references and physically delete the six legacy NPC GLBs in this plan.
+- Pro/Source animation enrichment is future work only; npc-055 baseline is verified Standard UAL1+UAL2.
 
 ## Guardrails
 
 - Do not change profession scheduling, priorities, yields, resource ownership, action durations or success rules.
-- Do not implement crop hydration just because `Farm_Watering` exists.
+- Do not redesign crop hydration; only expose the already-existing NPC dry-garden watering mutation as a timed semantic action so `Farm_Watering` has a truthful lifecycle.
 - Do not add player-only or NPC-only duplicate activity systems.
 - Do not persist animation state.
 - Do not use root motion for NPC world movement.
