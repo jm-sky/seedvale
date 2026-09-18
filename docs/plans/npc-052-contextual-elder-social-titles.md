@@ -9,6 +9,7 @@
 **Subdomains:** `dialogue` `relationships`
 **Tags:** `elder` `names` `presentation`
 **Roadmap:** `npc-professions-households-and-age.md`
+**Model:** Composer, Sonnet
 
 ## Goal
 
