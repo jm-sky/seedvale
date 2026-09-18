@@ -55,6 +55,7 @@ Current semantic keywords used by the working catalog:
 | `general_female` | Fish Audio | `5e3be339f2df45e6a1a338bb2ce94800` | `Warm Conversational`; current generic female/villager selection. Previous candidate was `British female` (`82a3ef4504a6441e9a07acdaaf5349c1`). |
 | `campfire_female` | Fish Audio | `5e3be339f2df45e6a1a338bb2ce94800` | `Warm Conversational` was used for the current campfire female POC; keep this as provisional and revisit later. |
 | `campfire_male` | Fish Audio | `c2a3921fd7024b9189cb912bdfe5266a` | `Casual Male Speaker`; current campfire male POC voice. |
+| `shepard` | Fish Audio | `4af16ba03cee422996ec29a43e1947ee` | `hetalia Russia` | 
 
 Provider page used for the Fish Audio voices: `https://fish.audio/app/`.
 
