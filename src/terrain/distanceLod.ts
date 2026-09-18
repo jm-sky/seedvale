@@ -1,3 +1,8 @@
+/** Absolute far-distance floor shared by `densityLodFraction`'s clamp —
+ *  exported so callers (e.g. `vegetationRegionBatcher`'s per-kind policy)
+ *  can detect "already at floor" without duplicating the constant. */
+export const DENSITY_LOD_FLOOR = 0.08
+
 /** Distance LOD for instanced density (grass / vegetation / rocks).
  *  `dist` is Chebyshev chunk distance; `radius` is the visible ring
  *  (`grass.radius` or `loadRadius`). Near stays full; far drops aggressively
@@ -6,7 +11,7 @@
 export function densityLodFraction(dist: number, radius: number, lodScale: number): number {
   const t = dist / Math.max(1, radius)
   const unscaled = t <= 0.35 ? 1 : 1 - (t - 0.35) * 1.6
-  return Math.max(0.08, Math.min(1, unscaled * lodScale))
+  return Math.max(DENSITY_LOD_FLOOR, Math.min(1, unscaled * lodScale))
 }
 
 /** Short cheap filler blades — distance LOD for the ground-cover bucket that

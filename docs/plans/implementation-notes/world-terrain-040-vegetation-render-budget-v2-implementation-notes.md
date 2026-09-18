@@ -2,7 +2,25 @@
 
 ## Status
 
-Recon completed against current `main`. Stage 1 is now explicitly defined as a safe production optimization before diagnostics.
+Stage 1 implemented on `main` (2026-09-18). Recon below reflects the state before implementation; see "Stage 1 — as implemented" for what actually shipped.
+
+## Stage 1 — as implemented
+
+- `src/terrain/distanceLod.ts`: exported the far-distance clamp as `DENSITY_LOD_FLOOR = 0.08` (was an inline literal in `densityLodFraction`) so the per-kind policy can detect "already at floor" without duplicating the constant.
+- `src/terrain/vegetationRegionBatcher.ts` (owns `VegetationKind`, per plan 1D):
+  - Added `VegetationLodClass` (`silhouette` | `medium` | `detail` | `groundDetail`) and the `KIND_LOD_CLASS` mapping exactly as specified in the plan.
+  - Added `CLASS_MID_MULTIPLIER`: `silhouette`/`medium` = `1` (unchanged), `detail` = `0.58`, `groundDetail` = `0.4` — chosen so High/`loadRadius=3`/dist=2 lands at `detail ≈ 0.286` and `groundDetail ≈ 0.197`, inside the plan's target bands.
+  - Added `export function vegetationLodFraction(kind, dist, radius, lodScale)`. Band logic: `t = dist / max(1, radius)`; if `t <= 0.35` (near) or `base <= DENSITY_LOD_FLOOR` (far, already floored) return `base` unchanged; otherwise return `Math.max(DENSITY_LOD_FLOOR, base * classMultiplier)`. `base` itself is `densityLodFraction(dist, radius, lodScale)` — no independent curve.
+  - Deliberately does **not** classify near field by `base === 1`: under `lodScale < 1` (Low/Medium presets) the near-field base is already `< 1` (e.g. `0.5` on Low), so near/far banding uses `t`/the floor constant directly rather than reverse-engineering it from the scaled value — this is the ambiguity the plan warned about.
+  - `syncLod`'s contract changed from `(chunkCoord, fraction: number)` to `(chunkCoord, dist: number, radius: number, lodScale: number)`. It now resolves `vegetationLodFraction(kind, dist, radius, lodScale)` per kind inside the existing per-kind loop and stores it in the existing per-(region,kind) `chunkFractions` map — no new storage shape, `maxFraction()`/nearest-member-wins untouched.
+- `src/terrain/chunkManager.ts`: `syncInstancedLodForRecord` now calls `vegetationRegionBatcher.syncLod(record.coord, dist, config.loadRadius, lodScale)` directly instead of pre-computing one shared `frac` via a local `vegetationLodForDistance()` helper (removed — it became dead code once per-kind resolution moved into the batcher). Grass keeps its own independent curve (`grassLodForDistance`), untouched.
+- Reflection visibility (`syncReflectionVisibility`, `anyReflectionVisible`, `REFLECTION_DISTANT_LAYER` layer assignment) was not touched. While adding tests, found and recorded (not fixed, out of scope) a pre-existing bug in `anyReflectionVisible()` in `docs/plans/LOOSE-ENDS.md` — it always falls through to `return true` regardless of per-chunk visibility flags.
+- Tests: `src/terrain/vegetationRegionBatcher.test.ts` — updated the two production call sites using the old `syncLod(coord, fraction)` signature, and added a `vegetationLodFraction` describe block plus batcher-level tests (per-kind mid-distance divergence, rebuild-preserves-effective-LOD, reflection/LOD independence). Covers every item in the Stage 1 test list below.
+- Verification run: `pnpm run type-check`, `pnpm run lint` (auto-fixed import ordering only), `pnpm test` (full suite, 7453 tests), `pnpm run build` — all clean. No browser verification performed (user does this manually).
+
+## Recon (pre-implementation state)
+
+Recon completed against current `main` before implementation. Stage 1 is a safe production optimization before diagnostics.
 
 ## Current architecture / confirmed facts
 
