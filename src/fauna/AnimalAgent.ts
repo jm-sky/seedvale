@@ -107,10 +107,6 @@ import {
   type AnimalRole,
 } from './animalDefs'
 import {
-  calmWanderWalkBaseline,
-  resolveAutonomousWalkSpeed,
-} from './animalWalkSpeed'
-import {
   applySourceRelief,
   canAcceptHandFeed,
   dietItemReliefScale,
@@ -210,6 +206,10 @@ import {
   resolveAnimalVariantStats,
   variantTintHex,
 } from './animalVariants'
+import {
+  calmWanderWalkBaseline,
+  resolveAutonomousWalkSpeed,
+} from './animalWalkSpeed'
 import {
   DOG_BARK_COOLDOWN_SEC,
   DOG_BARK_HOWL_RADIUS,

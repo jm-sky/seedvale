@@ -110,6 +110,7 @@ export function cloudCategoryWeightsFor(weather: WeatherState, season?: Season):
 type CloudVisualProfile = {
   coverage: number
   tint: number
+  opacity: number
 }
 
 /** `weather.intensity` is always 0 for `clear` (`weather.ts`), so
@@ -120,12 +121,12 @@ type CloudVisualProfile = {
  *  at the baseline too — `groundFog.ts`'s local layer carries fog weather's
  *  visual identity instead. */
 const CLOUD_VISUAL_PROFILES: Record<WeatherType, CloudVisualProfile> = {
-  clear: { coverage: 0.15, tint: 0xffffff },
-  cloudy: { coverage: 0.85, tint: 0xe8ecf1 },
-  rain: { coverage: 0.95, tint: 0x5b6673 },
-  storm: { coverage: 1, tint: 0x3a4450 },
-  snow: { coverage: 0.75, tint: 0xf4f7fa },
-  fog: { coverage: 0.15, tint: 0xffffff },
+  clear:  { coverage: 0.15, tint: 0xffffff, opacity: 0.8 },
+  cloudy: { coverage: 0.85, tint: 0xf1f3f5, opacity: 0.8 },
+  rain:   { coverage: 0.95, tint: 0xb8c0c8, opacity: 0.8 },
+  storm:  { coverage: 1.00, tint: 0x9ca6b2, opacity: 0.8 },
+  snow:   { coverage: 0.75, tint: 0xf7f9fb, opacity: 0.8 },
+  fog:    { coverage: 0.15, tint: 0xf5f6f7, opacity: 0.8 },
 }
 
 /** After the intensity lerp, `storm`/`rain` must not drop back toward the
@@ -143,6 +144,7 @@ const COVERAGE_FLOOR: Record<WeatherType, number> = {
 export type CloudAppearance = {
   coverage: number
   tint: number
+  opacity: number
 }
 
 /** Ambient "light" clouds are multiplied by across the day/night cycle —
@@ -190,7 +192,11 @@ export function cloudAppearanceFor(weather: WeatherState, elev: number): CloudAp
   tmpTargetColor.setHex(profile.tint)
   tmpBaseColor.lerp(tmpTargetColor, t)
   tmpBaseColor.multiply(cloudLightFromElev(elev))
-  return { coverage, tint: tmpBaseColor.getHex() }
+  return {
+    coverage,
+    tint: tmpBaseColor.getHex(),
+    opacity: profile.opacity,
+  }
 }
 
 type CloudSprite = {
@@ -326,7 +332,10 @@ export function createClouds(): CloudSystem {
       cs.sprite.visible = cs.visibilityThreshold < appearance.coverage
     }
     for (const categoryMaterials of [materials.light, materials.dense]) {
-      for (const material of categoryMaterials) material.color.setHex(appearance.tint)
+      for (const material of categoryMaterials) {
+        material.color.setHex(appearance.tint)
+        material.opacity = appearance.opacity
+      }
     }
   }
 
