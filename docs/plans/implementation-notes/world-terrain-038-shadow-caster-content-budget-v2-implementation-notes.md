@@ -422,3 +422,44 @@ Retagged create sites:
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
 
+## Implementation log — 2026-09-18 (household well + garden plant no-shadow + wood overflow max 2)
+
+Evidence from `docs/performance/results/2026-09-18--027--benchmark-settlement-heavy.md`:
+
+- `landmarkWellHousehold` 100 / 37.4k (20× `well.glb` × 5 meshes)
+- `landmarkWellCentral` 30 / 11.2k, `landmarkWellPasture` 25 / 9.3k — left casting
+- `landmarkGarden` 78 / 456k (~13× `crops.glb` bed × 6 meshes; plants ≈ 97% tris)
+
+### Recon (static; no new diagnostics)
+
+`well.glb`: Stone_Dark 608, Wood 530, Stone_Light 448, Bag 144, RoofTiles_Red 140 ≈ 1870 tris; all `castShadow=true` after `loadGltf` (authored diagonal ≫ 0.5). Partial Bag-only cut ≈ −20 draws — weak ROI vs whole-prop household cut.
+
+`crops.glb` per bed: Dirt 800 · Lettuce 9.7k · Red 1.6k · Green 15.6k · Orange 2.1k · Watermelon_DarkGreen 5.2k ≈ 35k. Template fitted once then `layoutCropsGarden` clones.
+
+### Production changes (three)
+
+1. **Household well no-shadow** — after `tagSettlementShadowKind(..., 'landmarkWellHousehold')`, `disableCastShadow(hw)`. Central/pasture unchanged. Main-pass, colliders, drink queues untouched.
+2. **Garden plant no-shadow** — `disableGardenPlantCastShadow` on fitted `crops.glb` template (all meshes except material `Dirt`). Procedural `createGarden` crop cones `castShadow=false`. Dirt / bed grounding caster kept. Cultivation anchors / interactions unchanged.
+3. **`WOOD_PILE_MAX_EXTRA` 3 → 2** — trim `WOOD_PILE_EXTRA_OFFSETS` to two slots. Progressive primary pile, quantity bands, ownership, storage semantics unchanged. Tests updated.
+
+### Not changed
+
+- `shadowBudget.ts`, NPC/fauna shadow distances, house statics, benchmark infrastructure, central/pasture wells.
+
+### Gate
+
+- User re-runs `?benchmark=settlement-heavy`.
+- Expect `landmarkWellHousehold` ≈ 0 in Settlement shadow casters.
+- Expect `landmarkGarden` ≈ Dirt-only (much lower tris; fewer draws).
+- Expect at most 2 overflow wood piles when stock is high.
+
+### Automated checks (this stage)
+
+- `storageVisuals` unit tests: pass (earlier in session).
+- `pnpm type-check`: pass.
+- `pnpm lint`: pass.
+- Full `pnpm test` / `pnpm build`: deferred to user.
+- No browser verification; no `pnpm docs:sync`.
+
+> **Zrób git commit i push do main, rebase jeżeli trzeba**
+
