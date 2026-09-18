@@ -8,7 +8,7 @@ import type { VillageLandmarkPlan, VillagePlan, VillagePlaza } from './villagePl
 import { buildConstructionCatalog } from '../assets/constructionCatalog'
 import { pickHouseDefinition } from '../assets/houseDefinitionExample'
 import { disposeObject3D, loadGltf, prepareProp, preparePropFitMax } from '../assets/loadGltf'
-import { isDebugMode } from '../debug/debugMode'
+import { DEBUG_HOUSE_LAMP_POSITION, isDebugMode } from '../debug/debugMode'
 import { distanceToSegment } from '../math/segment'
 import { buildInstancedProps, type PropPlacement } from '../render/instancedProps'
 import { pastureWellQueueId, settlementWellQueueId } from '../simulation'
@@ -1385,7 +1385,7 @@ export async function buildSettlementProps(
     hut.add(houseLight.object)
     houseLights.push(houseLight)
 
-    if (isDebugMode()) {
+    if (isDebugMode() && DEBUG_HOUSE_LAMP_POSITION) {
       console.info('[house:lamp]', {
         id: houseId,
         style: lampStyle,

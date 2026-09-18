@@ -206,6 +206,7 @@ export function advanceSocialPairing(
       partnerEntry.participant.gender,
       rng,
     )
+
     const questionCue: ConversationVoiceCue | undefined = talk
       ? { url: talk.questionUrl, delaySec: 0 }
       : undefined

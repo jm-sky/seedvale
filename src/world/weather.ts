@@ -310,7 +310,7 @@ export function tickClimate(state: ClimateState, seed: number, elapsedDays: numb
     if (forcedChanged || state.weather.type !== state.forced) {
       state.weather = {
         type: state.forced,
-        intensity: state.forced === 'clear' ? 0 : 0.7,
+        intensity: state.forced === 'clear' ? 0 : 0.8,
         temperature: temperatureFor(state.season, state.forced),
         startedAt: elapsedDays,
         endsAt: elapsedDays + WEATHER_CYCLE_DAYS,

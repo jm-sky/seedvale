@@ -45,6 +45,9 @@ const COLD_TEMPERATURE_THRESHOLD_C = -2
  *  threshold above. */
 const COLD_PRESSURE_FLOOR = 0.45
 
+const STORM_INTENSITY_THRESHOLD = 0.4
+const STORM_PRESSURE_MULT = 1.0
+
 /** Severe enough to interrupt a schedule-driven action already in flight via
  *  the existing critical-interrupt path (`NpcAgent.tickCriticalInterrupt`) —
  *  meaningfully above the highest value ordinary rain/cold-floor pressure
@@ -62,11 +65,25 @@ export const WEATHER_SEVERE_SHELTER_THRESHOLD = 0.65
  * as `Needs.ts`'s pressure scores, so it can compete directly against them.
  */
 export function weatherShelterPressure(weather: WeatherState): number {
-  const isSnow = weather.type === 'snow'
-  if (!isRainWeather(weather.type) && !isSnow) return 0
-  const threshold = isSnow ? SNOW_INTENSITY_THRESHOLD : RAIN_INTENSITY_THRESHOLD
-  const mult = isSnow ? SNOW_PRESSURE_MULT : RAIN_PRESSURE_MULT
-  let pressure = weather.intensity > threshold ? weather.intensity * mult : 0
-  if (weather.temperature <= COLD_TEMPERATURE_THRESHOLD_C) pressure = Math.max(pressure, COLD_PRESSURE_FLOOR)
+  const profile =
+    weather.type === 'storm'
+      ? { threshold: STORM_INTENSITY_THRESHOLD, mult: STORM_PRESSURE_MULT }
+      : weather.type === 'snow'
+        ? { threshold: SNOW_INTENSITY_THRESHOLD, mult: SNOW_PRESSURE_MULT }
+        : isRainWeather(weather.type)
+          ? { threshold: RAIN_INTENSITY_THRESHOLD, mult: RAIN_PRESSURE_MULT }
+          : null
+
+  if (!profile) return 0
+
+  let pressure =
+    weather.intensity > profile.threshold
+      ? weather.intensity * profile.mult
+      : 0
+
+  if (weather.temperature <= COLD_TEMPERATURE_THRESHOLD_C) {
+    pressure = Math.max(pressure, COLD_PRESSURE_FLOOR)
+  }
+
   return Math.min(1, pressure)
 }

@@ -34,12 +34,10 @@ export const NPC_UBC_HAIR_2_URL = `${UBC_DIR}/hair_2.webp`
 export const NPC_MODEL_URLS: Record<NpcGender, readonly string[]> = {
   male: [
     '/models/characters/Farmer.glb',
-    '/models/characters/Worker.glb',
     '/models/characters/Casual_Hoodie.glb',
     '/models/characters/Casual_2.glb',
   ],
   female: [
-    '/models/characters/Female_Worker.glb',
     '/models/characters/Female_Casual.glb',
     '/models/characters/Female_Medieval.glb',
     '/models/characters/Female_Formal.glb',

@@ -1,5 +1,7 @@
 /** Lightweight debug switches — URL-driven, no world-config rebuild. */
 
+export const DEBUG_HOUSE_LAMP_POSITION = false
+
 function urlFlag(name: string): boolean {
   if (typeof window === 'undefined') return false
   try {
