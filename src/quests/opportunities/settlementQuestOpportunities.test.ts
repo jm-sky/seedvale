@@ -4,10 +4,13 @@ import type { OpportunityNpc } from './worldQuestOpportunityTypes'
 import { generateFamilies } from '../../settlement/families'
 import { resolveInitialProfessionStaffing } from '../../settlement/professionStaffing'
 import {
+  collectInjuredCowOpportunities,
   collectLostLivestockOpportunities,
   collectSettlementQuestOpportunities,
   collectWolfDenPressureOpportunities,
+  injuredCowQuestId,
   lostLivestockQuestId,
+  parseInjuredCowQuestId,
   parseLostLivestockQuestId,
   parseWolfDenPressureQuestId,
   wolfDenPressureQuestId,
@@ -217,6 +220,103 @@ describe('lost livestock opportunity (fauna-024 / plan 031)', () => {
     expect(
       restored.find((def) => def.id === lostLivestockQuestId('home', 'sheep-house0-1')),
     ).toEqual(lostDefs.find((def) => def.id === lostLivestockQuestId('home', 'sheep-house0-1')))
+  })
+})
+
+describe('injured cow opportunity (plan quests-progression-057)', () => {
+  function householdCow(
+    animalId: string,
+    overrides: Partial<{
+      houseId: string
+      dead: boolean
+      owned: boolean
+      physicalInjury: number
+      maxHp: number
+    }> = {},
+  ) {
+    const houseId = overrides.houseId ?? 'home:home:0'
+    return {
+      animalId,
+      kind: 'cow' as const,
+      settlementId: 'home',
+      houseId,
+      dead: overrides.dead ?? false,
+      mounted: false,
+      owner: overrides.owned === false ? null : { kind: 'household' as const, houseId },
+      stray: undefined,
+      physicalInjury: overrides.physicalInjury,
+      maxHp: overrides.maxHp ?? 100,
+    }
+  }
+
+  it('selects a real, alive, household-owned, meaningfully injured cow', () => {
+    const livestock = [householdCow('cow-house0-0', { physicalInjury: 40, maxHp: 100 })]
+    const [opportunity] = collectInjuredCowOpportunities('home', livestock)
+    expect(opportunity?.animalId).toBe('cow-house0-0')
+    expect(opportunity?.id).toBe(injuredCowQuestId('home', 'cow-house0-0'))
+    expect(parseInjuredCowQuestId(opportunity!.id)).toEqual({ settlementId: 'home', animalId: 'cow-house0-0' })
+  })
+
+  it('excludes a healthy cow', () => {
+    expect(collectInjuredCowOpportunities('home', [householdCow('cow-house0-0', { physicalInjury: 0 })])).toEqual([])
+    expect(collectInjuredCowOpportunities('home', [householdCow('cow-house0-0')])).toEqual([])
+  })
+
+  it('excludes a dead cow', () => {
+    expect(collectInjuredCowOpportunities('home', [
+      householdCow('cow-house0-0', { physicalInjury: 40, dead: true }),
+    ])).toEqual([])
+  })
+
+  it('excludes a wild/non-household cow', () => {
+    expect(collectInjuredCowOpportunities('home', [
+      householdCow('cow-house0-0', { physicalInjury: 40, owned: false }),
+    ])).toEqual([])
+  })
+
+  it('excludes a non-cow, even if injured and household-owned', () => {
+    const sheep = { ...householdCow('sheep-house0-0', { physicalInjury: 40 }), kind: 'sheep' as const }
+    expect(collectInjuredCowOpportunities('home', [sheep])).toEqual([])
+  })
+
+  it('materializes a branch stage with a treat/kill objective pair and both terminal outcomes', () => {
+    const livestock = [householdCow('cow-house0-0', { physicalInjury: 40, maxHp: 100 })]
+    const [opportunity] = collectInjuredCowOpportunities('home', livestock)
+    const def = materializeSettlementQuestOpportunity(opportunity!, [anna, hunter], 'Dolina')
+    expect(def?.giver.npcId).toBe(anna.id)
+    expect(def?.settlementId).toBe('home')
+    const branch = def?.stages[0]
+    expect(branch?.mode).toBe('any')
+    expect(branch?.objectives?.map((slot) => slot.objective)).toEqual([
+      { type: 'treat_animal', animalId: 'cow-house0-0' },
+      { type: 'kill_bound_animal', animalId: 'cow-house0-0' },
+    ])
+    expect(def?.outcomes.map((outcome) => outcome.id).sort()).toEqual(['cow_slaughtered', 'cow_treated'])
+    const again = materializeSettlementQuestOpportunity(opportunity!, [anna, hunter], 'Dolina')
+    expect(again).toEqual(def)
+  })
+
+  it('reconstructs the same definition from a persisted id after the cow heals or dies', () => {
+    const persistedId = injuredCowQuestId('home', 'cow-house0-0')
+    const withInjury = buildWorldDrivenSettlementQuests({
+      settlementId: 'home',
+      settlementName: 'Dolina',
+      spawners: [],
+      npcs: [anna, hunter],
+      livestock: [householdCow('cow-house0-0', { physicalInjury: 40, maxHp: 100 })],
+    })
+    const afterHealed = buildWorldDrivenSettlementQuests({
+      settlementId: 'home',
+      settlementName: 'Dolina',
+      spawners: [],
+      npcs: [anna, hunter],
+      livestock: [householdCow('cow-house0-0', { physicalInjury: 0, maxHp: 100 })],
+      persistedQuestIds: [persistedId],
+    })
+    expect(withInjury.find((def) => def.id === persistedId)).toBeDefined()
+    expect(afterHealed.find((def) => def.id === persistedId)).toEqual(
+      withInjury.find((def) => def.id === persistedId),
+    )
   })
 })
 

@@ -139,72 +139,72 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `L` · **Score:**  56  
    → **unlocks:** 1/1
 
-17. `quests-progression-057` — **Injured cow Medicine alternative**  
+17. `quests-progression-063` — **Healer — Injured Resident**  
   🟡 `M` · **Score:**  49  
    → **unlocks:** 1/1
 
-18. `quests-progression-063` — **Healer — Injured Resident**  
-  🟡 `M` · **Score:**  49  
-   → **unlocks:** 1/1
-
-19. `settlements-004` — **Gold Economic Realization & Source Entitlements**  
+18. `settlements-004` — **Gold Economic Realization & Source Entitlements**  
   🔴 `M` · **Score:**  49  
    → **unlocks:** 1/1
 
-20. `quests-progression-010` — **Abandoned gold mine → mining colony integration**  
+19. `quests-progression-010` — **Abandoned gold mine → mining colony integration**  
   🔴 `M` · **Score:**  61  
    → **unlocks:** 0/0
 
-21. `quests-progression-060` — **Builder — Finish the Local Well**  
+20. `quests-progression-060` — **Builder — Finish the Local Well**  
   🔴 `M` · **Score:**  47  
    → **unlocks:** 0/0
 
-22. `quests-progression-054` — **Hunters Brotherhood — exceptional animal finale**  
+21. `quests-progression-054` — **Hunters Brotherhood — exceptional animal finale**  
   🟡 `L` · **Score:**  44  
    → **unlocks:** 0/0
 
-23. `settlements-npcs-044` — **Authored Outpost Occupants & Construction Lifecycle**  
+22. `settlements-npcs-044` — **Authored Outpost Occupants & Construction Lifecycle**  
   🔴 `L` · **Score:**  40  
    → **unlocks:** 1/1
 
-24. `quests-progression-058` — **Injured dog discovery thread**  
+23. `quests-progression-058` — **Injured dog discovery thread**  
   🟡 `M` · **Score:**  37  
    → **unlocks:** 0/0
 
-25. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
+24. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
   🔴 `M` · **Score:**  35  
    → **unlocks:** 0/0
 
-26. `npc-055` — **Semantic profession and activity animation coverage**  
+25. `npc-055` — **Semantic profession and activity animation coverage**  
   🔴 `L` · **Score:**  32  
    → **unlocks:** 0/0
 
-27. `npc-054` — **NPC desired gifts, gift acceptance and relationship rewards**  
+26. `npc-054` — **NPC desired gifts, gift acceptance and relationship rewards**  
   🔴 `L` · **Score:**  30  
    → **unlocks:** 0/0
 
-28. `items-player-014` — **Rope-pullable resource transport**  
+27. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-29. `tools-005` — **Seedvale Character Preparation Panel**  
+28. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-30. `world-terrain-039` — **N8AO / post-process cost budget**  
+29. `world-terrain-039` — **N8AO / post-process cost budget**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-31. `items-player-044` — **Shoulder and forearm equipment slots**  
+30. `items-player-044` — **Shoulder and forearm equipment slots**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-32. `world-terrain-041` — **Agent presentation render LOD**  
+31. `world-terrain-041` — **Agent presentation render LOD**  
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-33. `items-player-032` — **NPC player-storage resource and context rules**  
+32. `items-player-032` — **NPC player-storage resource and context rules**  
   🟡 `L` · **Score:**  20  
+   → **unlocks:** 0/0
+
+33. `npc-057` — **NPC destination threat assessment**  
+  🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
 34. `quests-progression-061` — **Builder — Complete an Unfinished Palisade Segment**  
@@ -253,9 +253,6 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
 - [`quests-progression-054-hunters-brotherhood-exceptional-animal-finale.md`](quests-progression-054-hunters-brotherhood-exceptional-animal-finale.md)  
   is blocked by:
   - [`quests-progression-053-hunters-brotherhood-competing-hunting-strategies.md`](quests-progression-053-hunters-brotherhood-competing-hunting-strategies.md)
-- [`quests-progression-058-injured-dog-discovery-thread.md`](quests-progression-058-injured-dog-discovery-thread.md)  
-  is blocked by:
-  - [`quests-progression-057-injured-cow-medicine-alternative.md`](quests-progression-057-injured-cow-medicine-alternative.md)
 - [`quests-progression-060-builder-finish-local-well.md`](quests-progression-060-builder-finish-local-well.md)  
   is blocked by:
   - [`settlements-npcs-043-settlement-cultivation-hydration-rain-and-farmer-watering.md`](settlements-npcs-043-settlement-cultivation-hydration-rain-and-farmer-watering.md)
@@ -441,6 +438,7 @@ graph TD
   npc_054["npc-054 — NPC desired gifts, gift acceptance and relationship rewards"]
   npc_055["npc-055 — Semantic profession and activity animation coverage"]
   npc_056["npc-056 — NPC voice full migration and legacy cleanup"]
+  npc_057["npc-057 — NPC destination threat assessment"]
   persistence_001["persistence-001 — Full Simulation Persistence"]
   persistence_002["persistence-002 — save integrity guard"]
   persistence_003["persistence-003 — save schema versioning and future migrations"]

@@ -336,29 +336,29 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/livestock.ts`
 
-- `createLivestockRegistry` — function — line 327
-- `disposeLivestock` — function — line 928
+- `createLivestockRegistry` — function — line 329
+- `disposeLivestock` — function — line 930
 - `fillShepherdFlockKinds` — function — line 48
 - `isPlayerOwnedLivestockRecord` — function — line 105
 - `LIVESTOCK_KINDS` — const — line 81
 - `LIVESTOCK_URLS` — const — line 65
-- `LivestockPersistence` — type — line 155
+- `LivestockPersistence` — type — line 157
 - `livestockRecordMatchesHouseholdSlot` — function — line 122
-- `LivestockRegistry` — type — line 177
+- `LivestockRegistry` — type — line 179
 - `LivestockSaveRecord` — type — line 95
 - `livestockStrayCandidateFromAgent` — function — line 135
-- `PersistentLivestockContext` — type — line 838
-- `resolveLivePersistentAnimal` — function — line 846
-- `restoreDetachedPlayerOwnedLivestock` — function — line 910
-- `setOwnedAnimalControl` — function — line 898
+- `PersistentLivestockContext` — type — line 840
+- `resolveLivePersistentAnimal` — function — line 848
+- `restoreDetachedPlayerOwnedLivestock` — function — line 912
+- `setOwnedAnimalControl` — function — line 900
 - `shouldSpawnDeterministicLivestockSlot` — function — line 114
   - domain: fauna
   - role: Household rolls and merchant-horse slots skip tombstones and player-owned records restored on the detached path (fauna-020 / fauna-030).
-- `spawnAnimalFromRecord` — function — line 222
-- `SpawnAnimalFromRecordDeps` — type — line 210
-- `spawnLivestock` — function — line 603
-- `tickSettlementLivestock` — function — line 945
-- `transferAnimalOwnership` — function — line 873
+- `spawnAnimalFromRecord` — function — line 224
+- `SpawnAnimalFromRecordDeps` — type — line 212
+- `spawnLivestock` — function — line 605
+- `tickSettlementLivestock` — function — line 947
+- `transferAnimalOwnership` — function — line 875
 
 ## `settlement/lodging.ts`
 

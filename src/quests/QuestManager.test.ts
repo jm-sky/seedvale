@@ -2796,6 +2796,207 @@ describe('QuestManager per-source lost livestock defs (plan 031)', () => {
   })
 })
 
+describe('QuestManager injured-cow Medicine alternative (plan quests-progression-057)', () => {
+  const INJURED_COW_ID = 'cow-house0-0'
+  const injuredCowQuest = quest({
+    id: 'world:injured-cow:home:cow-house0-0',
+    giverName: 'Anna',
+    offerLine: 'offer cow',
+    settlementId: 'home',
+    stages: [
+      {
+        objective: { type: 'treat_animal', animalId: INJURED_COW_ID },
+        objectives: [
+          { id: 'heal', objective: { type: 'treat_animal', animalId: INJURED_COW_ID }, resultId: 'cow_treated' },
+          { id: 'slaughter', objective: { type: 'kill_bound_animal', animalId: INJURED_COW_ID }, resultId: 'cow_died' },
+        ],
+        mode: 'any',
+        transitions: [
+          { resultId: 'cow_treated', toOutcomeId: 'cow_treated' },
+          { resultId: 'cow_died', toStageId: 'deliver-meat' },
+        ],
+        description: 'branch',
+        reminderLine: 'remind branch',
+      },
+      {
+        id: 'deliver-meat',
+        objective: { type: 'gather_item', kind: 'beef', count: 1 },
+        transitions: [{ toOutcomeId: 'cow_slaughtered' }],
+        description: 'deliver meat',
+        reminderLine: 'remind meat',
+        playerLine: 'here is the meat',
+      },
+    ],
+    reportLine: 'report cow',
+    outcomes: [
+      {
+        id: 'cow_treated',
+        state: 'complete',
+        resultText: 'healed',
+        consequences: { relations: [{ npc: { npcId: 'Anna' }, delta: 3 }] },
+      },
+      {
+        id: 'cow_slaughtered',
+        state: 'complete',
+        resultText: 'slaughtered',
+        reward: { visibility: 'shown', items: [{ kind: 'coin', count: 8 }] },
+      },
+    ],
+  })
+
+  function makeInjuredCowManager(
+    defs: readonly QuestDef[],
+    grantItem?: (kind: string, count: number) => void,
+    injuredCowSource?: import('./opportunities/worldQuestOpportunityTypes').InjuredCowSourceLookup,
+    initial?: QuestManagerInitial,
+  ): QuestManager {
+    return new QuestManager(
+      defs, undefined, new Inventory(), initial, grantItem,
+      undefined, undefined, undefined, undefined, undefined,
+      undefined, undefined, undefined, undefined, undefined,
+      undefined, undefined, undefined, undefined, undefined,
+      undefined, injuredCowSource,
+    )
+  }
+
+  it('resolves the humane outcome directly from a real Medicine treatment report', () => {
+    const qm = makeInjuredCowManager([injuredCowQuest])
+    acceptOffer(qm, 'Anna')
+    expect(qm.getState(injuredCowQuest.id)).toBe('active')
+
+    qm.onAnimalTreatment({
+      animalId: INJURED_COW_ID,
+      animalKind: 'cow',
+      treatmentMode: 'material',
+      actualHpRestored: 20,
+      severityBefore: 'serious',
+    })
+
+    expect(qm.getState(injuredCowQuest.id)).toBe('complete')
+    expect(qm.exportProgress()[0]?.resolvedOutcomeId).toBe('cow_treated')
+    expect(qm.getRelation('Anna')).toBe(3)
+  })
+
+  it('treating a different animal does not progress the bound quest', () => {
+    const qm = makeInjuredCowManager([injuredCowQuest])
+    acceptOffer(qm, 'Anna')
+
+    qm.onAnimalTreatment({
+      animalId: 'some-other-cow',
+      animalKind: 'cow',
+      treatmentMode: 'material',
+      actualHpRestored: 20,
+      severityBefore: 'serious',
+    })
+
+    expect(qm.getState(injuredCowQuest.id)).toBe('active')
+  })
+
+  it('is idempotent once already resolved through the humane outcome', () => {
+    const qm = makeInjuredCowManager([injuredCowQuest])
+    acceptOffer(qm, 'Anna')
+    qm.onAnimalTreatment({
+      animalId: INJURED_COW_ID, animalKind: 'cow', treatmentMode: 'material', actualHpRestored: 20, severityBefore: 'serious',
+    })
+    expect(qm.getRelation('Anna')).toBe(3)
+
+    qm.onAnimalTreatment({
+      animalId: INJURED_COW_ID, animalKind: 'cow', treatmentMode: 'material', actualHpRestored: 20, severityBefore: 'serious',
+    })
+    expect(qm.getRelation('Anna')).toBe(3)
+    expect(qm.getState(injuredCowQuest.id)).toBe('complete')
+  })
+
+  it('the exact bound cow dying moves to the meat-delivery stage; a different animal dying does not', () => {
+    const qm = makeInjuredCowManager([injuredCowQuest])
+    acceptOffer(qm, 'Anna')
+
+    expect(qm.onInteractObjective({ type: 'animal_died', animalId: 'some-other-cow' })).toBeNull()
+    expect(qm.getState(injuredCowQuest.id)).toBe('active')
+
+    qm.onInteractObjective({ type: 'animal_died', animalId: INJURED_COW_ID })
+    expect(qm.getState(injuredCowQuest.id)).toBe('active')
+    expect(qm.onInteract('Anna')?.line).toBe('remind meat')
+  })
+
+  it('resolves the slaughter outcome only once real beef is delivered to the giver', () => {
+    const granted: Array<{ kind: string, count: number }> = []
+    const inventory = new Inventory()
+    const qm = new QuestManager(
+      [injuredCowQuest], undefined, inventory, undefined, (kind, count) => granted.push({ kind, count }),
+    )
+    acceptOffer(qm, 'Anna')
+    qm.onInteractObjective({ type: 'animal_died', animalId: INJURED_COW_ID })
+
+    // No beef yet — reminder only, no consume/reward.
+    qm.onInteract('Anna')
+    expect(granted).toEqual([])
+    expect(qm.getState(injuredCowQuest.id)).toBe('active')
+
+    inventory.add('beef', 1)
+    speak(qm, 'Anna')
+    expect(inventory.count('beef')).toBe(0)
+    expect(qm.getState(injuredCowQuest.id)).toBe('complete')
+    expect(qm.exportProgress()[0]?.resolvedOutcomeId).toBe('cow_slaughtered')
+    expect(granted).toEqual([{ kind: 'coin', count: 8 }])
+  })
+
+  it('killing the treated cow afterward does not reopen or rewrite the completed quest', () => {
+    const qm = makeInjuredCowManager([injuredCowQuest])
+    acceptOffer(qm, 'Anna')
+    qm.onAnimalTreatment({
+      animalId: INJURED_COW_ID, animalKind: 'cow', treatmentMode: 'material', actualHpRestored: 20, severityBefore: 'serious',
+    })
+    expect(qm.getState(injuredCowQuest.id)).toBe('complete')
+
+    qm.onInteractObjective({ type: 'animal_died', animalId: INJURED_COW_ID })
+    expect(qm.getState(injuredCowQuest.id)).toBe('complete')
+    expect(qm.exportProgress()[0]?.resolvedOutcomeId).toBe('cow_treated')
+  })
+
+  it('retracts an unaccepted offer once the source is no longer injured, but leaves an active quest alone', () => {
+    const qm = makeInjuredCowManager(
+      [injuredCowQuest],
+      undefined,
+      { getSnapshot: (questId) => (questId === injuredCowQuest.id ? 'injured' : 'untracked') },
+    )
+    qm.onInteract('Anna')
+    expect(qm.getState(injuredCowQuest.id)).toBe('offered')
+
+    const healedQm = makeInjuredCowManager(
+      [injuredCowQuest],
+      undefined,
+      { getSnapshot: (questId) => (questId === injuredCowQuest.id ? 'healthy' : 'untracked') },
+      { progress: [{ id: injuredCowQuest.id, state: 'offered', stageIndex: 0 }], relations: {} },
+    )
+    healedQm.pollInjuredCowSources()
+    expect(healedQm.getState(injuredCowQuest.id)).toBe('not_offered')
+
+    const activeQm = makeInjuredCowManager(
+      [injuredCowQuest],
+      undefined,
+      { getSnapshot: (questId) => (questId === injuredCowQuest.id ? 'healthy' : 'untracked') },
+      { progress: [{ id: injuredCowQuest.id, state: 'active', stageIndex: 0 }], relations: {} },
+    )
+    activeQm.pollInjuredCowSources()
+    expect(activeQm.getState(injuredCowQuest.id)).toBe('active')
+  })
+
+  it('save/load restore preserves binding and a resolved outcome without duplicate progress', () => {
+    const restored = makeInjuredCowManager(
+      [injuredCowQuest],
+      undefined,
+      undefined,
+      { progress: [{ id: injuredCowQuest.id, state: 'complete', stageIndex: 2, resolvedOutcomeId: 'cow_treated' }], relations: { Anna: 3 } },
+    )
+    expect(restored.getState(injuredCowQuest.id)).toBe('complete')
+    restored.onAnimalTreatment({
+      animalId: INJURED_COW_ID, animalKind: 'cow', treatmentMode: 'material', actualHpRestored: 20, severityBefore: 'serious',
+    })
+    expect(restored.getRelation('Anna')).toBe(3)
+  })
+})
+
 describe('QuestManager authored zagubiona-owca stray trigger (plan 030)', () => {
   const sheepDef = runtimeAuthored(QUESTS.find((d) => d.id === 'zagubiona-owca')!)
 

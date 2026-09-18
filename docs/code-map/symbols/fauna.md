@@ -369,52 +369,52 @@ Generated from exported TypeScript symbols.
 
 - `AnimalStrayState` — type — line 12
   - domain: fauna
-- `beginStrayState` — function — line 256
+- `beginStrayState` — function — line 262
   - domain: fauna
   - role: Starts a stray episode record. Idempotent: an already-active or previously-ended episode is left untouched so restore/materialization cannot redisplace the same animal.
-- `classifyLostLivestock` — function — line 303
+- `classifyLostLivestock` — function — line 309
   - domain: fauna
   - role: Classifies one livestock individual for quest/world lookup.
-- `clearStrayEpisode` — function — line 278
+- `clearStrayEpisode` — function — line 284
   - domain: fauna
   - role: Ends the live episode, drops survival assist/lead-relevant flags, and keeps origin so a later start is refused.
-- `createEmptyStrayState` — function — line 92
+- `createEmptyStrayState` — function — line 98
   - domain: fauna
   - role: Creates the inactive stray sentinel used before an episode starts.
-- `hydrateStrayState` — function — line 331
-- `inspectStrayedCorpseState` — function — line 291
+- `hydrateStrayState` — function — line 337
+- `inspectStrayedCorpseState` — function — line 297
   - domain: fauna
   - role: Marks a dead strayed animal as inspected. Does not harvest or remove.
-- `isAnimalStraySave` — function — line 342
-- `isEligibleLostLivestock` — function — line 151
+- `isAnimalStraySave` — function — line 348
+- `isEligibleLostLivestock` — function — line 157
   - domain: fauna
   - role: Eligibility for starting a new stray episode on an existing individual.
-- `isStrayedAnimalReturned` — function — line 125
+- `isStrayedAnimalReturned` — function — line 131
   - domain: fauna
   - role: Pure return predicate — alive strayed livestock inside the stored origin/home radius ends the episode.
-- `isStrayEpisodeActive` — function — line 100
+- `isStrayEpisodeActive` — function — line 106
   - domain: fauna
   - role: True while this animal currently has a live stray episode.
-- `isStraySurvivalAssistActive` — function — line 108
+- `isStraySurvivalAssistActive` — function — line 114
   - domain: fauna
   - role: Survival-assist gate. Never true for ordinary animals.
 - `LivestockStrayCandidate` — type — line 64
 - `LostLivestockSourceStatus` — type — line 26
   - domain: fauna
-- `predatorPressureAt` — function — line 203
-- `selectLostLivestock` — function — line 182
+- `predatorPressureAt` — function — line 209
+- `selectLostLivestock` — function — line 188
   - domain: fauna
   - role: Deterministic pick of an existing household livestock id. Never invents a new identity. Prefers sheep when any are eligible.
-- `selectStrayDisplacementTarget` — function — line 224
+- `selectStrayDisplacementTarget` — function — line 230
   - domain: fauna
   - role: Bounded one-shot destination probe. Invalid terrain is rejected; predator pressure is a score penalty, never a hard exclusion. Falls back to the best valid candidate when every probe still has nearby predators.
-- `shouldBeginNaturalStray` — function — line 381
+- `shouldBeginNaturalStray` — function — line 387
   - domain: fauna
   - role: True once sustained out-of-band displacement has cleared the grace window — the caller's cue to begin a natural (non-quest) stray episode.
-- `shouldRetainStrayedCorpse` — function — line 140
+- `shouldRetainStrayedCorpse` — function — line 146
   - domain: fauna
   - role: Extra stray-corpse TTL — always false since fauna-029; natural world-time linger is the dispose clock. Inspect stays a quest flag.
-- `snapshotStrayState` — function — line 318
+- `snapshotStrayState` — function — line 324
 - `STRAY_CLASSIFICATION_GRACE_SECONDS` — const — line 62
 - `STRAY_CORPSE_RETENTION_SECONDS` — const — line 53
 - `STRAY_FLEE_RANGE_BONUS` — const — line 44
@@ -425,11 +425,11 @@ Generated from exported TypeScript symbols.
 - `STRAY_PREDATOR_SCORE_PENALTY` — const — line 41
 - `STRAY_PROBE_ATTEMPTS` — const — line 39
 - `STRAY_RETURN_RADIUS` — const — line 34
-- `StrayDisplacementContext` — type — line 75
-- `strayEpisodeSeed` — function — line 355
-- `straySurvivalFleeRangeBonus` — function — line 112
-- `straySurvivalFleeSpeedMultiplier` — function — line 116
-- `tickStrayClassificationGrace` — function — line 366
+- `StrayDisplacementContext` — type — line 81
+- `strayEpisodeSeed` — function — line 361
+- `straySurvivalFleeRangeBonus` — function — line 118
+- `straySurvivalFleeSpeedMultiplier` — function — line 122
+- `tickStrayClassificationGrace` — function — line 372
   - domain: fauna
   - role: Natural-stray grace accumulator (plan fauna-025) — resets the instant the animal is back inside `minDistance` of its own home/wander anchor, so a short flee that ends back near home never latches, while a sustained displacement accumulates toward `shouldBeginNaturalStray`.
 

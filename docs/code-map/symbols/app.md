@@ -11,8 +11,8 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/actionContext.ts`
 
-- `isActionBlocked` — function — line 114
-- `isChannelBusy` — function — line 121
+- `isActionBlocked` — function — line 120
+- `isChannelBusy` — function — line 127
 - `PlayerActionContext` — type — line 31
 
 ## `app/actions/actionContracts.ts`
@@ -95,11 +95,11 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/medicalTreatmentActions.ts`
 
-- `createMedicalTreatmentActions` — function — line 95
+- `createMedicalTreatmentActions` — function — line 108
 - `MedicalTreatmentActions` — type — line 23
   - domain: items-player
   - system: player-actions
-- `queryMedicalTreatmentAvailability` — function — line 121
+- `queryMedicalTreatmentAvailability` — function — line 134
 
 ## `app/actions/mountActions.ts`
 
@@ -287,13 +287,13 @@ Generated from exported TypeScript symbols.
 
 ## `app/createApp.ts`
 
-- `createApp` — function — line 424
+- `createApp` — function — line 426
   - system: app-composition
   - role: Composition root: builds every long-lived system, threads their dependencies and owns app-level lifecycle (boot, rebuild, dispose).
   - owns: WorldBundle, GameLoop, AppRenderLoop
   - lifecycle: boot
   - integration: Wires world, player, UI, persistence and audio systems together.
-- `NewAppOptions` — type — line 393
+- `NewAppOptions` — type — line 395
 
 ## `app/faunaEncounterComposition.ts`
 

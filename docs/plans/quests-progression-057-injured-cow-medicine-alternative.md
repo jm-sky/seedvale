@@ -1,7 +1,7 @@
 # Plan: Injured cow Medicine alternative
 
 **Created:** 2026-09-17
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~quests-progression-016~~, ~~items-player-046~~, ~~npc-025~~

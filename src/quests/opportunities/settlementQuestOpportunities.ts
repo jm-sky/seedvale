@@ -1,12 +1,14 @@
 import type { PreySpawner } from '../../fauna/AnimalSpawner'
 import type { LivestockStrayCandidate } from '../../fauna/animalStray'
 import type {
+  InjuredCowOpportunity,
   LostLivestockOpportunity,
   SettlementQuestOpportunity,
   WolfDenPressureOpportunity,
   WorldQuestSourceStatus,
 } from './worldQuestOpportunityTypes'
 import { isWolfDenPermanentlyDestroyed, isWolfDenPressureProblem } from '../../fauna/wolfDenScenario'
+import { resolveInjurySeverity } from '../../shared/injurySeverity'
 
 const WOLF_DEN_PRESSURE_PREFIX = 'world:wolf-den-pressure:'
 
@@ -160,6 +162,73 @@ export function collectLostLivestockOpportunities(
   return [...byAnimalId.values()].sort((a, b) => a.animalId.localeCompare(b.animalId))
 }
 
+const INJURED_COW_PREFIX = 'world:injured-cow:'
+
+export const INJURED_COW_TREATED_OUTCOME = 'cow_treated'
+export const INJURED_COW_SLAUGHTERED_OUTCOME = 'cow_slaughtered'
+
+/**
+ * Stable generated quest/opportunity id. Deterministic from settlement +
+ * existing livestock identity — never a runtime UUID.
+ *
+ * @domain quests-progression
+ */
+export function injuredCowQuestId(settlementId: string, animalId: string): string {
+  return `${INJURED_COW_PREFIX}${settlementId}:${animalId}`
+}
+
+export function parseInjuredCowQuestId(questId: string): { settlementId: string, animalId: string } | null {
+  if (!questId.startsWith(INJURED_COW_PREFIX)) return null
+  const rest = questId.slice(INJURED_COW_PREFIX.length)
+  const separator = rest.indexOf(':')
+  if (separator <= 0 || separator === rest.length - 1) return null
+  return { settlementId: rest.slice(0, separator), animalId: rest.slice(separator + 1) }
+}
+
+function injuredCowOpportunity(
+  settlementId: string,
+  houseId: string,
+  animalId: string,
+): InjuredCowOpportunity {
+  return {
+    id: injuredCowQuestId(settlementId, animalId),
+    settlementId,
+    kind: 'injured-cow',
+    houseId,
+    animalId,
+  }
+}
+
+/**
+ * Detects a real, alive, household-owned, meaningfully injured cow as a
+ * lightweight candidate (plan quests-progression-057). Severity comes from
+ * the shared `resolveInjurySeverity()` resolver, never a raw HP threshold
+ * duplicated here; a candidate with no injury snapshot or `none` severity is
+ * excluded.
+ *
+ * @domain quests-progression
+ */
+export function collectInjuredCowOpportunities(
+  settlementId: string,
+  livestock: readonly LivestockStrayCandidate[] = [],
+): InjuredCowOpportunity[] {
+  const byAnimalId = new Map<string, InjuredCowOpportunity>()
+  for (const candidate of livestock) {
+    if (candidate.settlementId !== settlementId) continue
+    if (candidate.kind !== 'cow') continue
+    if (candidate.dead) continue
+    if (candidate.owner?.kind !== 'household') continue
+    if (candidate.physicalInjury == null || candidate.maxHp == null) continue
+    if (resolveInjurySeverity(candidate.physicalInjury, candidate.maxHp) === 'none') continue
+    if (!candidate.animalId || byAnimalId.has(candidate.animalId)) continue
+    byAnimalId.set(
+      candidate.animalId,
+      injuredCowOpportunity(settlementId, candidate.owner.houseId, candidate.animalId),
+    )
+  }
+  return [...byAnimalId.values()].sort((a, b) => a.animalId.localeCompare(b.animalId))
+}
+
 export function collectSettlementQuestOpportunities(input: {
   settlementId: string
   spawners: readonly PreySpawner[]
@@ -171,6 +240,9 @@ export function collectSettlementQuestOpportunities(input: {
     byId.set(opportunity.id, opportunity)
   }
   for (const opportunity of collectLostLivestockOpportunities(input.settlementId, input.livestock)) {
+    byId.set(opportunity.id, opportunity)
+  }
+  for (const opportunity of collectInjuredCowOpportunities(input.settlementId, input.livestock)) {
     byId.set(opportunity.id, opportunity)
   }
   for (const questId of input.persistedQuestIds ?? []) {
@@ -187,17 +259,32 @@ export function collectSettlementQuestOpportunities(input: {
       continue
     }
     const lost = parseLostLivestockQuestId(questId)
-    if (!lost) continue
-    if (lost.settlementId !== input.settlementId) continue
+    if (lost) {
+      if (lost.settlementId !== input.settlementId) continue
+      if (byId.has(questId)) continue
+      const record = (input.livestock ?? []).find((candidate) => candidate.animalId === lost.animalId)
+      const houseId = record?.owner?.kind === 'household' ? record.owner.houseId : `${input.settlementId}:home:0`
+      byId.set(questId, {
+        id: questId,
+        settlementId: input.settlementId,
+        kind: 'lost-livestock',
+        houseId,
+        animalId: lost.animalId,
+      })
+      continue
+    }
+    const injuredCow = parseInjuredCowQuestId(questId)
+    if (!injuredCow) continue
+    if (injuredCow.settlementId !== input.settlementId) continue
     if (byId.has(questId)) continue
-    const record = (input.livestock ?? []).find((candidate) => candidate.animalId === lost.animalId)
+    const record = (input.livestock ?? []).find((candidate) => candidate.animalId === injuredCow.animalId)
     const houseId = record?.owner?.kind === 'household' ? record.owner.houseId : `${input.settlementId}:home:0`
     byId.set(questId, {
       id: questId,
       settlementId: input.settlementId,
-      kind: 'lost-livestock',
+      kind: 'injured-cow',
       houseId,
-      animalId: lost.animalId,
+      animalId: injuredCow.animalId,
     })
   }
   return [...byId.values()]

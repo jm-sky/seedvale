@@ -1072,6 +1072,7 @@ Generated from TypeScript imports.
 - `shared/StaminaState.ts`
 - `shared/VigorState.ts`
 - `shared/bootMark.ts`
+- `shared/injurySeverity.ts`
 - `terrain/chunkGrid.ts`
 - `terrain/chunkManager.ts`
 - `terrain/chunkWorkerPool.ts`

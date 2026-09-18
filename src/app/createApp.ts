@@ -191,6 +191,7 @@ import {
   settlementOpportunityNpcsFromDef,
 } from '../quests/opportunities/settlementNpcMaterialization'
 import {
+  parseInjuredCowQuestId,
   parseLostLivestockQuestId,
   parseWolfDenPressureQuestId,
   wolfDenPressureStatusFromSpawners,
@@ -226,6 +227,7 @@ import { settlementNpcDescriptors } from '../settlement/npcIdentity'
 import { cellsWithinRadius } from '../settlement/settlementGenerator'
 import { summarizeVillagePlan } from '../settlement/villagePlanDebug'
 import { useBootMark } from '../shared/bootMark'
+import { resolveInjurySeverity } from '../shared/injurySeverity'
 import { drainStamina } from '../shared/StaminaState'
 import { drainVigor } from '../shared/VigorState'
 import { chunksNear } from '../terrain/chunkGrid'
@@ -2030,6 +2032,15 @@ export async function createApp(
       getChronicleSearch: () => getActiveLostTreasureChronicleSearchBinding(),
       research: worldKnowledgeResearch,
     }),
+    {
+      getSnapshot: (questId) => {
+        const parsed = parseInjuredCowQuestId(questId)
+        if (!parsed) return 'untracked'
+        const animal = bundle.settlementsManager.resolvePersistentAnimal(parsed.animalId)
+        if (!animal || animal.isDead()) return 'dead'
+        return resolveInjurySeverity(animal.physicalInjury, animal.health.maxHp) === 'none' ? 'healthy' : 'injured'
+      },
+    },
   )
 
   const refreshGuardEveningPolicies = (): void => {
@@ -2093,6 +2104,7 @@ export async function createApp(
     questManager.onHorseRewardTargetDied(animalId)
     questManager.pollSettlementRatInfestationObjectives()
     questManager.pollLostLivestockSources()
+    questManager.pollInjuredCowSources()
   }
   // Restore-time reconciliation (plan fauna-039 §21) — a save taken between
   // an animal's death and a successful handoff (or one written by a build
@@ -2297,6 +2309,9 @@ export async function createApp(
       const unlock = badges.recordSuccessfulTreatment(settlementId)
       if (unlock) handleSettlementBadgeUnlock(unlock)
     },
+    onAnimalTreatmentCompleted: (context) => {
+      questManager.onAnimalTreatment(context)
+    },
     onSettlementBadgeUnlock: handleSettlementBadgeUnlock,
     onCampfireLit: () => {
       questManager.recheckSettlementLightObjectives()
@@ -2311,6 +2326,10 @@ export async function createApp(
     // World-driven lost-livestock only observes fauna episodes — never starts
     // them. Authored `zagubiona-owca` starts stray via onAnimalTargetBound.
     questManager.pollLostLivestockSources()
+    // Injured-cow offer retraction (plan quests-progression-057) shares this
+    // same per-frame livestock-quest sync point — an already-active quest
+    // resolves through its own branch objectives, not this poll.
+    questManager.pollInjuredCowSources()
   }
   syncLostLivestockQuests()
 

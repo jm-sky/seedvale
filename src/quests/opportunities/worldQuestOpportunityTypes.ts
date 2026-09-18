@@ -13,7 +13,7 @@ import type { NpcId } from '../../settlement/npcState'
  * @system settlement-quest-opportunities
  * @role Data-only opportunity contract between settlement/world systems and quest materialization.
  */
-export type WorldQuestOpportunityKind = 'wolf-den-pressure' | 'lost-livestock'
+export type WorldQuestOpportunityKind = 'wolf-den-pressure' | 'lost-livestock' | 'injured-cow'
 
 /**
  * Authored RPG scenario matrices. Eligibility binds real world refs;
@@ -64,7 +64,26 @@ export type RpgQuestOpportunity = {
   sourceId: string
 }
 
-export type SettlementQuestOpportunity = WolfDenPressureOpportunity | LostLivestockOpportunity | RpgQuestOpportunity
+/**
+ * Injured household cow opportunity (plan quests-progression-057). The cow
+ * stays a real household-owned `AnimalAgent` — this only exposes a detected
+ * candidate to the settlement giver/materialization layer.
+ *
+ * @domain quests-progression
+ */
+export type InjuredCowOpportunity = {
+  id: string
+  settlementId: string
+  kind: 'injured-cow'
+  houseId: string
+  animalId: string
+}
+
+export type SettlementQuestOpportunity =
+  | WolfDenPressureOpportunity
+  | LostLivestockOpportunity
+  | InjuredCowOpportunity
+  | RpgQuestOpportunity
 
 /**
  * Live source status for a materialized world-driven quest.
@@ -92,6 +111,21 @@ export type WorldQuestSourceLookup = {
  */
 export type LostLivestockSourceLookup = {
   getSnapshot: (questId: string) => LostLivestockSourceStatus | 'untracked'
+}
+
+/**
+ * Live status of one bound injured-cow source (plan quests-progression-057).
+ * `injured` gates the offer; anything else (healed, dead, or the animal no
+ * longer resolving) retracts an unaccepted offer. An already-`active` quest
+ * resolves through the branch stage's own objectives (`treat_animal` /
+ * `kill_bound_animal` + meat delivery), not through this lookup.
+ *
+ * @domain quests-progression
+ */
+export type InjuredCowSourceStatus = 'injured' | 'healthy' | 'dead'
+
+export type InjuredCowSourceLookup = {
+  getSnapshot: (questId: string) => InjuredCowSourceStatus | 'untracked'
 }
 
 /**

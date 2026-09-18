@@ -34,6 +34,7 @@ Generated from TypeScript imports.
 - `reputation/ReputationManager.ts`
 - `settlement/livestock.ts`
 - `settlement/npcState.ts`
+- `shared/injurySeverity.ts`
 - `world/dayNight.ts`
 - `world/timeConversion.ts`
 
@@ -697,6 +698,7 @@ Generated from TypeScript imports.
 - `fauna/animalStray.ts`
 - `fauna/wolfDenScenario.ts`
 - `quests/opportunities/worldQuestOpportunityTypes.ts`
+- `shared/injurySeverity.ts`
 
 **Imported by**
 

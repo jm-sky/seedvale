@@ -14,6 +14,7 @@ function fakeTarget(overrides: Partial<{
   applyActual: number
   kind: TreatableTarget['kind']
   settlementId: string
+  animalKind: TreatableTarget['animalKind']
 }> = {}): TreatableTarget & {
   injury: number
   applyCalls: number[]
@@ -42,6 +43,7 @@ function fakeTarget(overrides: Partial<{
       return actual
     },
     settlementId: overrides.settlementId,
+    animalKind: overrides.animalKind,
     get injury() { return state.injury },
     set injury(v: number) { state.injury = v },
     get applyCalls() { return state.applyCalls },
@@ -55,6 +57,7 @@ function setup(inventoryCounts: Record<string, number> = {}) {
   const toast = { show: vi.fn() }
   const busy = createBusyAction()
   const onPlayerMedicalTreatmentCompleted = vi.fn()
+  const onAnimalTreatmentCompleted = vi.fn()
   const ctx = {
     inventory,
     player: { skills },
@@ -67,6 +70,7 @@ function setup(inventoryCounts: Record<string, number> = {}) {
     onInventoryChanged: vi.fn(),
     refreshInventoryScreen: vi.fn(),
     onPlayerMedicalTreatmentCompleted,
+    onAnimalTreatmentCompleted,
   } as unknown as PlayerActionContext
   return {
     actions: createMedicalTreatmentActions(ctx),
@@ -76,6 +80,7 @@ function setup(inventoryCounts: Record<string, number> = {}) {
     busy,
     ctx,
     onPlayerMedicalTreatmentCompleted,
+    onAnimalTreatmentCompleted,
   }
 }
 
@@ -207,5 +212,57 @@ describe('settlement Known Deeds hook (plan quests-progression-059)', () => {
     busy.tick(MEDICAL_TREATMENT_DURATION_SEC + 0.01)
 
     expect(onPlayerMedicalTreatmentCompleted).not.toHaveBeenCalled()
+  })
+})
+
+describe('animal-treatment quest report (plan quests-progression-057)', () => {
+  it('fires for a successful livestock treatment with animalKind/mode/severity context', () => {
+    const { actions, busy, onAnimalTreatmentCompleted } = setup({ bandage: 1 })
+    const target = fakeTarget({ injury: 40, kind: 'livestock', settlementId: 'village-a', animalKind: 'cow' })
+    actions.startMedicalTreatment(target)
+    busy.tick(MEDICAL_TREATMENT_DURATION_SEC + 0.01)
+
+    expect(onAnimalTreatmentCompleted).toHaveBeenCalledTimes(1)
+    expect(onAnimalTreatmentCompleted).toHaveBeenCalledWith({
+      animalId: 't1',
+      animalKind: 'cow',
+      treatmentMode: 'material',
+      actualHpRestored: expect.any(Number),
+      severityBefore: expect.any(String),
+    })
+  })
+
+  it('fires for player-owned livestock too (no settlementId requirement)', () => {
+    const { actions, busy, onAnimalTreatmentCompleted } = setup({ bandage: 1 })
+    const target = fakeTarget({ injury: 40, kind: 'livestock', animalKind: 'horse' })
+    actions.startMedicalTreatment(target)
+    busy.tick(MEDICAL_TREATMENT_DURATION_SEC + 0.01)
+
+    expect(onAnimalTreatmentCompleted).toHaveBeenCalledTimes(1)
+  })
+
+  it('never fires for NPC or self treatment', () => {
+    const { actions, busy, onAnimalTreatmentCompleted } = setup({ bandage: 1 })
+    actions.startMedicalTreatment(fakeTarget({ injury: 40, kind: 'npc', settlementId: 'village-a' }))
+    busy.tick(MEDICAL_TREATMENT_DURATION_SEC + 0.01)
+    actions.startMedicalTreatment(fakeTarget({ injury: 40, kind: 'self' }))
+    busy.tick(MEDICAL_TREATMENT_DURATION_SEC + 0.01)
+
+    expect(onAnimalTreatmentCompleted).not.toHaveBeenCalled()
+  })
+
+  it('never fires on cancellation or a zero-actual-restore no-op', () => {
+    const { actions, busy, onAnimalTreatmentCompleted } = setup({ bandage: 1 })
+    const cancelled = fakeTarget({ injury: 40, kind: 'livestock', settlementId: 'village-a', animalKind: 'cow' })
+    actions.startMedicalTreatment(cancelled)
+    busy.cancel()
+
+    const zeroEffect = fakeTarget({
+      injury: 40, kind: 'livestock', settlementId: 'village-a', animalKind: 'cow', applyActual: 0,
+    })
+    actions.startMedicalTreatment(zeroEffect)
+    busy.tick(MEDICAL_TREATMENT_DURATION_SEC + 0.01)
+
+    expect(onAnimalTreatmentCompleted).not.toHaveBeenCalled()
   })
 })

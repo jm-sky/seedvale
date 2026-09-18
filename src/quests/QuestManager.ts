@@ -5,7 +5,10 @@ import type { Inventory } from '../items/Inventory'
 import type { ItemKind } from '../items/items'
 import type { ReputationDimension, SocialConsequence } from '../reputation/ReputationManager'
 import type { NpcId } from '../settlement/npcState'
+import type { InjurySeverity } from '../shared/injurySeverity'
 import type {
+  InjuredCowSourceLookup,
+  InjuredCowSourceStatus,
   LostLivestockSourceLookup,
   WorldQuestSourceLookup,
   WorldQuestSourceStatus,
@@ -18,6 +21,7 @@ import {
   LOST_LIVESTOCK_DEAD_OUTCOME,
   LOST_LIVESTOCK_LIVE_OUTCOME,
   LOST_LIVESTOCK_UNAVAILABLE_OUTCOME,
+  parseInjuredCowQuestId,
   parseLostLivestockQuestId,
 } from './opportunities/settlementQuestOpportunities'
 import {
@@ -239,6 +243,25 @@ export type PlayerAnimalHarvestContext = {
   lootKinds: readonly ItemKind[]
 }
 
+/**
+ * Completed, real, positive-effect Medicine treatment of one livestock
+ * `animalId` (plan quests-progression-057) — reported once from
+ * `medicalTreatmentActions.ts`'s completion path, after `applyTreatment()`
+ * confirms `actualHpRestored > 0`. Never reported for self/NPC treatment,
+ * a cancelled action, a failed revalidation, or a zero-effect apply, so
+ * `QuestManager.onAnimalTreatment()` can trust it as proof of a genuine
+ * player action rather than natural/third-party recovery.
+ *
+ * @domain quests-progression
+ */
+export type AnimalTreatmentQuestContext = {
+  animalId: string
+  animalKind: AnimalKind
+  treatmentMode: 'material' | 'stabilize'
+  actualHpRestored: number
+  severityBefore: InjurySeverity
+}
+
 /** Successful loose-food consumption report (plan quests-progression-020). */
 export type HabitatAnimalFeedContext = {
   animalId: string
@@ -437,7 +460,11 @@ const NO_LOST_LIVESTOCK_SOURCE: LostLivestockSourceLookup = {
   getSnapshot: () => 'untracked',
 }
 
-export type { WorldQuestSourceLookup, WorldQuestSourceStatus }
+const NO_INJURED_COW_SOURCE: InjuredCowSourceLookup = {
+  getSnapshot: () => 'untracked',
+}
+
+export type { InjuredCowSourceLookup, InjuredCowSourceStatus, WorldQuestSourceLookup, WorldQuestSourceStatus }
 
 const NO_SOCIAL_AVAILABILITY: QuestSocialAvailabilityLookup = {
   getReputationDimension: () => 0,
@@ -488,6 +515,7 @@ function objectiveMatchesRef(
 ): boolean {
   switch (ref.type) {
     case 'animal_died':
+      if (objective.type === 'kill_bound_animal') return objective.animalId === ref.animalId
       return objective.type === 'kill_target_animal' && boundAnimalId === ref.animalId
     case 'animal_found':
       return objective.type === 'find_animal' && boundAnimalId === ref.animalId
@@ -555,6 +583,7 @@ export class QuestManager {
   private readonly worldProgress: QuestWorldProgressLookup
   private readonly worldQuestSource: WorldQuestSourceLookup
   private readonly lostLivestockSource: LostLivestockSourceLookup
+  private readonly injuredCowSource: InjuredCowSourceLookup
   private readonly transferAnimalOwnership: QuestAnimalOwnershipTransfer
   private readonly canReserveHorseReward: HorseRewardAvailability
   private readonly worldTime: QuestWorldTimeLookup
@@ -598,6 +627,7 @@ export class QuestManager {
     physicalOutcome: QuestPhysicalOutcomeResolver = NO_PHYSICAL_OUTCOME,
     lifecycleHooks: QuestLifecycleHooks = {},
     worldKnowledgeResolver: QuestWorldKnowledgeResolver = NO_WORLD_KNOWLEDGE,
+    injuredCowSource: InjuredCowSourceLookup = NO_INJURED_COW_SOURCE,
   ) {
     validateQuestDefinitions(defs)
     this.defs = defs
@@ -619,6 +649,7 @@ export class QuestManager {
     this.physicalOutcome = physicalOutcome
     this.lifecycleHooks = lifecycleHooks
     this.worldKnowledgeResolver = worldKnowledgeResolver
+    this.injuredCowSource = injuredCowSource
     for (const def of defs) this.states.set(def.id, { state: 'not_offered', stageIndex: 0 })
     if (initial) {
       for (const entry of initial.progress) {
@@ -1036,6 +1067,8 @@ export class QuestManager {
     if (source !== 'untracked' && source !== 'present') return false
     const lost = this.lostLivestockSource.getSnapshot(def.id)
     if (lost !== 'untracked' && lost !== 'lost-alive' && lost !== 'corpse-uninspected') return false
+    const injuredCow = this.injuredCowSource.getSnapshot(def.id)
+    if (injuredCow !== 'untracked' && injuredCow !== 'injured') return false
     const lostParsed = parseLostLivestockQuestId(def.id)
     if (lostParsed && this.isAnimalClaimedByOtherQuest(def.id, lostParsed.animalId)) return false
     if (this.isAuthoredLivestockFindBlockedByClaimedTarget(def)) return false
@@ -1499,6 +1532,26 @@ export class QuestManager {
     }
   }
 
+  /**
+   * Retracts an unaccepted injured-cow offer once the source is no longer
+   * `injured` (healed or dead) — an already-`active` quest resolves through
+   * its own branch stage objectives (`treat_animal` / `kill_bound_animal` +
+   * meat delivery), never through this poll (plan quests-progression-057).
+   *
+   * @domain quests-progression
+   */
+  pollInjuredCowSources(): void {
+    for (const def of this.defs) {
+      if (!parseInjuredCowQuestId(def.id)) continue
+      const snapshot = this.injuredCowSource.getSnapshot(def.id)
+      if (snapshot === 'untracked') continue
+      const s = this.stateOf(def.id)
+      if (s.state === 'offered' && snapshot !== 'injured') {
+        this.setQuestState(def.id, { state: 'not_offered', stageIndex: 0 })
+      }
+    }
+  }
+
   /** Polls live knowledge/container state for active world-progression
    *  objectives (plan quests-progression-009). */
   pollWorldProgressionObjectives(): void {
@@ -1532,6 +1585,27 @@ export class QuestManager {
           this.writeSlotProgress(def, current, slot.id, { count: next })
         }
         if (next >= objective.count) this.completeObjectiveSlot(def, this.stateOf(def.id), slot)
+        break
+      }
+    }
+  }
+
+  /**
+   * Reports a completed, real, positive-effect Medicine treatment of one
+   * livestock `animalId` (plan quests-progression-057) — see
+   * `AnimalTreatmentQuestContext`. Matches by exact `animalId` only; species
+   * is diagnostic, never the identity key. Idempotent once the matching
+   * `treat_animal` slot is already complete — `unfinishedSlots` excludes it.
+   *
+   * @domain quests-progression
+   */
+  onAnimalTreatment(context: AnimalTreatmentQuestContext): void {
+    for (const def of this.defs) {
+      const s = this.stateOf(def.id)
+      if (s.state !== 'active') continue
+      for (const slot of this.unfinishedSlots(def, s)) {
+        if (slot.objective.type !== 'treat_animal' || slot.objective.animalId !== context.animalId) continue
+        this.completeObjectiveSlot(def, s, slot)
         break
       }
     }

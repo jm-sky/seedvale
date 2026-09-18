@@ -347,11 +347,14 @@ Generated from TypeScript imports.
 - `ai/healingPressure.test.ts`
 - `ai/healingPressure.ts`
 - `app/actions/medicalTreatmentActions.ts`
+- `app/createApp.ts`
 - `debug/npcDebugApi.ts`
 - `items/Inventory.ts`
 - `items/itemCatalog.ts`
 - `player/medicalTreatment.test.ts`
 - `player/medicalTreatment.ts`
+- `quests/QuestManager.ts`
+- `quests/opportunities/settlementQuestOpportunities.ts`
 - `shared/effectivePhysicalAttributes.ts`
 - `shared/injuryRecovery.test.ts`
 - `shared/injuryRecovery.ts`

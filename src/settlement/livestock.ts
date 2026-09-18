@@ -145,6 +145,8 @@ export function livestockStrayCandidateFromAgent(
     mounted: animal.isMounted(),
     owner: animal.getOwner(),
     stray: animal.getStrayState(),
+    physicalInjury: animal.physicalInjury,
+    maxHp: animal.health.maxHp,
   }
 }
 

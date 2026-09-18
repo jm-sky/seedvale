@@ -1131,6 +1131,19 @@ export type QuestObjective =
    *  not `find_animal` (death is not failure). `animalId` is the existing
    *  persistent livestock identity bound at materialization. */
   | { type: 'recover_lost_livestock', animalId: string }
+  /** A completed, real, positive-effect Medicine treatment of the exact
+   *  bound `animalId` (plan quests-progression-057) — reported once by
+   *  `QuestManager.onAnimalTreatment()` from the Busy Action completion path,
+   *  never inferred from injury/health polling. Natural or third-party
+   *  recovery never satisfies this: only an explicit player treatment report
+   *  can. */
+  | { type: 'treat_animal', animalId: string }
+  /** The exact bound `animalId` has died, by any cause (plan
+   *  quests-progression-057) — pre-bound at materialization, unlike
+   *  `kill_target_animal`'s kind-based late binding, since the exact
+   *  individual is already known. Matches the same generic `animal_died`
+   *  world report every animal death raises. */
+  | { type: 'kill_bound_animal', animalId: string }
   /** Manual lighting of canonical settlement torches and campfire (plan
    *  quests-progression-021) — reads settlement-owned lit state only. */
   | {

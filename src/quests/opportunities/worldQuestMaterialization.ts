@@ -3,6 +3,7 @@ import type { LivestockStrayCandidate } from '../../fauna/animalStray'
 import type { SettlementDef } from '../../settlement/settlementGenerator'
 import type { QuestDef } from '../quests'
 import type {
+  InjuredCowOpportunity,
   LostLivestockOpportunity,
   OpportunityNpc,
   SettlementQuestOpportunity,
@@ -20,6 +21,8 @@ import {
 } from './rpgQuestMatrices'
 import {
   collectSettlementQuestOpportunities,
+  INJURED_COW_SLAUGHTERED_OUTCOME,
+  INJURED_COW_TREATED_OUTCOME,
   LOST_LIVESTOCK_DEAD_OUTCOME,
   LOST_LIVESTOCK_LIVE_OUTCOME,
   LOST_LIVESTOCK_UNAVAILABLE_OUTCOME,
@@ -62,7 +65,7 @@ export function selectSettlementQuestGiver(
     const hunter = pool.find((npc) => npc.role === 'hunter')
     if (hunter) return hunter
   }
-  if (kind === 'lost-livestock') {
+  if (kind === 'lost-livestock' || kind === 'injured-cow') {
     const farmer = pool.find((npc) => npc.role === 'farmer')
     if (farmer) return farmer
   }
@@ -179,6 +182,96 @@ function materializeLostLivestockQuest(
 }
 
 /**
+ * Injured household cow (plan quests-progression-057): the giver proposes
+ * slaughter, but the branch stage lets the Player instead resolve it through
+ * a real Medicine treatment of the exact bound cow. Neither branch is
+ * labeled "correct" in dialogue. The humane branch resolves directly
+ * (`treat_animal` is a completed-treatment report, not a giver hand-in); the
+ * slaughter branch additionally requires delivering the cow's own harvested
+ * `beef` — one knife-harvest yields exactly one, matching the single-cow
+ * source.
+ *
+ * @domain quests-progression
+ */
+const INJURED_COW_BEEF_COUNT = 1
+const INJURED_COW_SLAUGHTER_STAGE_ID = 'deliver-meat'
+
+function materializeInjuredCowQuest(
+  opportunity: InjuredCowOpportunity,
+  giver: OpportunityNpc,
+  settlementName: string,
+): QuestDef {
+  const animalId = opportunity.animalId
+  return {
+    id: opportunity.id,
+    title: 'Ranna krowa',
+    description:
+      `Krowa z gospodarstwa w osadzie ${settlementName} jest poważnie ranna. `
+      + `${giver.name} chce, żebyś ją dobił i przyniósł mięso — ale to, co z nią zrobisz, zależy od ciebie.`,
+    giverName: giver.name,
+    giver: { npcId: giver.id },
+    settlementId: opportunity.settlementId,
+    offerLine:
+      'Nasza krowa jest tak poturbowana, że już się nie podniesie. Szkoda by było zmarnować mięso — dobij ją '
+      + 'i przynieś mi, co z niej zostanie.',
+    stages: [
+      {
+        objective: { type: 'treat_animal', animalId },
+        objectives: [
+          { id: 'heal', objective: { type: 'treat_animal', animalId }, resultId: INJURED_COW_TREATED_OUTCOME },
+          { id: 'slaughter', objective: { type: 'kill_bound_animal', animalId }, resultId: 'cow_died' },
+        ],
+        mode: 'any',
+        transitions: [
+          { resultId: INJURED_COW_TREATED_OUTCOME, toOutcomeId: INJURED_COW_TREATED_OUTCOME },
+          { resultId: 'cow_died', toStageId: INJURED_COW_SLAUGHTER_STAGE_ID },
+        ],
+        description: `Dobij ranną krowę na prośbę ${giver.name}a, albo spróbuj ją opatrzyć.`,
+        reminderLine: 'Krowa wciąż cierpi. Zadecyduj, co z nią zrobisz.',
+        progressLine: 'Krowa wyzdrowiała.',
+      },
+      {
+        id: INJURED_COW_SLAUGHTER_STAGE_ID,
+        objective: { type: 'gather_item', kind: 'beef', count: INJURED_COW_BEEF_COUNT },
+        transitions: [{ toOutcomeId: INJURED_COW_SLAUGHTERED_OUTCOME }],
+        description: 'Przynieś mięso z ubitej krowy.',
+        reminderLine: 'Masz już mięso z krowy?',
+        playerLine: 'Oto mięso z krowy.',
+      },
+    ],
+    reportPromptLine: 'No i co z tą krową?',
+    reportPlayerLine: 'Oto mięso z krowy.',
+    reportLine: 'Dzięki. Przynajmniej mięso się nie zmarnuje.',
+    outcomes: [
+      {
+        id: INJURED_COW_TREATED_OUTCOME,
+        state: 'complete',
+        resultText: 'Krowa wyzdrowiała i wróciła do zdrowego stada.',
+        consequences: {
+          relations: [{ npc: { npcId: giver.id }, delta: 3 }],
+          social: {
+            reputation: { benevolence: 10, trust: 6 },
+            renown: 8,
+          },
+        },
+      },
+      {
+        id: INJURED_COW_SLAUGHTERED_OUTCOME,
+        state: 'complete',
+        resultText: 'Krowa nie żyje, ale przynajmniej mięso trafiło do gospodarstwa.',
+        reward: { visibility: 'shown', items: [{ kind: 'coin', count: 8 }] },
+        consequences: {
+          relations: [{ npc: { npcId: giver.id }, delta: 1 }],
+          social: {
+            reputation: { competence: 3 },
+          },
+        },
+      },
+    ],
+  }
+}
+
+/**
  * Materializes a selected opportunity into a normal `QuestDef`.
  * QuestManager owns later quest progress; this function only builds the definition.
  *
@@ -199,6 +292,9 @@ export function materializeSettlementQuestOpportunity(
   if (!giver) return undefined
   if (opportunity.kind === 'lost-livestock') {
     return materializeLostLivestockQuest(opportunity, giver, settlementName)
+  }
+  if (opportunity.kind === 'injured-cow') {
+    return materializeInjuredCowQuest(opportunity, giver, settlementName)
   }
   return materializeWolfDenPressureQuest(opportunity, giver, settlementName)
 }

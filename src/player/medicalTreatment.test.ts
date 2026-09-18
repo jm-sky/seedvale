@@ -115,6 +115,7 @@ describe('settlement attribution for Known Deeds (plan quests-progression-059)',
   function fakeLivestock(owner: { kind: 'household', houseId: string } | { kind: 'player' } | null): AnimalAgent {
     return {
       animalId: 'animal:1',
+      def: { kind: 'sheep' },
       getDisplayName: () => 'Owca',
       health: { dead: false, maxHp: 50 },
       physicalInjury: 10,

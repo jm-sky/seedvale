@@ -101,6 +101,12 @@ export type PlayerActionContext = {
     settlementId: string
     actualRestored: number
   }) => void
+  /** Player Medicine treatment completed with a real, positive effect on a
+   *  livestock target's exact `animalId` (plan quests-progression-057) —
+   *  distinct from the Known Deeds hook above: fires for any livestock
+   *  treatment (not gated on a resolved settlement id), never for self/NPC
+   *  treatment. See `medicalTreatmentActions.ts::completeMedicalTreatment`. */
+  onAnimalTreatmentCompleted?: (context: import('../../quests/QuestManager').AnimalTreatmentQuestContext) => void
   /** A settlement Known Deed badge was newly earned (plan
    *  quests-progression-059) — the single fan-out seam every deed producer
    *  (`groundActions.ts`, and the two hooks above via `createApp.ts`) routes

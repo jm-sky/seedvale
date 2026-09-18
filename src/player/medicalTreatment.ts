@@ -1,5 +1,5 @@
 import type { NpcAgent } from '../ai/NpcAgent'
-import type { AnimalAgent } from '../fauna/AnimalAgent'
+import type { AnimalAgent, AnimalKind } from '../fauna/AnimalAgent'
 import type { Interactable } from '../interaction/Interactable'
 import type { Inventory } from '../items/Inventory'
 import type { ItemKind } from '../items/items'
@@ -49,6 +49,10 @@ export type TreatableTarget = {
   kind: TreatableTargetKind
   label: string
   resolveInjuryRecovery: (nowDays: number) => void
+  /** Species — livestock only (plan quests-progression-057), used solely to
+   *  build the quest-facing `AnimalTreatmentQuestContext` report; matching
+   *  itself is always by exact `id`/`animalId`, never by this field. */
+  animalKind?: AnimalKind
   /** Settlement whose community would recognize this treatment as a known
    *  deed (plan quests-progression-059) — undefined for self-treatment and
    *  for an owner with no settlement affiliation (player-owned livestock).
@@ -188,6 +192,7 @@ export function treatableFromLivestock(
     getMaxHp: () => animal.health.maxHp,
     resolveInjuryRecovery: (nowDays) => animal.resolveInjuryRecoveryAt(nowDays),
     applyTreatment: (requested, nowDays) => animal.applyPhysicalInjuryTreatment(requested, nowDays),
+    animalKind: animal.def.kind,
     settlementId: houseId ? resolveHouseholdSettlementId?.(houseId) : undefined,
   }
 }

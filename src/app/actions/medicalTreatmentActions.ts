@@ -72,6 +72,19 @@ function completeMedicalTreatment(
     })
   }
 
+  // World-driven animal-treatment quest report (plan quests-progression-057)
+  // — livestock only, unconditional on settlement affiliation (unlike the
+  // Known Deeds hook above), since matching is purely by exact `animalId`.
+  if (target.kind === 'livestock' && target.animalKind) {
+    ctx.onAnimalTreatmentCompleted?.({
+      animalId: target.id,
+      animalKind: target.animalKind,
+      treatmentMode: plan.mode,
+      actualHpRestored: actualRestored,
+      severityBefore: plan.severity,
+    })
+  }
+
   if (plan.mode === 'material' && plan.materialKind) {
     if (!inventory.remove(plan.materialKind, 1)) {
       toast.show(`Opatrzono: ${target.label}.`, 'pickup')

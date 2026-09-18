@@ -70,6 +70,12 @@ export type LivestockStrayCandidate = {
   mounted: boolean
   owner: AnimalOwner
   stray: AnimalStrayState | undefined
+  /** Current wound/max HP (plan quests-progression-057) — optional so every
+   *  existing stray-selection call site is unaffected; only the injured-cow
+   *  opportunity collector reads these to derive severity via the shared
+   *  `resolveInjurySeverity()` resolver, never a raw HP threshold of its own. */
+  physicalInjury?: number
+  maxHp?: number
 }
 
 export type StrayDisplacementContext = {
