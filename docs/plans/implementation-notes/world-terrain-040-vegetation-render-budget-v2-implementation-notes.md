@@ -2,269 +2,258 @@
 
 ## Status
 
-Recon completed against current `main`. Implementation not started.
+Recon completed against current `main`. Stage 1 is now explicitly defined as a safe production optimization before diagnostics.
 
 ## Current architecture / confirmed facts
 
 - `src/terrain/vegetationRegionBatcher.ts` is the single renderer-side aggregation mechanism for living trees, bushes, cacti, reeds, ferns, lilies, seaweed and selected environment props (`largeRock`, `rockCluster`, `fallenLog`).
 - Regions are fixed **3×3 chunks** (`REGION_CHUNKS = 3`). Chunk remains the world ownership / streaming unit; region is rendering-only.
 - Each `(region, kind)` owns one `InstancedPropGroup` rebuilt when member chunk contributions change.
-- `syncLod(chunkCoord, fraction)` stores one scalar fraction per contributing chunk, and the region applies `maxFraction()` — nearest contributing chunk wins. This is deliberately conservative.
-- `src/terrain/chunkManager.ts::syncInstancedLodForRecord()` currently computes one common fraction via:
+- `syncLod(chunkCoord, fraction)` currently stores one scalar fraction per contributing chunk, and the region applies `maxFraction()` — nearest contributing chunk wins.
+- `src/terrain/chunkManager.ts::syncInstancedLodForRecord()` computes a common fraction from chunk Chebyshev distance.
+- `densityLodFraction(dist, config.loadRadius, lodScale)` is the shared source curve for all vegetation/environment kinds.
+- On High with `loadRadius=3`, the source fractions are approximately:
+  - dist 0 → 1.00,
+  - dist 1 → 1.00,
+  - dist 2 → 0.49,
+  - dist 3 → 0.08.
+- `InstancedPropGroup.setLodFraction()` narrows `InstancedMesh.count`; it does not rebuild buffers.
+- Reflection visibility already has a separate conservative per-region path and must stay independent.
+- Existing 3×3 region batching solved the old per-chunk submission problem. Do not add another batching layer.
+
+## Stage 1 — implement before new diagnostics
+
+The current code already exposes a low-risk inefficiency: small/detail vegetation uses the same mid-distance density as silhouette-forming objects.
+
+Implement a conservative per-kind policy using the existing LOD seam.
+
+### Policy classes
+
+Use a small explicit classification rather than per-kind magic curves:
+
+- **silhouette**
+  - `tree-living`
+  - `cactus`
+  - `largeRock`
+- **medium**
+  - `fallenLog`
+  - `rockCluster`
+- **detail**
+  - `bush`
+  - `reed`
+  - `lily`
+- **groundDetail**
+  - `fern`
+  - `seaweed`
+
+In Stage 1:
+- silhouette stays exactly on the current curve,
+- medium stays exactly on the current curve,
+- only detail / groundDetail are reduced.
+
+### Distance-aware contract
+
+Do not derive the whole policy from `baseFraction` alone if that makes near/mid/far ambiguous.
+
+Preferred helper shape:
 
 ```ts
-const dist = chebyshevDistance(record.coord, playerChunk)
-const frac = vegetationLodForDistance(dist)
-vegetationRegionBatcher.syncLod(record.coord, frac)
+export function vegetationLodFraction(
+  kind: VegetationKind,
+  dist: number,
+  radius: number,
+  lodScale: number,
+): number
 ```
 
-- `vegetationLodForDistance()` delegates to `densityLodFraction(dist, config.loadRadius, lodScale)`. Therefore **all vegetation/environment kinds currently receive the same source LOD fraction** before region `max()` is applied.
-- `InstancedPropGroup.setLodFraction()` narrows `InstancedMesh.count`; it does not rebuild buffers. This is the existing cheap LOD seam and should be reused.
-- Reflection visibility already has a separate conservative per-region path (`syncReflectionVisibility` + `REFLECTION_DISTANT_LAYER`). Do not merge main-pass LOD and mirror visibility into one policy.
-- Existing 3×3 region batching solved the old per-chunk submission problem. Do not introduce another batching layer or global vegetation megabatch.
+Equivalent API is fine if it explicitly preserves the distance band.
 
-## Performance evidence
+Requirements:
 
-From `2026-09-17--021--benchmark-settlement-heavy.md`:
+- near field remains unchanged,
+- far floor remains unchanged,
+- only partial/mid LOD is reduced for detail classes,
+- deterministic,
+- no allocation,
+- no duplicate independent distance curves at multiple call-sites.
 
-- vegetation census: ~214 draws / ~760.9k triangles,
-- `full`: ~46.5 ms,
-- `hide-vegetation`: ~28.7 ms.
+For High / radius 3, target approximately:
 
-From `2026-09-17--022--benchmark-stream.md`:
+| class | d0 | d1 | d2 | d3 |
+|---|---:|---:|---:|---:|
+| silhouette | 1.00 | 1.00 | 0.49 | 0.08 |
+| medium | 1.00 | 1.00 | 0.49 | 0.08 |
+| detail | 1.00 | 1.00 | ~0.27–0.29 | 0.08 |
+| groundDetail | 1.00 | 1.00 | ~0.20 | 0.08 |
 
-- `full`: ~10.8 ms,
-- `hide-vegetation`: ~6.8 ms.
+A class multiplier is acceptable internally, roughly:
+- detail: 0.55–0.60 of current partial fraction,
+- groundDetail: 0.40 of current partial fraction,
 
-These isolation deltas are upper bounds and overlap with shadows/post-processing. They justify recon, not a promised gain.
+but do not apply that blindly to near=1 or below the current far floor.
 
-## Recommended implementation shape
+### Integration seam
 
-### R1 — bounded per-kind vegetation census
-
-Extend diagnostics rather than changing rendering first.
-
-Preferred location:
-
-- extend `src/perf/sceneCensus.ts` or add a small vegetation-specific helper beside it,
-- consume existing object names emitted by `vegetationRegionBatcher` (`chunk-vegetation-region-...`, `chunk-environment-region-...`),
-- if current names do not expose `kind`, add a stable `userData` diagnostic tag on the region group / instanced meshes at build time rather than parsing fragile table-key strings.
-
-For each `VegetationKind`, report at least:
-
-- active `InstancedMesh` count / estimated draw calls,
-- active instance count (`mesh.count`),
-- full capacity if cheap/available,
-- triangles at active count,
-- number of active region-kind groups,
-- `castShadow` participation,
-- applied LOD fraction.
-
-Diagnostics must be sampled only for benchmark/report generation. Do not add a per-frame traversal in normal gameplay.
-
-### R2 — expose current applied region/kind LOD cheaply
-
-The batcher already owns the authoritative applied LOD state. Prefer exposing a **diagnostic snapshot method** from `VegetationRegionBatcher` rather than re-deriving it from scene transforms.
-
-Example shape (exact naming flexible):
-
-```ts
-export type VegetationRegionDiagRow = {
-  kind: VegetationKind
-  regions: number
-  sourceChunks: number
-  activeInstances: number
-  fullInstances: number
-  appliedFractionMin: number
-  appliedFractionMax: number
-}
-
-snapshotDiagnostics(): VegetationRegionDiagRow[]
-```
-
-This should read existing maps/buckets only when called by benchmark/report code.
-
-Do not make diagnostic state a second source of truth.
-
-### Gate A — choose exactly one production lever
-
-After R1/R2 and one fresh `settlement-heavy` + `stream` benchmark, classify the dominant remaining cost:
-
-1. excessive active instances / triangles for small vegetation,
-2. conservative region `max()` keeping distant small vegetation dense,
-3. shadow participation,
-4. rebuild work during streaming,
-5. something else.
-
-Implement **one** lever only, then re-benchmark.
-
-## Preferred production lever if census confirms triangle/instance pressure
-
-### R3 — per-kind LOD policy inside existing region batcher
-
-The strongest current architectural candidate is a per-kind multiplier/policy applied to the already-computed chunk fraction before region aggregation.
-
-Do **not** change the public world-level `lodScale` meaning and do not create a second visibility system.
+Prefer to keep per-kind knowledge in `vegetationRegionBatcher`, because it already owns `VegetationKind` and region-kind records.
 
 Preferred flow:
 
 ```text
 chunkManager
-  computes existing base vegetation fraction
+  computes existing distance/base LOD inputs
         ↓
-vegetationRegionBatcher.syncLod(chunkCoord, baseFraction)
+vegetationRegionBatcher
+  resolves effective fraction per kind
         ↓
-for each contributed kind:
-  kindFraction = applyVegetationKindBudget(kind, baseFraction)
-  store per chunk/kind
+chunkFractions for each region+kind
         ↓
-region applies existing max(nearest-member-wins)
+existing maxFraction()
         ↓
-InstancedPropGroup.setLodFraction(kindFraction)
+InstancedPropGroup.setLodFraction()
 ```
 
-This preserves all existing call sites and moves kind knowledge to the module that already owns kinds.
+If `syncLod(chunkCoord, fraction)` cannot support a truly distance-aware policy without reverse-engineering the band, extend the call minimally to include the already-known chunk distance (or equivalent band input). Do not move scene/world ownership into the helper.
 
-Start with conservative policy classes rather than ten unrelated magic constants:
+### Preserve current region conservatism
 
-- **structural / silhouette:** `tree-living`, `largeRock`, `fallenLog` → close to current fraction,
-- **medium vegetation:** `bush`, `cactus`, `rockCluster` → moderately reduced at partial LOD,
-- **small/detail:** `reed`, `fern`, `lily`, `seaweed` → more aggressive reduction once base fraction drops below 1.
+Do not alter:
+- `REGION_CHUNKS`,
+- `maxFraction()`,
+- region visibility,
+- reflection visibility,
+- rebuild-on-change.
 
-Exact multipliers/curves must come from the benchmark census. Do not hard-code speculative values in the plan.
+One nearby chunk may still keep the whole region-kind dense. That is acceptable in Stage 1; region conservatism is a possible Stage 2 target only after measurement.
 
-A pure helper in `vegetationRegionBatcher.ts` (or a tiny adjacent module if tests become cleaner) is preferred:
+### Prefix-ordering guard
 
-```ts
-function vegetationKindLodFraction(kind: VegetationKind, baseFraction: number): number
-```
+`InstancedPropGroup.setLodFraction()` renders the first N instances in each bucket. Existing placement ordering is deterministic/seeded and is relied on to make this a reasonable spatial subsample.
 
-Requirements:
+Do not:
+- sort placements by distance,
+- sort by vegetation kind importance,
+- reorder source placements,
+- introduce per-frame reordering.
 
-- clamp `[0, 1]`,
-- deterministic,
-- no allocations,
-- no distance calculation duplication,
-- keep at least the existing `InstancedPropGroup` minimum-one-instance behavior for non-empty buckets unless visual verification proves a category may fully disappear.
+Changing ordering is not part of this optimization and could make thinning spatially biased.
 
-### Why not change `REGION_CHUNKS`
+### Quality presets
 
-Do not tune 3×3 → 2×2/4×4 as the first production change.
+Do not add config or GUI fields.
 
-Changing region size simultaneously changes:
+Preserve:
+- Low `lodScale=0.5`,
+- Medium `lodScale=0.75`,
+- High `lodScale=1`.
 
-- draw submissions,
-- frustum granularity,
-- conservative nearest-member LOD behavior,
-- rebuild size/frequency,
-- reflection visibility granularity.
+The per-kind policy layers on top of the existing global quality setting.
 
-That makes causality poor and can trade one bottleneck for another. Only revisit region size if diagnostics show `max()` over-retention is dominant and per-kind policy cannot recover enough cost.
+## Explicitly out of Stage 1
 
-## Alternative lever if region conservatism dominates
+Do not change:
 
-If census proves a region is commonly held at fraction `1` by one near edge chunk while most instances lie far away, do not add per-instance distance checks.
+- `tree-living`,
+- `cactus`,
+- `largeRock`,
+- `fallenLog`,
+- `rockCluster`,
+- shadow policy,
+- reflection policy,
+- region size,
+- region visibility,
+- rebuild frequency,
+- worldgen/placement density,
+- grass/filler,
+- settlement vegetation.
 
-Prefer a bounded improvement to existing region aggregation, e.g. a region-kind distance/fraction derived from already-known member chunk fractions with an explicit conservative rule. Any alternative to `max()` must preserve nearby vegetation and be unit-tested for region-edge transitions.
+Do not add new diagnostics in the same implementation pass.
 
-Do not iterate all placements/instances per frame.
+## Stage 1 implementation order
 
-## Alternative lever if rebuild work dominates `stream`
+1. Inspect the exact `syncInstancedLodForRecord()` / `syncLod()` call contract on current main.
+2. Add the pure policy classification/resolver.
+3. Integrate the resolver into the existing region-kind LOD path with the smallest contract change needed.
+4. Preserve existing region `maxFraction()` behavior.
+5. Add focused tests.
+6. Run repository-standard automated checks.
+7. Stop production work. User benchmarks in browser.
+8. Only after the user benchmark decide whether Stage 2 diagnostics are needed.
 
-Only pursue this if fresh instrumentation shows rebuild CPU/hitches are material.
+## Stage 1 tests
 
-Current rebuild does:
+Cover at least:
 
-- dispose previous `InstancedPropGroup`,
-- concatenate member chunk placements,
-- rebuild all `(species, primitive)` buckets,
-- recompute bounding spheres.
+- all `VegetationKind` values map to the intended class,
+- near/full fraction stays 1,
+- silhouette and medium match the old policy,
+- detail is lower only in the partial/mid range,
+- groundDetail is more aggressive than detail,
+- no result exceeds the baseline fraction,
+- current far floor is preserved,
+- monotonicity with increasing distance,
+- Low/Medium/High `lodScale` still affect the base policy,
+- one region can apply different effective fractions to e.g. `tree-living` and `fern`,
+- nearest-member `maxFraction()` still works per region+kind,
+- rebuild reapplies the current effective kind policy,
+- reflection visibility remains independent.
 
-Possible work must stay inside the existing rebuild-on-change contract. Do not introduce a new worker protocol or incremental GPU allocator unless the measured rebuild cost justifies a separate larger plan.
+## Stage 2 — diagnostics only after user benchmark
 
-A cheap first diagnostic is counts + duration around `rebuild()` sampled only under perf diagnostics.
+If vegetation remains a material render cost after Stage 1, add a bounded vegetation-specific diagnostic snapshot.
+
+Measure per kind:
+
+- active InstancedMesh / draw submissions,
+- active instance count,
+- full capacity where cheap,
+- active triangles,
+- number of region-kind groups,
+- applied LOD fraction,
+- castShadow participation.
+
+Also measure rebuild count/duration in `stream` only if needed.
+
+Do not add a per-frame normal-game traversal.
+
+Use Stage 2 to decide whether the next lever is:
+
+1. silhouette/medium LOD,
+2. conservative region `max()`,
+3. rebuild cost,
+4. a different measured source.
 
 ## Shadows interaction
 
-`world-terrain-038` owns shadow content policy. Avoid duplicating shadow rules here.
+`world-terrain-038` owns the completed shadow-content optimization. Do not add another shadow policy in Stage 1.
 
-If plan 038 already removes small/distant vegetation from shadow maps before this implementation lands, vegetation-040 should measure **main-pass** benefit separately and not add a second `castShadow` policy.
-
-If 038 is not implemented yet and census says vegetation shadow cost dominates, record that dependency/result and defer the production fix to 038 rather than duplicating it here.
-
-## Files expected to change
-
-Likely:
-
-- `src/terrain/vegetationRegionBatcher.ts`
-- `src/terrain/vegetationRegionBatcher.test.ts`
-- `src/perf/sceneCensus.ts` / `src/perf/sceneCensus.test.ts` or one small adjacent vegetation diagnostic module
-- `src/perf/types.ts`
-- `src/perf/report.ts` / tests if the new census becomes part of saved benchmark output
-
-Only if required by the chosen lever:
-
-- `src/terrain/chunkManager.ts` — preferably unchanged for per-kind policy; keep the existing `syncLod(record.coord, frac)` call contract.
-
-Avoid unrelated changes to placement/worldgen, worker mesh generation or grass.
-
-## Tests
-
-Add unit coverage for:
-
-- every `VegetationKind` maps to the expected policy class,
-- fraction clamps and monotonicity,
-- `baseFraction = 1` preserves full detail where intended,
-- region nearest-member aggregation still behaves deterministically,
-- diagnostic snapshot counts region/kind records correctly,
-- `removeByKey` / rebuild preserves the active LOD policy after rebuild,
-- reflection visibility semantics remain independent.
-
-If `syncLod` internal storage becomes per-kind, explicitly test that one chunk contribution can produce different applied fractions for e.g. `tree-living` vs `fern` without changing chunk ownership.
+If later diagnostics show a new dominant shadow problem, record it explicitly rather than quietly duplicating shadow rules here.
 
 ## Technical verification
 
 AI agent:
 
 ```text
-pnpm test -- <focused vegetation/perf tests>
+pnpm test -- <focused vegetation tests>
 pnpm typecheck / project-equivalent type check
 pnpm lint
 pnpm build
 ```
 
-Use repository-standard commands from `package.json`/`CLAUDE.md`; do not run browser verification.
+Use repository-standard commands from `package.json` / `CLAUDE.md`. Do not run browser verification. Do not run `pnpm docs:sync`.
 
-User browser verification:
+User after Stage 1:
 
-1. Run `?benchmark=settlement-heavy` before/after.
-2. Run `?benchmark=stream` before/after.
-3. Compare:
-   - vegetation draws,
-   - vegetation active instances/triangles per kind,
-   - `RENDER`, FPS, frame p95,
-   - region rebuild diagnostics if added.
-4. Visually inspect while walking/turning across region boundaries:
-   - near trees never thin unexpectedly,
-   - bushes/reeds/ferns do not visibly pulse,
-   - no 3×3 region-shaped popping,
-   - reflection behavior unchanged.
+1. Run `?benchmark=settlement-heavy`.
+2. Run `?benchmark=stream`.
+3. Compare vegetation active instances/triangles, total draws, `RENDER`, FPS and frame p95.
+4. Walk/turn through forest and region boundaries.
+5. Inspect bushes, reeds, ferns, lilies and seaweed for visible thinning/pulsing.
+6. Confirm near vegetation still looks identical.
 
 ## Success / stop gate
 
-Keep a production LOD change only if it yields a repeatable render win and the visual transition remains acceptable.
+Keep Stage 1 if it yields a repeatable render/instance/triangle win without a visible near-range regression or obvious region-shaped popping.
 
-Prefer a meaningful reduction in vegetation active instances/triangles with unchanged or lower draw submissions. If the only measurable gain requires obvious vegetation popping or extensive new architecture, stop and document the result.
-
-## Explicit non-goals
-
-- second/global vegetation batching system,
-- changing world/chunk ownership,
-- per-frame iteration over placements/instances,
-- GPU-driven/indirect rendering,
-- occlusion framework,
-- settlement vegetation rewrite,
-- grass filler optimization,
-- shadow-policy duplication with world-terrain-038.
+If the gain is weak, do not keep increasing multipliers aggressively. Move to Stage 2 diagnostics and identify the actual remaining bottleneck.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
