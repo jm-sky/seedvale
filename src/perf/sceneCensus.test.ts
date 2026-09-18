@@ -173,6 +173,22 @@ describe('classifySettlementContent', () => {
     wood.userData[SETTLEMENT_SHADOW_KIND_USERDATA] = 'storageWood'
     expect(classifySettlementContent(wood)).toBe('storageWood')
 
+    const woodPrimary = namedMesh('pile-primary')
+    woodPrimary.userData[SETTLEMENT_SHADOW_KIND_USERDATA] = 'storageWoodSettlementPrimary'
+    expect(classifySettlementContent(woodPrimary)).toBe('storageWoodSettlementPrimary')
+
+    const woodOverflow = namedMesh('pile-overflow')
+    woodOverflow.userData[SETTLEMENT_SHADOW_KIND_USERDATA] = 'storageWoodSettlementOverflow'
+    expect(classifySettlementContent(woodOverflow)).toBe('storageWoodSettlementOverflow')
+
+    const woodSecondary = namedMesh('pile-secondary')
+    woodSecondary.userData[SETTLEMENT_SHADOW_KIND_USERDATA] = 'storageWoodSettlementSecondary'
+    expect(classifySettlementContent(woodSecondary)).toBe('storageWoodSettlementSecondary')
+
+    const woodHousehold = namedMesh('pile-household')
+    woodHousehold.userData[SETTLEMENT_SHADOW_KIND_USERDATA] = 'storageWoodHousehold'
+    expect(classifySettlementContent(woodHousehold)).toBe('storageWoodHousehold')
+
     const exteriorLamp = namedMesh('lamp')
     exteriorLamp.userData[SETTLEMENT_SHADOW_KIND_USERDATA] = 'fireHouseExteriorLamp'
     expect(classifySettlementContent(exteriorLamp)).toBe('fireHouseExteriorLamp')
@@ -184,6 +200,34 @@ describe('classifySettlementContent', () => {
     const campfire = namedMesh('campfire')
     campfire.userData[SETTLEMENT_SHADOW_KIND_USERDATA] = 'fireCampfire'
     expect(classifySettlementContent(campfire)).toBe('fireCampfire')
+  })
+
+  it('classifies landmark diagnostic subcategories', () => {
+    const well = namedMesh('well')
+    well.userData[SETTLEMENT_SHADOW_KIND_USERDATA] = 'landmarkWell'
+    expect(classifySettlementContent(well)).toBe('landmarkWell')
+
+    const garden = new Group()
+    garden.name = 'garden:lg'
+    const crop = namedMesh('crop')
+    garden.add(crop)
+    expect(classifySettlementContent(crop)).toBe('landmarkGarden')
+
+    const taggedGarden = namedMesh('crops')
+    taggedGarden.userData[SETTLEMENT_SHADOW_KIND_USERDATA] = 'landmarkGarden'
+    expect(classifySettlementContent(taggedGarden)).toBe('landmarkGarden')
+
+    const field = namedMesh('wheat')
+    field.userData[SETTLEMENT_SHADOW_KIND_USERDATA] = 'landmarkField'
+    expect(classifySettlementContent(field)).toBe('landmarkField')
+
+    const notice = namedMesh('board')
+    notice.userData[SETTLEMENT_SHADOW_KIND_USERDATA] = 'landmarkNoticeBoard'
+    expect(classifySettlementContent(notice)).toBe('landmarkNoticeBoard')
+
+    const leftover = namedMesh('legacy-landmark')
+    leftover.userData[SETTLEMENT_SHADOW_KIND_USERDATA] = 'landmark'
+    expect(classifySettlementContent(leftover)).toBe('landmark')
   })
 })
 
@@ -204,6 +248,24 @@ describe('censusSettlementShadowCasters', () => {
 
     const census = censusSettlementShadowCasters(scene)
     expect(census.houseStatic.meshes).toBe(0)
+    expect(census.other.meshes).toBe(0)
+  })
+
+  it('excludes exterior house lamps with castShadow disabled', () => {
+    const scene = new Scene()
+    const settlement = new Group()
+    settlement.name = 'settlement'
+
+    const lampRoot = new Group()
+    lampRoot.userData[SETTLEMENT_SHADOW_KIND_USERDATA] = 'fireHouseExteriorLamp'
+    const lampMesh = namedMesh('lantern')
+    lampMesh.castShadow = false
+    lampRoot.add(lampMesh)
+    settlement.add(lampRoot)
+    scene.add(settlement)
+
+    const census = censusSettlementShadowCasters(scene)
+    expect(census.fireHouseExteriorLamp.meshes).toBe(0)
     expect(census.other.meshes).toBe(0)
   })
 
@@ -229,7 +291,7 @@ describe('censusSettlementShadowCasters', () => {
 
     const tagged = namedMesh('well')
     tagged.castShadow = true
-    tagged.userData[SETTLEMENT_SHADOW_KIND_USERDATA] = 'landmark'
+    tagged.userData[SETTLEMENT_SHADOW_KIND_USERDATA] = 'landmarkWell'
     settlement.add(tagged)
 
     scene.add(settlement)
@@ -238,7 +300,8 @@ describe('censusSettlementShadowCasters', () => {
     expect(census.houseStatic.instancedMeshes).toBe(1)
     expect(census.houseStatic.instances).toBe(4)
     expect(census.fence.meshes).toBe(1)
-    expect(census.landmark.meshes).toBe(1)
+    expect(census.landmarkWell.meshes).toBe(1)
+    expect(census.landmark.meshes).toBe(0)
     expect(census.other.meshes).toBe(0)
   })
 })

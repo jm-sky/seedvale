@@ -111,8 +111,12 @@ export function placeOnGround(
  *  needed for props whose *authored* (pre-fit) geometry is large enough to
  *  read as shadow-casting even though the in-game (post-fit) prop is a small,
  *  decorative reed/lily/seaweed clump (plan world-terrain-010's "reeds, lily
- *  pads and seaweed cast no shadows by default" hard constraint). */
-function disableCastShadow(object: THREE.Object3D): THREE.Object3D {
+ *  pads and seaweed cast no shadows by default" hard constraint). Also used
+ *  create-time for exterior house lantern fixtures (world-terrain-038).
+ *
+ * @domain world-terrain
+ */
+export function disableCastShadow(object: THREE.Object3D): THREE.Object3D {
   object.traverse((node) => {
     const mesh = node as THREE.Mesh
     if (mesh.isMesh) mesh.castShadow = false

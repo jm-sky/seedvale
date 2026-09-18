@@ -314,3 +314,53 @@ Next user measurement: rerun `?benchmark=settlement-heavy`. The decision should 
 4. do not stack production cuts before the next benchmark.
 
 No production shadow rule was added in this diagnostic step.
+
+## Implementation log — 2026-09-18 (exterior lamp no-shadow + wood/landmark split)
+
+Evidence from `docs/performance/results/2026-09-18--025--benchmark-settlement-heavy.md` (census only; isolation probes partially broken — do not use FPS/render-ms as before):
+
+- `storageWood` 478 draws / 674.8k tris
+- `fireHouseExteriorLamp` 324 / 22.5k
+- `landmark` 273 / 556.8k
+
+### Production change (exactly one)
+
+- After `tagSettlementShadowKind(..., 'fireHouseExteriorLamp')` in `props.ts`, call exported `disableCastShadow(houseLight.object)` from `propUtils.ts`.
+- Keeps fixture mesh, PointLight, night intensity, interior fill; only removes the exterior lantern from the shadow pass.
+- Interior table lamps, village torches, campfires, houseStatic unchanged.
+
+### Diagnostic splits (no quantity / logic changes)
+
+`storageWood` sources retagged:
+
+- `storageWoodSettlementPrimary` — primary progressive pile
+- `storageWoodSettlementOverflow` — extra overflow clones
+- `storageWoodSettlementSecondary` — LG/XL secondary stockpile
+- `storageWoodHousehold` — household yard piles
+- `storageWood` remains fallback
+
+`landmark` sources retagged:
+
+- `landmarkWell` — central + household + pasture wells
+- `landmarkGarden` — gardens (+ `kindFromName` `garden:` → `landmarkGarden`)
+- `landmarkField` — wheat field
+- `landmarkNoticeBoard` — notice board
+- `landmark` remains fallback
+
+### Gate
+
+- Waiting on user `?benchmark=settlement-heavy` for post-cut Isolation and the new wood/landmark subcategory rows.
+- Expect `fireHouseExteriorLamp` ≈ 0 in Settlement shadow casters.
+- Do not use 025 FPS as the before baseline for Isolation.
+
+### Automated checks (this stage)
+
+- `sceneCensus` + `report` unit tests: pass.
+- `pnpm type-check`: pass.
+- `pnpm lint`: pass.
+- `pnpm test`: pass (7349).
+- `pnpm build`: pass.
+- No browser verification; no `pnpm docs:sync`.
+
+> **Zrób git commit i push do main, rebase jeżeli trzeba**
+

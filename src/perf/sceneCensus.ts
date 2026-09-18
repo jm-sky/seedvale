@@ -35,6 +35,10 @@ export const SETTLEMENT_CONTENT_KINDS = [
   'fence',
   'storage',
   'storageWood',
+  'storageWoodSettlementPrimary',
+  'storageWoodSettlementOverflow',
+  'storageWoodSettlementSecondary',
+  'storageWoodHousehold',
   'storageContainer',
   'storageBarrel',
   'storageHay',
@@ -42,6 +46,10 @@ export const SETTLEMENT_CONTENT_KINDS = [
   'storageGoods',
   'workplace',
   'landmark',
+  'landmarkWell',
+  'landmarkGarden',
+  'landmarkField',
+  'landmarkNoticeBoard',
   'fireLight',
   'fireHouseExteriorLamp',
   'fireHouseInteriorLamp',
@@ -140,7 +148,7 @@ function kindFromName(name: string): SettlementContentKind | null {
   ) {
     return 'storageTrough'
   }
-  if (name.startsWith('garden:')) return 'landmark'
+  if (name.startsWith('garden:')) return 'landmarkGarden'
   if (
     name === 'settlement-bushes'
     || name.startsWith('settlement-bushes-')

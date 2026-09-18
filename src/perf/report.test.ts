@@ -3,6 +3,7 @@ import { buildAgentCpuReport, emptyAgentCpuDiagTotals } from './agentCpuDiag'
 import { formatLongFrameAttribution } from './longFrameFormat'
 import { createPerfMonitor } from './monitor'
 import { buildReport, formatReport } from './report'
+import { emptySettlementShadowCensus } from './sceneCensus'
 import { LONG_FRAME_MS, PERF_CATEGORY_COUNT, PERF_CATEGORY_INDEX } from './types'
 
 describe('createPerfMonitor', () => {
@@ -472,17 +473,15 @@ describe('buildReport', () => {
 
   it('includes settlement shadow casters breakdown', () => {
     const categoryMsSum = new Float64Array(PERF_CATEGORY_COUNT)
-    const settlementShadowCasters = {
-      houseStatic: { meshes: 5, instancedMeshes: 5, instances: 200, drawCalls: 5, triangles: 100000 },
-      houseInteractive: { meshes: 0, instancedMeshes: 0, instances: 0, drawCalls: 0, triangles: 0 },
-      fence: { meshes: 3, instancedMeshes: 3, instances: 80, drawCalls: 3, triangles: 40000 },
-      storage: { meshes: 0, instancedMeshes: 0, instances: 0, drawCalls: 0, triangles: 0 },
-      storageGoods: { meshes: 0, instancedMeshes: 0, instances: 0, drawCalls: 0, triangles: 0 },
-      workplace: { meshes: 0, instancedMeshes: 0, instances: 0, drawCalls: 0, triangles: 0 },
-      landmark: { meshes: 1, instancedMeshes: 0, instances: 1, drawCalls: 1, triangles: 2000 },
-      fireLight: { meshes: 0, instancedMeshes: 0, instances: 0, drawCalls: 0, triangles: 0 },
-      decor: { meshes: 0, instancedMeshes: 0, instances: 0, drawCalls: 0, triangles: 0 },
-      other: { meshes: 0, instancedMeshes: 0, instances: 0, drawCalls: 0, triangles: 0 },
+    const settlementShadowCasters = emptySettlementShadowCensus()
+    settlementShadowCasters.houseStatic = {
+      meshes: 5, instancedMeshes: 5, instances: 200, drawCalls: 5, triangles: 100000,
+    }
+    settlementShadowCasters.fence = {
+      meshes: 3, instancedMeshes: 3, instances: 80, drawCalls: 3, triangles: 40000,
+    }
+    settlementShadowCasters.landmark = {
+      meshes: 1, instancedMeshes: 0, instances: 1, drawCalls: 1, triangles: 2000,
     }
     const report = buildReport({
       durationSec: 30,
