@@ -4,7 +4,7 @@
 **Status:** `planned` 📋
 **Type:** feature
 **Priority:** high · **Effort:** M
-**Depends on:** npc-046, fauna-037
+**Depends on:** ~~npc-046~~, ~~fauna-037~~
 **Domain:** `npc`
 **Subdomains:** `behavior` `decision-making` `combat` `work`
 **Tags:** `shepherd` `livestock` `predators` `combat` `loadout`
