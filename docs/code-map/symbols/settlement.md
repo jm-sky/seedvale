@@ -41,7 +41,7 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/createSettlement.ts`
 
-- `createSettlement` — function — line 457
+- `createSettlement` — function — line 462
 - `CreateSettlementDeps` — type — line 279
 - `Settlement` — type — line 153
 - `settlementSpawnPoint` — function — line 267

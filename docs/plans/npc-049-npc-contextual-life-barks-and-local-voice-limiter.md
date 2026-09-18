@@ -1,7 +1,7 @@
 # Plan: NPC contextual life barks and local voice limiter
 
 **Created:** 2026-09-17
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — implemented 2026-09-18 (`vitest` npcBarkLimiter + npcVoiceLines + `type-check`). Browser/manual audio verification not performed — belongs to the User.
 **Type:** feature
 **Priority:** high · **Effort:** M
 **Depends on:** npc-044
@@ -10,6 +10,7 @@
 **Tags:** `voice` `audio` `barks` `needs` `threats`
 **Roadmap:** -
 **Model:** Composer, Sonnet
+**Implemented at:** 2026-09-18 11:49
 
 ## Goal
 

@@ -287,7 +287,7 @@ Generated from TypeScript imports.
 - `app/actions/placementRequirementView.ts`
 - `app/inspection/worldInspectionView.ts`
 - `audio/audioSettings.ts`
-- `audio/createWorldAudio.ts`
+- `audio/npcVoicePlayback.ts`
 - `audio/uiSounds.ts`
 - `badges/badges.ts`
 - `config/qualityProfiles.ts`

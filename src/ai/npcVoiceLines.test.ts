@@ -183,4 +183,46 @@ describe('resolveNpcVoiceLine production manifest', () => {
       ),
     ).toBe('/sounds/voices/merchant_female_agree_01.mp3')
   })
+
+  it('resolves contextual life bark intents from the generated manifest', () => {
+    expect(resolveNpcVoiceLine(npc({ role: 'farmer', age: 40 }), 'exhausted')).toBe(
+      '/sounds/voices/general_male_exhausted_01.mp3',
+    )
+    expect(resolveNpcVoiceLine(npc({ role: 'farmer', age: 40 }), 'hungry')).toBe(
+      '/sounds/voices/general_male_hungry_01.mp3',
+    )
+    expect(resolveNpcVoiceLine(npc({ role: 'farmer', age: 40 }), 'weather_shelter')).toBe(
+      '/sounds/voices/general_male_weather_shelter_01.mp3',
+    )
+    expect(resolveNpcVoiceLine(npc({ role: 'farmer', age: 40 }), 'danger_alert')).toBe(
+      '/sounds/voices/general_male_danger_alert_01.mp3',
+    )
+    expect(resolveNpcVoiceLine(npc({ role: 'farmer', age: 40 }), 'combat_start')).toBe(
+      '/sounds/voices/general_male_combat_start_01.mp3',
+    )
+    expect(resolveNpcVoiceLine(npc({ role: 'farmer', age: 40 }), 'call_for_help')).toBe(
+      '/sounds/voices/general_male_call_for_help_01.mp3',
+    )
+    expect(resolveNpcVoiceLine(npc({ role: 'farmer', age: 40 }), 'work_finished')).toBe(
+      '/sounds/voices/general_male_work_finished_01.mp3',
+    )
+  })
+
+  it('resolves profession-specific danger and livestock barks', () => {
+    expect(resolveNpcVoiceLine(npc({ role: 'hunter', age: 40 }), 'danger_alert')).toBe(
+      '/sounds/voices/hunter_male_danger_alert_01.mp3',
+    )
+    expect(resolveNpcVoiceLine(npc({ role: 'shepherd', age: 40 }), 'livestock_danger')).toBe(
+      '/sounds/voices/shepherd_male_livestock_danger_01.mp3',
+    )
+    expect(resolveNpcVoiceLine(npc({ role: 'guard', age: 40 }), 'guard_response')).toBe(
+      '/sounds/voices/guard_male_guard_response_01.mp3',
+    )
+  })
+
+  it('falls female exhausted back to general female when no profession clip exists', () => {
+    expect(
+      resolveNpcVoiceLine(npc({ gender: 'female', role: 'farmer', age: 40, voiceActor: 'karen' }), 'exhausted'),
+    ).toBe('/sounds/voices/general_female_exhausted_01.mp3')
+  })
 })

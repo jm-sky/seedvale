@@ -195,47 +195,43 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `M` · **Score:**  31  
    → **unlocks:** 0/0
 
-31. `npc-049` — **NPC contextual life barks and local voice limiter**  
-  🔴 `M` · **Score:**  29  
-   → **unlocks:** 0/0
-
-32. `items-player-014` — **Rope-pullable resource transport**  
+31. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-33. `settlements-019` — **Settlement render submission budget**  
+32. `settlements-019` — **Settlement render submission budget**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-34. `tools-005` — **Seedvale Character Preparation Panel**  
+33. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-35. `world-terrain-039` — **N8AO / post-process cost budget**  
+34. `world-terrain-039` — **N8AO / post-process cost budget**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-36. `world-terrain-040` — **Vegetation render budget v2**  
+35. `world-terrain-040` — **Vegetation render budget v2**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-37. `items-player-044` — **Shoulder and forearm equipment slots**  
+36. `items-player-044` — **Shoulder and forearm equipment slots**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-38. `world-terrain-041` — **Agent presentation render LOD**  
+37. `world-terrain-041` — **Agent presentation render LOD**  
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-39. `settlements-npcs-046` — **Pasture Well & Trough Local Water Use**  
+38. `settlements-npcs-046` — **Pasture Well & Trough Local Water Use**  
   🟡 `S` · **Score:**  21  
    → **unlocks:** 0/0
 
-40. `items-player-032` — **NPC player-storage resource and context rules**  
+39. `items-player-032` — **NPC player-storage resource and context rules**  
   🟡 `L` · **Score:**  20  
    → **unlocks:** 0/0
 
-41. `quests-progression-061` — **Builder — Complete an Unfinished Palisade Segment**  
+40. `quests-progression-061` — **Builder — Complete an Unfinished Palisade Segment**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 

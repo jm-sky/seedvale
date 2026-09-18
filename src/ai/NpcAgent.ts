@@ -34,6 +34,9 @@ import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import type { WorldSpatialContext } from '../world/spatialContext'
 import type { WeatherState } from '../world/weather'
 import type { NpcBurialHooks } from './burialPressure'
+import type { NpcBarkIntent } from './npcBarkPolicies'
+import type { RequestNpcBark } from './npcBarkRequest'
+import { getSharedRequestNpcBark } from './npcBarkRequest'
 import type { GraveVisitCandidate, NpcGraveVisitHooks } from './graveVisitPressure'
 import type { HelperAssignment } from './helperAssignment'
 import type { ActionId, NpcPlannedAction, Phase } from './npcAction'
@@ -1018,6 +1021,11 @@ export type NpcAgentDeps = {
    *  omitted, falls back to the module-level
    *  `configureNpcPlayerReactionAudio` wiring (or non-cancelable `playAt`). */
   playAtCancelable?: PlayAtCancelable
+  /**
+   * Optional contextual life-bark requester (npc-049). When omitted, falls
+   * back to module-level `configureRequestNpcBark` wiring from createApp.
+   */
+  requestNpcBark?: RequestNpcBark
   /** Which GLB to load — defaults to `resolveNpcAppearance(...)`. The one
    *  field only `create()` reads; the constructor itself already has
    *  `root`/`animations` loaded from it by then. When set, skips the
@@ -1424,6 +1432,11 @@ export class NpcAgent {
   /** Optional per-agent override (tests); production uses module configure
    *  resolved at play time so boot order vs `createWorldBundle` does not matter. */
   private readonly playAtCancelableOverride: PlayAtCancelable | null
+  /**
+   * Optional per-agent bark requester override (tests); production uses
+   * `configureRequestNpcBark` from createApp (npc-049).
+   */
+  private readonly requestNpcBarkOverride: RequestNpcBark | null
   /** In-flight lookAtPlayer reaction bark — stopped when dialogue opens or a
    *  new reaction replaces it. */
   private playerReactionVoice: ActiveSound | null = null
@@ -1648,6 +1661,7 @@ export class NpcAgent {
     const mining = deps.mining ?? null
     this.playAt = playAt
     this.playAtCancelableOverride = deps.playAtCancelable ?? null
+    this.requestNpcBarkOverride = deps.requestNpcBark ?? null
     this.forest = forest
     this.id = npcId
     this.queues = queues
@@ -2365,6 +2379,7 @@ export class NpcAgent {
     replaceActionLifecycle(this.actionLifecycle)
     this.phase = 'combat'
     this.trace.record({ simTime: this.simClock, type: 'combat.started', targetId: intent.target.ref.id })
+    this.requestBark('combat_start', `combat:${this.id}:${intent.target.ref.id}`)
     return true
   }
 
@@ -2854,6 +2869,8 @@ export class NpcAgent {
     if ((this.phase === 'goTo' || this.phase === 'execute') && isExhausted(this.stamina)) {
       this.previousPhase = this.phase
       this.phase = 'exhausted'
+      // Presentation-only (npc-049) — work already stopped; bark may be denied.
+      this.requestBark('exhausted')
     }
     if (executeIsHeavy) {
       applyWorkVigor(this.vigor, dt)
@@ -2921,6 +2938,7 @@ export class NpcAgent {
       this.mesh.position.z,
       nearbyAnimalThreats,
     )
+    let flockThreatApplied = false
     if (this.role === 'shepherd' && this.household) {
       const flockThreat = senseOwnedFlockThreat(
         this.mesh.position.x,
@@ -2943,16 +2961,32 @@ export class NpcAgent {
             distance: Math.hypot(candidate.x - this.mesh.position.x, candidate.z - this.mesh.position.z),
             target: candidate.target,
           }
+          flockThreatApplied = true
         }
       }
     }
-    if (previousAnimalThreat === null && this.currentAnimalThreat !== null) {
-      this.trace.record({
-        simTime: this.simClock,
-        type: 'animalThreat.sensed',
-        animalId: this.currentAnimalThreat.animalId,
-        distance: this.currentAnimalThreat.distance,
-      })
+    if (this.currentAnimalThreat !== null) {
+      const threatId = this.currentAnimalThreat.animalId
+      const isNewEpisode = previousAnimalThreat === null
+        || previousAnimalThreat.animalId !== threatId
+      if (previousAnimalThreat === null) {
+        this.trace.record({
+          simTime: this.simClock,
+          type: 'animalThreat.sensed',
+          animalId: threatId,
+          distance: this.currentAnimalThreat.distance,
+        })
+      }
+      if (isNewEpisode) {
+        if (flockThreatApplied && this.household) {
+          this.requestBark(
+            'livestock_danger',
+            `livestock-threat:${threatId}:${this.household.homeId}`,
+          )
+        } else if (previousAnimalThreat === null) {
+          this.requestBark('danger_alert', `threat:${threatId}`)
+        }
+      }
     }
     if (
       this.currentAnimalThreat
@@ -3091,10 +3125,14 @@ export class NpcAgent {
           }
           break
         }
+        const previousNeed = this.activeNeed
         const need = outcome === 'need' ? (decision as NeedId) : 'idle'
         this.activeNeed = need
         this.trace.record({ simTime: this.simClock, type: 'need.selected', need, pressures, candidates })
         if (outcome === 'need') {
+          if (need === 'food' && previousNeed !== 'food') {
+            this.requestBark('hungry')
+          }
           this.ensurePlanForNeed(need)
           this.beginNeed(need)
           break
@@ -3171,7 +3209,14 @@ export class NpcAgent {
           } else {
             completeActionLifecycle(this.actionLifecycle)
             this.leaveActiveQueue()
-            if (action) this.trace.record({ simTime: this.simClock, type: 'action.completed', action: action.kind })
+            if (action) {
+              this.trace.record({ simTime: this.simClock, type: 'action.completed', action: action.kind })
+              // Narrow work-block completion bark (npc-049) — terminal execute
+              // only, classified as schedule work, not gathering/need/interrupt.
+              if (classifyPendingActivity(action, this.activeNeed) === 'work') {
+                this.requestBark('work_finished')
+              }
+            }
             this.clearMovementCommitment()
             this.phase = 'choose'
           }
@@ -6015,6 +6060,7 @@ export class NpcAgent {
       this.wanderNear(this.home)
       return
     }
+    this.requestBark('weather_shelter')
     this.startAction({
       kind: 'shelter',
       destination: copyVec3(this.home),
@@ -6530,6 +6576,41 @@ export class NpcAgent {
     this.target.copy(anchor)
     this.applyRimDestination(this.target)
     this.phase = 'wander'
+  }
+
+  /**
+   * Settlement/local area key for bark budgets (npc-049). Prefer household
+   * settlement id; fall back to economy. Never parse from `this.id`.
+   */
+  private barkAreaKey(): string | null {
+    return this.household?.settlementId ?? this.economy?.settlementId ?? null
+  }
+
+  /**
+   * Request a contextual life/world bark (npc-049). Presentation-only —
+   * denial or missing audio never changes simulation state.
+   */
+  private requestBark(
+    intent: NpcBarkIntent,
+    episodeKey?: string,
+  ): void {
+    const request = this.requestNpcBarkOverride ?? getSharedRequestNpcBark()
+    const areaKey = this.barkAreaKey()
+    if (!request || !areaKey) return
+    request({
+      npc: {
+        id: this.id,
+        gender: this.gender,
+        role: this.role,
+        age: this.age,
+        voiceActor: this.voiceActor,
+      },
+      position: this.mesh.position,
+      areaKey,
+      intent,
+      nowSim: this.simClock,
+      episodeKey,
+    })
   }
 
   /** Reuses existing voice pools per tier (plan 117 §3) — no new audio

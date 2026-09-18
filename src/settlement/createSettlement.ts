@@ -339,6 +339,11 @@ export type CreateSettlementDeps = {
   clearColliders: (ownerKey: string) => void
   // presentation
   playAt?: PlayAt
+  /**
+   * Contextual life/world bark requester (npc-049). Optional — when omitted,
+   * NPCs use module-level `configureRequestNpcBark` from createApp.
+   */
+  requestNpcBark?: import('../ai/npcBarkRequest').RequestNpcBark
   /** Plan 157 — registers this settlement's house lamps/village torches/
    *  campfire (`group`, once built) so production `NUM_POINT_LIGHTS`
    *  stabilization (`src/world/pointLightBudget.ts`) sees them for as long
@@ -474,6 +479,7 @@ export async function createSettlement(
     registerColliders,
     clearColliders,
     playAt = () => {},
+    requestNpcBark,
     roadCtx,
     forest,
     onAnimalDeath,
@@ -1099,6 +1105,7 @@ export async function createSettlement(
         physicalProfile,
         familyMembers,
         playAt,
+        requestNpcBark,
         forest,
         npcId,
         queues,
@@ -1179,6 +1186,7 @@ export async function createSettlement(
         physicalProfile,
         familyMembers: visitorSpawn.familyMembers,
         playAt,
+        requestNpcBark,
         npcId: visitorSpawn.npcId,
         npcState,
         household: visitorSpawn.household ?? null,

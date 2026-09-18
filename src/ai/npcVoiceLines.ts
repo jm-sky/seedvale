@@ -152,7 +152,10 @@ export function pickNpcFriendlyTalkSound(gender: NpcGender): string | undefined 
   return pool[Math.floor(Math.random() * pool.length)]
 }
 
-/** Semantic dialogue voice events resolved by `resolveNpcVoiceLine` (npc-044). */
+/**
+ * Semantic voice events resolved by `resolveNpcVoiceLine` (npc-044 dialogue
+ * + npc-049 contextual life/world barks). Bark intents are presentation-only.
+ */
 export type NpcVoiceSemanticIntent =
   | 'greeting'
   | 'farewell'
@@ -166,6 +169,15 @@ export type NpcVoiceSemanticIntent =
   | 'quest_accepted'
   | 'quest_declined'
   | 'quest_complete'
+  | 'exhausted'
+  | 'hungry'
+  | 'weather_shelter'
+  | 'danger_alert'
+  | 'combat_start'
+  | 'call_for_help'
+  | 'livestock_danger'
+  | 'guard_response'
+  | 'work_finished'
 
 /**
  * Presentation-only age band for generated voice filenames (`young` / `old`).
@@ -310,6 +322,68 @@ const GENERATED_VOICE_MANIFEST: Readonly<Record<string, readonly string[]>> = {
   'hunter:male:quest_complete': [
     '/sounds/voices/hunter_male_quest_complete_01.mp3',
     '/sounds/voices/hunter_male_quest_complete_02.mp3',
+  ],
+
+  // Contextual life / world barks (npc-049) — only files present on disk.
+  'general:male:exhausted': [
+    '/sounds/voices/general_male_exhausted_01.mp3',
+  ],
+  'general:female:exhausted': [
+    '/sounds/voices/general_female_exhausted_01.mp3',
+  ],
+  'general:male:hungry': [
+    '/sounds/voices/general_male_hungry_01.mp3',
+  ],
+  'general:male:weather_shelter': [
+    '/sounds/voices/general_male_weather_shelter_01.mp3',
+  ],
+  'general:female:weather_shelter': [
+    '/sounds/voices/general_female_weather_shelter_01.mp3',
+  ],
+  'guard:male:weather_shelter': [
+    '/sounds/voices/guard_male_weather_shelter_01.mp3',
+  ],
+  'general:male:danger_alert': [
+    '/sounds/voices/general_male_danger_alert_01.mp3',
+  ],
+  'general:female:danger_alert': [
+    '/sounds/voices/general_female_danger_alert_01.mp3',
+  ],
+  'guard:male:danger_alert': [
+    '/sounds/voices/guard_male_danger_alert_01.mp3',
+  ],
+  'hunter:male:danger_alert': [
+    '/sounds/voices/hunter_male_danger_alert_01.mp3',
+  ],
+  'general:male:combat_start': [
+    '/sounds/voices/general_male_combat_start_01.mp3',
+  ],
+  'guard:male:combat_start': [
+    '/sounds/voices/guard_male_combat_start_01.mp3',
+  ],
+  'hunter:male:combat_start': [
+    '/sounds/voices/hunter_male_combat_start_01.mp3',
+  ],
+  'general:male:call_for_help': [
+    '/sounds/voices/general_male_call_for_help_01.mp3',
+  ],
+  'general:female:call_for_help': [
+    '/sounds/voices/general_female_call_for_help_01.mp3',
+  ],
+  'guard:male:call_for_help': [
+    '/sounds/voices/guard_male_call_for_help_01.mp3',
+  ],
+  'hunter:male:call_for_help': [
+    '/sounds/voices/hunter_male_call_for_help_01.mp3',
+  ],
+  'shepherd:male:livestock_danger': [
+    '/sounds/voices/shepherd_male_livestock_danger_01.mp3',
+  ],
+  'guard:male:guard_response': [
+    '/sounds/voices/guard_male_guard_response_01.mp3',
+  ],
+  'general:male:work_finished': [
+    '/sounds/voices/general_male_work_finished_01.mp3',
   ],
 }
 

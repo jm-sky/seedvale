@@ -155,6 +155,12 @@ Generated from exported TypeScript symbols.
 
 - `nightPhase` — function — line 19
 
+## `audio/npcVoicePlayback.ts`
+
+- `configureNpcVoicePlayback` — function — line 17
+- `NPC_VOICE_VOLUME` — const — line 12
+- `playNpcVoiceAt` — function — line 25
+
 ## `audio/playerMoveSounds.ts`
 
 - `applyFootstepPackFromUrl` — function — line 70

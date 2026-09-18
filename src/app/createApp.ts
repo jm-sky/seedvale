@@ -10,6 +10,8 @@ import type { GrassForageOverrides } from '../world/grassForage'
 import type { NearbyPlayerWellLookup } from '../world/playerWell'
 import type { PlayerActionContext } from './actions/actionContext'
 import { configureNpcPlayerReactionAudio } from '../ai/NpcAgent'
+import { NpcBarkLimiter } from '../ai/npcBarkLimiter'
+import { configureRequestNpcBark, createRequestNpcBark } from '../ai/npcBarkRequest'
 import { NEUTRAL_PLAYER_SOCIAL_STATE } from '../ai/reactionChance'
 import { playAnimalCombatDeath } from '../audio/actionSounds'
 import { playNegativeConsequence } from '../audio/consequenceSounds'
@@ -844,6 +846,7 @@ export async function createApp(
   configureUiSounds(worldAudio.playOnce)
   configureNpcVoiceSounds(worldAudio.playAt)
   configureNpcPlayerReactionAudio(worldAudio.playAtCancelable)
+  configureRequestNpcBark(createRequestNpcBark(new NpcBarkLimiter()))
 
   const mapDiscovery = createMapDiscovery(initialSave?.map.discoveredCells)
   const mapProjection = createMapProjection(rawSampleParamsFromWorld(config))
@@ -3562,6 +3565,7 @@ export async function createApp(
     configureUiSounds(null)
     configureNpcVoiceSounds(null)
     configureNpcPlayerReactionAudio(null)
+    configureRequestNpcBark(null)
     configureAudioVolumes(worldAudio.getVolumes(), null)
     worldAudio.dispose()
     // Marks a still-in-flight initial-boot background phase stale before

@@ -63,6 +63,8 @@ Generated from TypeScript imports.
 - `ai/npcAnimalThreat.ts`
 - `ai/npcAppearance.ts`
 - `ai/npcAssistance.ts`
+- `ai/npcBarkPolicies.ts`
+- `ai/npcBarkRequest.ts`
 - `ai/npcCaveLocomotion.ts`
 - `ai/npcColliderRim.ts`
 - `ai/npcCombat.ts`
@@ -662,6 +664,57 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `ai/npcAssistance.test.ts`
+
+## `ai/npcBarkLimiter.test.ts`
+
+**Imports**
+
+- `ai/npcBarkLimiter.ts`
+- `ai/npcBarkPolicies.ts`
+- `ai/npcBarkRequest.ts`
+- `ai/npcVoiceLines.ts`
+- `audio/npcVoicePlayback.ts`
+
+## `ai/npcBarkLimiter.ts`
+
+**Imports**
+
+- `ai/npcBarkPolicies.ts`
+
+**Imported by**
+
+- `ai/npcBarkLimiter.test.ts`
+- `ai/npcBarkRequest.ts`
+- `app/createApp.ts`
+
+## `ai/npcBarkPolicies.ts`
+
+**Imports**
+
+- `ai/npcVoiceLines.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `ai/npcBarkLimiter.test.ts`
+- `ai/npcBarkLimiter.ts`
+- `ai/npcBarkRequest.ts`
+
+## `ai/npcBarkRequest.ts`
+
+**Imports**
+
+- `ai/npcBarkLimiter.ts`
+- `ai/npcBarkPolicies.ts`
+- `ai/npcVoiceLines.ts`
+- `audio/createWorldAudio.ts`
+- `audio/npcVoicePlayback.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `ai/npcBarkLimiter.test.ts`
+- `app/createApp.ts`
 
 ## `ai/npcCaveLocomotion.test.ts`
 
@@ -1357,6 +1410,9 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `ai/npcBarkLimiter.test.ts`
+- `ai/npcBarkPolicies.ts`
+- `ai/npcBarkRequest.ts`
 - `ai/npcVoiceLines.test.ts`
 - `quests/QuestManager.ts`
 - `ui-vue/store.ts`

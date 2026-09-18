@@ -912,6 +912,8 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `ai/characters.ts`
+- `ai/npcBarkLimiter.ts`
+- `ai/npcBarkRequest.ts`
 - `ai/reactionChance.ts`
 - `app/actions/actionContext.ts`
 - `app/actions/containerActions.ts`

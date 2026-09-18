@@ -41,8 +41,19 @@ Current semantic keywords used by the working catalog:
 - `quest_accepted`
 - `quest_declined`
 - `quest_complete`
+- `exhausted`
+- `hungry`
+- `weather_shelter`
+- `danger_alert`
+- `combat_start`
+- `call_for_help`
+- `livestock_danger`
+- `guard_response`
+- `work_finished`
 
 `refusal` means the NPC refuses something requested by the player. `quest_declined` means the player declines the NPC's quest/offer and the NPC reacts to that decision.
+
+Contextual life/world bark keywords (npc-049) are presentation-only and share the same flat filename convention. Runtime only lists files that exist under `public/sounds/voices/` in the generated voice manifest.
 
 ## Voice sources
 

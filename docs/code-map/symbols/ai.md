@@ -181,25 +181,25 @@ Generated from exported TypeScript symbols.
 
 ## `ai/NpcAgent.ts`
 
-- `classifyPendingActivity` — function — line 737
-- `configureNpcPlayerReactionAudio` — function — line 985
-- `CurrentActivity` — type — line 547
-- `CurrentActivityKind` — type — line 540
-- `HUNT_RESUPPLY_ARROW_TARGET` — const — line 854
-- `NPC_HEIGHT` — const — line 479
-- `NPC_SHADOW_DISTANCE` — const — line 484
-- `NpcAgent` — class — line 1112
+- `classifyPendingActivity` — function — line 740
+- `configureNpcPlayerReactionAudio` — function — line 988
+- `CurrentActivity` — type — line 550
+- `CurrentActivityKind` — type — line 543
+- `HUNT_RESUPPLY_ARROW_TARGET` — const — line 857
+- `NPC_HEIGHT` — const — line 482
+- `NPC_SHADOW_DISTANCE` — const — line 487
+- `NpcAgent` — class — line 1120
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcAgentDeps` — type — line 1002
-- `NpcInspectionSnapshot` — type — line 562
-- `NpcWhy` — type — line 712
-- `projectNpcWhy` — function — line 779
-- `promoteChainKind` — function — line 729
+- `NpcAgentDeps` — type — line 1005
+- `NpcInspectionSnapshot` — type — line 565
+- `NpcWhy` — type — line 715
+- `projectNpcWhy` — function — line 782
+- `promoteChainKind` — function — line 732
 
 ## `ai/npcAnimalThreat.ts`
 
@@ -255,6 +255,35 @@ Generated from exported TypeScript symbols.
 - `findCarriedConsumableKind` — function — line 27
 - `resolveNpcAssistance` — function — line 97
 - `violatesOwnNeedsGuard` — function — line 86
+
+## `ai/npcBarkLimiter.ts`
+
+- `NpcBarkAdmitDecision` — type — line 33
+- `NpcBarkAdmitRequest` — type — line 17
+- `NpcBarkLimiter` — class — line 45
+  - domain: npc
+- `NpcBarkRejectReason` — type — line 26
+
+## `ai/npcBarkPolicies.ts`
+
+- `isNpcBarkIntent` — function — line 128
+- `longestNpcBarkRetentionSec` — function — line 133
+- `NPC_OPTIONAL_BARK_AREA_WINDOW_SEC` — const — line 32
+- `NPC_OPTIONAL_BARK_MAX_PER_AREA` — const — line 33
+- `NpcBarkIntent` — type — line 36
+- `NpcBarkPolicy` — type — line 17
+- `npcBarkPolicyFor` — function — line 123
+- `NpcBarkPriority` — type — line 11
+
+## `ai/npcBarkRequest.ts`
+
+- `configureRequestNpcBark` — function — line 44
+- `createRequestNpcBark` — function — line 76
+- `getSharedRequestNpcBark` — function — line 48
+- `NpcBarkDecision` — type — line 30
+- `NpcBarkRequest` — type — line 20
+- `RequestNpcBark` — type — line 34
+- `resolveNpcBarkVoiceUrl` — function — line 57
 
 ## `ai/npcCaveLocomotion.ts`
 
@@ -606,7 +635,7 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcVoiceLines.ts`
 
-- `buildNpcVoiceLookupKeys` — function — line 322
+- `buildNpcVoiceLookupKeys` — function — line 396
 - `FRIENDLY_TALK_SOUND_VOLUME` — const — line 148
 - `NPC_CONFIRMATION_SOUND_URLS` — const — line 79
 - `NPC_FAREWELL_SOUND_URLS` — const — line 75
@@ -616,22 +645,22 @@ Generated from exported TypeScript symbols.
 - `NPC_QUEST_COMPLETE_SOUND_URLS` — const — line 117
 - `NPC_REACTION_SOUND_URLS` — const — line 106
 - `NpcVoiceActor` — type — line 21
-- `NpcVoiceAgeBand` — type — line 175
+- `NpcVoiceAgeBand` — type — line 187
   - domain: npc
-- `NpcVoiceResolveInput` — type — line 178
-- `NpcVoiceSemanticIntent` — type — line 156
+- `NpcVoiceResolveInput` — type — line 190
+- `NpcVoiceSemanticIntent` — type — line 159
 - `pickNpcConfirmationSound` — function — line 100
 - `pickNpcFarewellSound` — function — line 94
 - `pickNpcFriendlyTalkSound` — function — line 150
 - `pickNpcGreetingSound` — function — line 88
 - `REACTION_SOUND_VOLUME` — const — line 124
-- `resolveNpcVoiceLine` — function — line 362
+- `resolveNpcVoiceLine` — function — line 436
   - domain: npc
-- `resolveNpcVoiceLineWithManifest` — function — line 370
+- `resolveNpcVoiceLineWithManifest` — function — line 444
 - `voiceActorForIndex` — function — line 28
-- `voiceAgeBandForAge` — function — line 192
+- `voiceAgeBandForAge` — function — line 204
   - domain: npc
-- `voiceScopeForRole` — function — line 205
+- `voiceScopeForRole` — function — line 217
 
 ## `ai/npcWorkContract.ts`
 

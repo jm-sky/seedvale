@@ -5,7 +5,6 @@ import type { ActionAvailability, ActionResult } from '../app/actions/actionCont
 import type { PlacementPreviewKind, PlacementPreviewUiView } from '../app/actions/placementPreviewActions'
 import type { PlacementPreviewState as PlacementPreviewPresentation, PlacementRequirementView } from '../app/actions/placementRequirementView'
 import type { InspectionActionId, WorldInspectionView } from '../app/inspection/worldInspectionView'
-import type { PlayAt } from '../audio/createWorldAudio'
 import type { BadgeDef, SettlementBadgeDef } from '../badges/badges'
 import type { QualityPreset } from '../config/qualityProfiles'
 import type { WorldConfig } from '../config/worldConfig'
@@ -748,16 +747,11 @@ function emitUiOpen(): void {
   if (uiPlayOnce) playUiOpen(uiPlayOnce)
 }
 
-let npcVoicePlayAt: PlayAt | null = null
-/** Quiet enough to sit under the `emitUiOpen()` panel chirp. */
-const NPC_VOICE_VOLUME = 0.75
-
-export function configureNpcVoiceSounds(playAt: PlayAt | null): void {
-  npcVoicePlayAt = playAt
-}
+export { configureNpcVoicePlayback as configureNpcVoiceSounds } from '../audio/npcVoicePlayback'
+import { playNpcVoiceAt } from '../audio/npcVoicePlayback'
 
 function playNpcVoice(npc: NpcAgent | null, url: string | undefined): void {
-  if (npc && url && npcVoicePlayAt) npcVoicePlayAt(url, npc.mesh.position, NPC_VOICE_VOLUME)
+  playNpcVoiceAt(npc?.mesh.position, url)
 }
 
 export function emitUiClick(): void {

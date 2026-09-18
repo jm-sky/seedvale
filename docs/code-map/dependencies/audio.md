@@ -123,6 +123,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `ai/npcBarkRequest.ts`
 - `ai/npcPlayerReactionVoice.test.ts`
 - `app/actions/actionContext.ts`
 - `app/createApp.ts`
@@ -136,6 +137,7 @@ Generated from TypeScript imports.
 - `audio/distanceGain.test.ts`
 - `audio/doorSounds.ts`
 - `audio/fireSounds.ts`
+- `audio/npcVoicePlayback.ts`
 - `audio/playerMoveSounds.ts`
 - `audio/weatherSounds.test.ts`
 - `audio/weatherSounds.ts`
@@ -143,7 +145,6 @@ Generated from TypeScript imports.
 - `settlement/PlacedFires.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
-- `ui-vue/store.ts`
 
 ## `audio/distanceGain.test.ts`
 
@@ -216,6 +217,18 @@ Generated from TypeScript imports.
 
 - `audio/createAmbientAudio.ts`
 - `audio/frogAmbience.ts`
+
+## `audio/npcVoicePlayback.ts`
+
+**Imports**
+
+- `audio/createWorldAudio.ts`
+
+**Imported by**
+
+- `ai/npcBarkLimiter.test.ts`
+- `ai/npcBarkRequest.ts`
+- `ui-vue/store.ts`
 
 ## `audio/playerMoveSounds.test.ts`
 
