@@ -364,3 +364,61 @@ Evidence from `docs/performance/results/2026-09-18--025--benchmark-settlement-he
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
 
+## Implementation log — 2026-09-18 (census effective visibility + landmarkWell recon)
+
+Evidence from `docs/performance/results/2026-09-18--026--benchmark-settlement-heavy.md`:
+
+- `fireHouseExteriorLamp` gone from shadow census — exterior lamp cut kept.
+- `storageWoodHousehold` 360 / 451.8k — suspected inflated by hidden progressive `Pile_*` stages.
+- `landmarkWell` 175 / 65.5k (submission-heavy).
+- `landmarkGarden` 84 / 491.1k.
+
+### Diagnostic fix: effective visibility
+
+`isRenderableMesh` only checked local `object.visible`. Three.js also culls when any ancestor is hidden.
+
+- Added `isEffectivelyVisible` (walk object → parents; all must be `visible`).
+- Applied in `censusScene`, `censusShadowCasters`, `censusSettlementShadowCasters`.
+- `hideBuckets` / runtime render unchanged.
+- Test: visible mesh under `parent.visible=false` counts as 0.
+
+### Recon `landmarkWell` (no production cut)
+
+| Fact | Detail |
+|------|--------|
+| Asset | `well.glb` via `WELL_URL`; fallback `createWell()` |
+| GLB primitives | **5** meshes; after `loadGltf` SMALL_MESH threshold **all** `castShadow=true` (authored diagonal ≫ 0.5) |
+| Fallback | 8 meshes; 7 cast (water no shadow) |
+| Placement | One template → `clone(true)` for central / household / pasture — **not** InstancedMesh |
+| Colliders / queues | Separate circle colliders + drink queues in `createSettlement.ts` — not mesh-derived |
+| 026 math | 175 draws ≈ 35×5 GLB meshes → many well instances in load radius and/or role mix; split will attribute |
+
+ROI candidates (notes only — **not implemented**): whole-prop no-shadow, shadow proxy / merge, household InstancedMesh rebucketing, visual-accepted castShadow=false.
+
+### Diagnostic split
+
+Retagged create sites:
+
+- `landmarkWellCentral`
+- `landmarkWellHousehold`
+- `landmarkWellPasture`
+
+`landmarkWell` remains fallback.
+
+### Gate
+
+- User re-runs `?benchmark=settlement-heavy`.
+- Expect lower `storageWood*` (hidden stages excluded).
+- Expect well rows split Central / Household / Pasture; sum ≈ N×5 meshes for GLB wells.
+
+### Automated checks (this stage)
+
+- `sceneCensus` + `report` unit tests: pass.
+- `pnpm type-check`: pass.
+- `pnpm lint`: pass.
+- `pnpm test`: one unrelated failure in `src/ai/weatherPressure.test.ts` (storm vs rain shelter pressure); not touched by this change.
+- `pnpm build`: pass.
+- No browser verification; no `pnpm docs:sync`.
+
+> **Zrób git commit i push do main, rebase jeżeli trzeba**
+

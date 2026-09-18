@@ -863,7 +863,7 @@ export async function buildSettlementProps(
   const wellTemplate = await loadPropOrFallback(WELL_URL, WELL_HEIGHT, createWell)
   const well = wellTemplate.clone(true)
   placeOnGround(well, wellX, wellZ, sampleHeight)
-  tagSettlementShadowKind(well, 'landmarkWell')
+  tagSettlementShadowKind(well, 'landmarkWellCentral')
   group.add(well)
   landmarks.well.set(wellX, sampleHeight(wellX, wellZ), wellZ)
   landmarks.wellProp = well
@@ -883,7 +883,7 @@ export async function buildSettlementProps(
     if (familyIndex == null) continue
     const hw = wellTemplate.clone(true)
     placeOnGround(hw, lm.x, lm.z, sampleHeight)
-    tagSettlementShadowKind(hw, 'landmarkWell')
+    tagSettlementShadowKind(hw, 'landmarkWellHousehold')
     group.add(hw)
     const position = new THREE.Vector3(lm.x, sampleHeight(lm.x, lm.z), lm.z)
     wells.push({
@@ -899,7 +899,7 @@ export async function buildSettlementProps(
   if (pasturePlan) {
     const pw = wellTemplate.clone(true)
     placeOnGround(pw, pasturePlan.well.x, pasturePlan.well.z, sampleHeight)
-    tagSettlementShadowKind(pw, 'landmarkWell')
+    tagSettlementShadowKind(pw, 'landmarkWellPasture')
     group.add(pw)
     const position = new THREE.Vector3(
       pasturePlan.well.x,

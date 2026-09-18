@@ -207,6 +207,18 @@ describe('classifySettlementContent', () => {
     well.userData[SETTLEMENT_SHADOW_KIND_USERDATA] = 'landmarkWell'
     expect(classifySettlementContent(well)).toBe('landmarkWell')
 
+    const wellCentral = namedMesh('well-central')
+    wellCentral.userData[SETTLEMENT_SHADOW_KIND_USERDATA] = 'landmarkWellCentral'
+    expect(classifySettlementContent(wellCentral)).toBe('landmarkWellCentral')
+
+    const wellHousehold = namedMesh('well-household')
+    wellHousehold.userData[SETTLEMENT_SHADOW_KIND_USERDATA] = 'landmarkWellHousehold'
+    expect(classifySettlementContent(wellHousehold)).toBe('landmarkWellHousehold')
+
+    const wellPasture = namedMesh('well-pasture')
+    wellPasture.userData[SETTLEMENT_SHADOW_KIND_USERDATA] = 'landmarkWellPasture'
+    expect(classifySettlementContent(wellPasture)).toBe('landmarkWellPasture')
+
     const garden = new Group()
     garden.name = 'garden:lg'
     const crop = namedMesh('crop')
@@ -228,6 +240,27 @@ describe('classifySettlementContent', () => {
     const leftover = namedMesh('legacy-landmark')
     leftover.userData[SETTLEMENT_SHADOW_KIND_USERDATA] = 'landmark'
     expect(classifySettlementContent(leftover)).toBe('landmark')
+  })
+})
+
+describe('effective visibility', () => {
+  it('skips meshes under a hidden ancestor in all census helpers', () => {
+    const scene = new Scene()
+    const settlement = new Group()
+    settlement.name = 'settlement'
+    const pile = new Group()
+    pile.visible = false
+    const stage = namedMesh('Pile_01')
+    stage.castShadow = true
+    stage.visible = true
+    pile.add(stage)
+    settlement.add(pile)
+    scene.add(settlement)
+
+    expect(censusScene(scene).settlement.meshes).toBe(0)
+    expect(censusShadowCasters(scene).settlement.meshes).toBe(0)
+    expect(censusSettlementShadowCasters(scene).other.meshes).toBe(0)
+    expect(censusSettlementShadowCasters(scene).landmarkWell.meshes).toBe(0)
   })
 })
 
@@ -291,7 +324,7 @@ describe('censusSettlementShadowCasters', () => {
 
     const tagged = namedMesh('well')
     tagged.castShadow = true
-    tagged.userData[SETTLEMENT_SHADOW_KIND_USERDATA] = 'landmarkWell'
+    tagged.userData[SETTLEMENT_SHADOW_KIND_USERDATA] = 'landmarkWellCentral'
     settlement.add(tagged)
 
     scene.add(settlement)
@@ -300,7 +333,8 @@ describe('censusSettlementShadowCasters', () => {
     expect(census.houseStatic.instancedMeshes).toBe(1)
     expect(census.houseStatic.instances).toBe(4)
     expect(census.fence.meshes).toBe(1)
-    expect(census.landmarkWell.meshes).toBe(1)
+    expect(census.landmarkWellCentral.meshes).toBe(1)
+    expect(census.landmarkWell.meshes).toBe(0)
     expect(census.landmark.meshes).toBe(0)
     expect(census.other.meshes).toBe(0)
   })

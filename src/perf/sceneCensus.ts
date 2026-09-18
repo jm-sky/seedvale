@@ -47,6 +47,9 @@ export const SETTLEMENT_CONTENT_KINDS = [
   'workplace',
   'landmark',
   'landmarkWell',
+  'landmarkWellCentral',
+  'landmarkWellHousehold',
+  'landmarkWellPasture',
   'landmarkGarden',
   'landmarkField',
   'landmarkNoticeBoard',
@@ -223,6 +226,17 @@ function isRenderableMesh(object: Object3D): object is Mesh {
   return mesh.isMesh === true || mesh instanceof InstancedMesh || mesh instanceof SkinnedMesh
 }
 
+/** True when `object` and every ancestor up to the scene root are `visible`.
+ *  Matches Three.js render eligibility (hidden parents cull descendants). */
+function isEffectivelyVisible(object: Object3D): boolean {
+  let node: Object3D | null = object
+  while (node) {
+    if (!node.visible) return false
+    node = node.parent
+  }
+  return true
+}
+
 function accumulateInto(
   bucket: BucketStats,
   mesh: Mesh,
@@ -248,6 +262,7 @@ export function censusScene(scene: Scene): SceneCensus {
   const census = emptyCensus()
   scene.traverse((object) => {
     if (!isRenderableMesh(object)) return
+    if (!isEffectivelyVisible(object)) return
     accumulateMesh(census, object)
   })
   return census
@@ -255,8 +270,9 @@ export function censusScene(scene: Scene): SceneCensus {
 
 /**
  * Upper-bound estimate of content that participates in the shadow map:
- * visible renderable meshes with `castShadow === true`, classified into the
- * same buckets as {@link censusScene}. Content estimate only — not GPU time.
+ * effectively visible renderable meshes with `castShadow === true`, classified
+ * into the same buckets as {@link censusScene}. Content estimate only — not
+ * GPU time.
  *
  * @domain world-terrain
  */
@@ -264,6 +280,7 @@ export function censusShadowCasters(scene: Scene): SceneCensus {
   const census = emptyCensus()
   scene.traverse((object) => {
     if (!isRenderableMesh(object)) return
+    if (!isEffectivelyVisible(object)) return
     if (!object.castShadow) return
     accumulateMesh(census, object)
   })
@@ -272,7 +289,8 @@ export function censusShadowCasters(scene: Scene): SceneCensus {
 
 /**
  * Settlement-only shadow-caster breakdown by content kind. Only counts
- * visible `castShadow` meshes whose top-level scene bucket is `settlement`.
+ * effectively visible `castShadow` meshes whose top-level scene bucket is
+ * `settlement`.
  *
  * @domain world-terrain
  */
@@ -280,6 +298,7 @@ export function censusSettlementShadowCasters(scene: Scene): SettlementShadowCen
   const census = emptySettlementShadowCensus()
   scene.traverse((object) => {
     if (!isRenderableMesh(object)) return
+    if (!isEffectivelyVisible(object)) return
     if (!object.castShadow) return
     if (classifyObject(object) !== 'settlement') return
     accumulateInto(census[classifySettlementContent(object)], object)
