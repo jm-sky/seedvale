@@ -6,7 +6,7 @@
 **Depends on:** none
 **Domain:** `fauna`
 **Type:** `feature`
-**Roadmap:** `quests-travelling-merchant-journeys.md`
+**Roadmap:** `quests-travelling-merchant-journeys.md`\n**Model:** `Opus`, `Sonnet`
 
 ## Goal
 
