@@ -64,39 +64,25 @@ Implement semantic resolution immediately before this presentation choice rather
 
 Combat remains separate: current attack/hurt/death one-shot lifecycle must keep priority over ordinary semantic work animation.
 
-## Recommended new module
+## Semantic resolver contract
 
-Add `src/ai/npcAnimationIntent.ts`.
+Add `src/ai/npcAnimationIntent.ts`. It is Three.js-free and presentation-only.
 
-Keep it Three.js-free and presentation-only.
+Use this exact precedence:
 
-Recommended inputs should expose only facts already available on `NpcAgent`, for example:
+1. combat/hurt/death one-shot gates remain outside the resolver;
+2. an active stationary execute/busy action wins over stale movement flags;
+3. moving with effective run/flee → `run`;
+4. moving with explicitly bulky cargo → `walkCarry`;
+5. other movement → `walk`;
+6. concrete `ActionId` → semantic activity;
+7. generic `work` may inspect role using the fixed table below;
+8. unsupported busy activity → `interact`;
+9. otherwise → `idle`.
 
-```ts
-type ResolveNpcAnimationIntentInput = {
-  actionKind: ActionId | null
-  moving: boolean
-  locomotionMode: 'walk' | 'run'
-  carrying: boolean
-  busy: boolean
-  role?: Role
-}
-```
+Concrete `ActionId` always beats profession. No animation intent is persisted.
 
-Do not blindly copy this shape if current call sites can provide a smaller one. The important rule is that concrete `ActionId` beats `Role`.
-
-Suggested precedence:
-
-1. combat one-shot gate remains outside this resolver;
-2. movement + effective run → `run`;
-3. movement + relevant carried cargo → `walkCarry`;
-4. movement → `walk`;
-5. concrete execute action → semantic activity intent;
-6. generic `work` may inspect role only when no more specific action exists;
-7. fallback → `interact` for busy work/need activity;
-8. otherwise → `idle`.
-
-Be careful with precedence: current code intentionally prevents busy actions from continuing a locomotion clip if `moving` remains stale. Preserve that safety. If the resolver sees a true execute/busy phase, stationary action presentation must win over stale movement state.
+Bulky cargo is not equivalent to “inventory non-empty”. Add a small shared/pure classifier (or equivalent presentation helper) whose initial accepted resource is wood/beams. Ordinary food, herbs, arrows and ore do not trigger `walkCarry`. Run/flee always overrides `walkCarry`.
 
 ## Action-to-intent mapping
 
@@ -109,31 +95,36 @@ Direct mappings:
 - `plant` → `farmPlant`
 - `eat` → `consume`
 - `conversation` → `talk`
-- `fish` → `interact` in Standard baseline
+- `fish` → `interact`
 - `mine` → `interact`
-- `sharpen` → `interact` unless a current target is proven compatible with `Fixing_Kneeling`
+- `sharpen` → `interact`
 - `shear` → `interact`
 - `drink` → `interact`
 - `bury` / `cleanAnimalCorpse` → `interact`
-- `deposit` / `exchange` → keep current interaction fallback unless a specific pickup endpoint is known to be table-height.
+- ground food/item pickup, including berries/herbs → `interact`
+- `deposit` / `exchange` → `interact`
+- existing garden watering → new short semantic action `waterGarden` → `farmWater`; its completion calls the existing `foodSources.waterGarden(garden.id)`
+- existing sleep entry after `goSleep` reaches its destination → `layToIdle`; the existing sleep FSM remains authoritative.
 
-Do not map `PickUp_Table` globally to all pickup/logistics actions: many current pickups are ground-level or abstract inventory transfers.
+`PickUp_Table` is not extracted or wired in this plan.
 
-Do not wire `Farm_Watering` until a real watering action exists. The current crop hydration/watering gameplay is outside this plan.
+`Chest_Open` is extracted into the shared companion but has no runtime mapping until an actual NPC chest/container action exists.
 
-## Generic `work` ambiguity
+## Generic `work` mapping
 
-Several profession paths intentionally return `kind: 'work'` rather than a dedicated `ActionId`.
+For `ActionId === 'work'`, use this fixed role mapping:
 
-Known examples include hunter arrow/bow crafting and generic production/workplace fallback.
+- herbalist → `fixKneeling`
+- textile_worker → `fixKneeling`
+- blacksmith → `fixKneeling`
+- hunter → `fixKneeling`
+- trader → `interact`
+- miner → `interact`
+- fisher → `interact`
+- shepherd → `interact`
+- farmer/woodcutter/guard generic `work` → `interact` unless a more specific concrete ActionId is active.
 
-For these:
-
-- concrete profession actions must remain preferred whenever they exist;
-- role-based animation selection is allowed only at this presentation fallback seam;
-- hunter generic crafting may use `fixKneeling` only if the authored pose is spatially sensible at the existing workplace;
-- textile worker/herbalist/unsupported roles should remain `interact` rather than inventing a false semantic clip;
-- do not change `planProfessionWork()` return kinds solely to make animation selection easier unless a new action id is independently useful to simulation state.
+Do not change profession planning merely to improve animation coverage except for the existing garden watering mutation, which must become a short semantic action so the already-existing world mutation has a truthful visible duration.
 
 ## UAL asset pipeline
 
@@ -164,34 +155,13 @@ Use non-root-motion Standard files for gameplay movement. Seedvale navigation re
 
 ## Shared companion asset decision
 
-Current public animation asset is:
+The final shared animation asset is exactly:
 
-`public/models/characters/ubc/ual1_player.glb`
+`public/models/characters/ubc/ual_humanoid.glb`
 
-Current constant/resolver:
+Replace the player-named `PLAYER_UBC_ANIMATION_URL` contract with a neutral UBC humanoid companion constant/resolver used by both player and NPC UBC models. Update PlayerController/NpcAgent call sites atomically.
 
-- `PLAYER_UBC_ANIMATION_URL`
-- `companionAnimationUrl(modelUrl)` in `src/player/playerVisualPreset.ts`.
-
-Current `NpcAgent.create()` ignores `NpcAppearance.animationUrl` directly and derives:
-
-```ts
-const modelUrl = deps.modelUrl ?? appearance.modelUrl
-const animationUrl = companionAnimationUrl(modelUrl)
-```
-
-It then loads the companion clips and merges them with model clips.
-
-For this plan, prefer making this API neutral instead of creating an NPC-only companion resolver. A clean end state is one shared UBC humanoid animation URL used by both Player and NPC UBC outfits.
-
-Possible migration:
-
-- rename/replace `PLAYER_UBC_ANIMATION_URL` with a neutral exported UBC humanoid companion constant;
-- keep player preset `animationUrl` pointing at the same shared file;
-- keep `companionAnimationUrl(modelUrl)` (or rename it neutrally) as the path-family resolver;
-- update PlayerController/NpcAgent call sites together.
-
-Do not duplicate UAL clips into every outfit GLB.
+After migration, `public/models/characters/ubc/ual1_player.glb` must no longer be a runtime dependency. Do not create separate player/NPC companion files and do not duplicate UAL clips into outfit GLBs.
 
 ## Building UAL1 + UAL2 into one runtime companion
 
@@ -213,41 +183,41 @@ The generated runtime file name should be neutral, e.g. `ual_humanoid.glb`; upda
 
 ## Baseline Standard clip manifest
 
-The implementation baseline may only require clips already inspected in the locally held Standard archives.
+The final `ual_humanoid.glb` must contain the already-required player/combat clips from the current companion plus these approved npc-055 runtime/presentation clips:
 
-High-value UAL1 Standard clips:
-
+UAL1 Standard:
 - `Idle_Loop`
 - `Walk_Loop`
 - `Jog_Fwd_Loop`
 - `Sprint_Loop`
 - `Interact`
-- `PickUp_Table`
 - `Fixing_Kneeling`
 - `Idle_Talking_Loop`
 - `Sitting_Enter`
 - `Sitting_Idle_Loop`
 - `Sitting_Talking_Loop`
 - `Sitting_Exit`
-- current combat/jump/swim/crouch subset already used by the player/NPC pipeline.
+- current combat/hurt/death/player-required clips already present in the existing companion pipeline.
 
-High-value UAL2 Standard clips:
-
+UAL2 Standard:
 - `TreeChopping_Loop`
 - `Farm_Harvest`
 - `Farm_PlantSeed`
-- `Farm_Watering` (asset only; no gameplay caller in this plan)
+- `Farm_Watering`
 - `Walk_Carry_Loop`
 - `Consume`
 - `LayToIdle`
+- `Chest_Open`.
+
+Do not include for npc-055 without another concrete runtime consumer:
+- `PickUp_Table`
 - `Idle_FoldArms_Loop`
 - `Idle_Lantern_Loop`
 - `Yes`
 - `Idle_No_Loop`
-- `Chest_Open`
 - `OverhandThrow`.
 
-Do not add fishing/mining/smithing/shearing/textile/ground-foraging clip names unless the locally available paid archive is later inspected and exact names are mechanically verified.
+No fishing/mining/smithing/shearing/textile/foraging paid clip is part of this plan.
 
 ## Appearance migration
 
@@ -279,23 +249,27 @@ Do not create new appearance randomness or persist mesh selection.
 
 ### Adult role completion
 
-Expand the existing mapping rather than creating another resolver.
+Use exactly these mappings:
 
-Use only UBC outfit families actually generated by the current asset pipeline. If a proposed visual mapping needs `knight_cloth` or `noble`, first check whether `NpcOutfitId` / variant generation supports that family; currently the NPC UBC union is only:
+| Role | Outfit |
+|---|---|
+| farmer | Peasant |
+| woodcutter | Peasant |
+| guard | Knight |
+| trader | Wizard |
+| miner | Peasant |
+| fisher | Peasant |
+| hunter | Ranger |
+| blacksmith | Peasant |
+| shepherd | Peasant |
+| textile_worker | Peasant |
+| herbalist | Peasant |
 
-```ts
-'peasant' | 'wizard' | 'ranger' | 'knight'
-```
-
-Do not casually add a family whose female assets, hair variants or NPC sidecar tint do not exist.
-
-The safest migration can reuse Peasant/Ranger/Wizard/Knight across more professions without requiring unique profession outfits.
+Only Peasant/Wizard/Ranger/Knight are allowed. Peasant is the default profession fallback. Reuse existing deterministic UBC hair/beard/color machinery; do not add Noble or Knight_Cloth.
 
 ### Female guard
 
-`NPC_UBC_FEMALE_KNIGHT_URL` is already declared, but current `defaultUbcUrl(..., 'knight')` always returns the male unhelmeted Knight and `resolveNpcAppearance()` explicitly falls back to Modular for non-male guards.
-
-Before removing that fallback, verify the current asset generator actually emits `female_knight.glb` and that its hair/head/material composition is valid. Do not trust the exported constant alone.
+Female guard must use Knight. Verify/fix the existing female Knight build output if necessary; failure is an asset-pipeline bug to fix in this plan, not permission to fall back to Modular.
 
 ## Children
 
@@ -312,7 +286,7 @@ if (member.scale !== 1) wrapper.scale.setScalar(member.scale)
 For this plan:
 
 - remove the early non-adult Modular appearance fallback;
-- resolve children through a UBC-compatible appearance;
+- resolve every child to Peasant UBC regardless of role;
 - preserve the existing `member.scale` application unchanged;
 - do not invent Teen assets;
 - do not alter age generation or physical-stat curves.
@@ -321,18 +295,22 @@ Dedicated Teen male/female bodies are intentionally deferred until the future Ba
 
 ## Legacy cleanup
 
-Do not delete files merely because `resolveNpcAppearance()` no longer returns them.
+Legacy Modular Men/Women are removed, not retained.
 
-Before removal, search runtime references to all legacy character GLBs, including:
+After UBC migration:
+1. Search all repository/runtime/debug/test references to:
+   - `Farmer.glb`
+   - `Casual_Hoodie.glb`
+   - `Casual_2.glb`
+   - `Female_Casual.glb`
+   - `Female_Medieval.glb`
+   - `Female_Formal.glb`.
+2. Migrate or remove every remaining code/debug/test reference.
+3. Remove the legacy model pools/preloads and `outfit: 'modular'` runtime path.
+4. Physically delete those six public GLBs in this plan.
+5. Update asset docs so they no longer claim the deleted models are runtime assets.
 
-- `Farmer.glb`
-- `Casual_Hoodie.glb`
-- `Casual_2.glb`
-- `Female_Casual.glb`
-- `Female_Medieval.glb`
-- `Female_Formal.glb`
-
-Also check debug/model-browser/test fixtures and docs separately. Runtime references must reach zero before deleting public assets; debug-only fixtures may need explicit migration rather than deletion.
+Do not keep a hidden legacy fallback for children, female guards or unsupported professions.
 
 ## Tests
 
@@ -343,7 +321,7 @@ Create focused tests for:
 - each directly supported `ActionId`;
 - unsupported work kinds falling back to `interact`;
 - movement walk/run selection;
-- carried movement selecting `walkCarry`;
+- only wood/beam bulky-cargo walking selecting `walkCarry`; ordinary inventory and ore do not;
 - stale `moving=true` not overriding stationary busy execution;
 - role consulted only for ambiguous generic `work`;
 - no dependency on Three.js.
@@ -398,13 +376,13 @@ The extraction/build step should be self-validating:
 
 - `NpcAppearance.animationUrl` exists, but `NpcAgent.create()` currently recomputes the companion from `modelUrl`; do not accidentally maintain two competing companion sources.
 - `PLAYER_UBC_ANIMATION_URL` is player-named but already shared by NPCs; rename/refactor instead of adding a second constant.
-- `Farm_Watering` being available does not mean crop watering exists as an NPC action.
+- Garden watering already exists as an immediate mutation; this plan must wrap that existing mutation in a short semantic `waterGarden` action rather than adding another watering decision system.
 - `PickUp_Table` is not a valid general ground-pickup replacement.
 - animation clip duration must never control profession work duration.
-- `Walk_Carry_Loop` is presentation derived from existing cargo state; it must not create or persist a new carrying flag.
+- `Walk_Carry_Loop` is presentation derived from an explicit bulky-cargo classifier; initial bulky kind is wood/beams. It must not create/persist duplicate cargo state, and run/flee overrides it.
 - loaded/off-screen simulation continuity cannot depend on animation playback.
 - legacy and UBC rigs must not share UAL through runtime retargeting.
-- current `NPC_UBC_FEMALE_KNIGHT_URL` declaration is not proof the generated asset is runtime-ready; verify the build output before using it.
+- female guard must end on Knight UBC; verify/fix the generated female Knight output rather than preserving Modular fallback.
 - do not broaden this work into a Teen/body-proportion implementation.
 
 ## Model choice
