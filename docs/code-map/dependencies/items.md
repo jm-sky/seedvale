@@ -8,6 +8,7 @@ Generated from TypeScript imports.
 
 - `items/HeldTool.ts`
 - `items/Inventory.ts`
+- `items/itemInstances.ts`
 - `items/weaponMaintenance.ts`
 
 ## `items/HeldTool.ts`
@@ -1045,6 +1046,7 @@ Generated from TypeScript imports.
 - `app/inspection/buildWorldInspection.ts`
 - `app/inventoryWiring.ts`
 - `economy/production.ts`
+- `items/HeldTool.test.ts`
 - `items/HeldTool.ts`
 - `items/Inventory.test.ts`
 - `items/Inventory.ts`
