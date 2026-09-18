@@ -56,7 +56,7 @@ export const SETTLEMENT_DEFINITION_CACHE_NAMESPACE = 'settlement-definitions'
  * resolved progression-policy identity) is fingerprinted separately. An
  * old-version record is a plain cache miss — records are never migrated.
  */
-export const SETTLEMENT_DEFINITION_CACHE_VERSION = 1
+export const SETTLEMENT_DEFINITION_CACHE_VERSION = 2
 
 const DEFAULT_DEBOUNCE_MS = 4000
 /** Bounded per-seed cap of requested cells only — never a full grid scan.

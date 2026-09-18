@@ -79,21 +79,23 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/families.ts`
 
-- `cobbleCountForSize` — function — line 132
-- `FamilyDef` — type — line 162
-- `FamilyMember` — type — line 145
-- `FamilyMemberRef` — type — line 171
-- `FamilyRelation` — type — line 143
-- `generateFamilies` — function — line 431
-- `maxRolledVillageSize` — function — line 208
-- `minRolledVillageSize` — function — line 216
-- `RolledVillageSize` — type — line 18
-- `rolledVillageSizeRank` — function — line 203
-- `rollVillageSize` — function — line 239
-- `VILLAGE_SIZE_CONFIG` — const — line 64
-- `VillageSize` — type — line 15
-- `villageSizeConfig` — function — line 117
-- `VillageSizeConfig` — type — line 22
+- `cobbleCountForSize` — function — line 133
+- `ensureSettlementElder` — function — line 544
+  - domain: settlements-npcs
+- `FamilyDef` — type — line 163
+- `FamilyMember` — type — line 146
+- `FamilyMemberRef` — type — line 172
+- `FamilyRelation` — type — line 144
+- `generateFamilies` — function — line 466
+- `maxRolledVillageSize` — function — line 209
+- `minRolledVillageSize` — function — line 217
+- `RolledVillageSize` — type — line 19
+- `rolledVillageSizeRank` — function — line 204
+- `rollVillageSize` — function — line 240
+- `VILLAGE_SIZE_CONFIG` — const — line 65
+- `VillageSize` — type — line 16
+- `villageSizeConfig` — function — line 118
+- `VillageSizeConfig` — type — line 23
 
 ## `settlement/findSettlementSite.ts`
 
@@ -940,19 +942,19 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/settlementGenerator.ts`
 
-- `cellFromId` — function — line 142
-- `cellKey` — function — line 127
-- `cellSeed` — function — line 170
-- `cellsWithinRadius` — function — line 154
-- `generateSettlementDef` — function — line 784
-- `generateVillagePlan` — function — line 714
-- `probeSettlementSite` — function — line 506
+- `cellFromId` — function — line 143
+- `cellKey` — function — line 128
+- `cellSeed` — function — line 171
+- `cellsWithinRadius` — function — line 155
+- `generateSettlementDef` — function — line 790
+- `generateVillagePlan` — function — line 720
+- `probeSettlementSite` — function — line 507
   - domain: settlements
-- `SETTLEMENT_GRID_STEP` — const — line 69
-- `SettlementCell` — type — line 75
-- `SettlementDef` — type — line 77
-- `SettlementSiteProbe` — type — line 491
-- `worldToCell` — function — line 131
+- `SETTLEMENT_GRID_STEP` — const — line 70
+- `SettlementCell` — type — line 76
+- `SettlementDef` — type — line 78
+- `SettlementSiteProbe` — type — line 492
+- `worldToCell` — function — line 132
 
 ## `settlement/settlementNameUniqueness.ts`
 

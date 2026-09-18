@@ -318,6 +318,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `settlement/families.ts`
+- `settlement/npcPhysicalProfile.ts`
 - `terrain/naturalResources.ts`
 
 ## `settlement/families.ts`
@@ -326,6 +327,7 @@ Generated from TypeScript imports.
 
 - `ai/characters.ts`
 - `ai/nameCultures.ts`
+- `settlement/npcPhysicalProfile.ts`
 - `shared/SettlementName.ts`
 - `terrain/naturalResources.ts`
 - `world/parseSeed.ts`
@@ -979,6 +981,7 @@ Generated from TypeScript imports.
 - `settlement/families.ts`
 - `settlement/lostTreasureChroniclesElderResident.ts`
 - `settlement/npcIdentity.ts`
+- `settlement/npcPhysicalProfile.ts`
 - `settlement/professionStaffing.ts`
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementPlanCache.ts`
@@ -1184,7 +1187,11 @@ Generated from TypeScript imports.
 - `ai/npcStamina.test.ts`
 - `ai/npcVoiceLines.ts`
 - `settlement/createSettlement.ts`
+- `settlement/families.test.ts`
+- `settlement/families.ts`
+- `settlement/lostTreasureChroniclesElderResident.test.ts`
 - `settlement/npcPhysicalProfile.test.ts`
+- `settlement/settlementGenerator.test.ts`
 - `shared/effectivePhysicalAttributes.ts`
 
 ## `settlement/npcPostDeath.test.ts`
@@ -1878,6 +1885,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `settlement/families.ts`
+- `settlement/npcPhysicalProfile.ts`
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementTerrain.ts`
 - `settlement/villagePlan.ts`

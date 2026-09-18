@@ -14,6 +14,7 @@ import {
   selectLostTreasureChroniclesElderSettlement,
 } from './lostTreasureChroniclesElderResident'
 import { flattenedSettlementMembers, settlementNpcId } from './npcIdentity'
+import { lifeStageForAge } from './npcPhysicalProfile'
 import { resolveInitialProfessionStaffing } from './professionStaffing'
 import { generateSettlementDef } from './settlementGenerator'
 import { clearSettlementDefCache, settlementDefFor } from './settlementPlanCache'
@@ -156,6 +157,12 @@ describe('lost treasure chronicles elder resident', () => {
     expect(host.size).not.toBe('OUTPOST')
     expect(['SM', 'MD']).toContain(host.size)
     expect(host.families.filter(isLostTreasureElderFamily)).toHaveLength(1)
+
+    // Kazimierz (age 74, plan settlements-npcs-045) already satisfies the
+    // generic settlement elder invariant on his own — no other resident
+    // needs to be promoted just because he's authored, not generated.
+    const kazimierz = flattenedSettlementMembers(host).find((m) => m.name === LOST_TREASURE_ELDER_GIVEN_NAME)
+    expect(lifeStageForAge(kazimierz!.age)).toBe('elderly')
 
     const members = flattenedSettlementMembers(host)
     const elderMembers = members.filter((member) => member.name === LOST_TREASURE_ELDER_GIVEN_NAME)

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { NaturalResource } from '../terrain/naturalResources'
 import {
   cobbleCountForSize,
+  ensureSettlementElder,
   generateFamilies,
   maxRolledVillageSize,
   minRolledVillageSize,
@@ -11,6 +12,12 @@ import {
   type VillageSize,
   villageSizeConfig,
 } from './families'
+import { lifeStageForAge, NPC_AGE_MAX } from './npcPhysicalProfile'
+
+const isElderAge = (age: number): boolean => {
+  const stage = lifeStageForAge(age)
+  return stage === 'elderly' || stage === 'veryElderly'
+}
 
 describe('cobbleCountForSize', () => {
   it('is 0 for OUTPOST/SM (no plaza focal point)', () => {
@@ -314,5 +321,109 @@ describe('generateFamilies', () => {
         'Barbara:fisher',
       ])
     })
+
+    it('lets adults roll past 70, including natural elderly/veryElderly, while non-elders stay dominant (plan settlements-npcs-045)', () => {
+      let sawOver70 = false
+      let sawElderly = false
+      let sawVeryElderly = false
+      let elderCount = 0
+      let veryElderlyCount = 0
+      let adultCount = 0
+      for (let seed = 0; seed < 300; seed++) {
+        const families = generateFamilies(seed, 'LG', false, 'polish')
+        for (const member of families.flatMap((f) => f.members)) {
+          if (member.relation === 'child') continue
+          adultCount++
+          if (member.age > 70) sawOver70 = true
+          const stage = lifeStageForAge(member.age)
+          if (stage === 'elderly') { sawElderly = true; elderCount++ }
+          if (stage === 'veryElderly') { sawVeryElderly = true; veryElderlyCount++ }
+        }
+      }
+      expect(sawOver70).toBe(true)
+      expect(sawElderly).toBe(true)
+      expect(sawVeryElderly).toBe(true)
+      // veryElderly must stay materially rarer than the rest of the adult population.
+      expect(veryElderlyCount).toBeLessThan(adultCount - veryElderlyCount)
+      expect(veryElderlyCount).toBeLessThan(elderCount)
+    })
+
+    it('never rolls an adult age above NPC_AGE_MAX', () => {
+      for (let seed = 0; seed < 200; seed++) {
+        const families = generateFamilies(seed, 'XL', false, 'polish')
+        for (const member of families.flatMap((f) => f.members)) {
+          expect(member.age).toBeLessThanOrEqual(NPC_AGE_MAX)
+        }
+      }
+    })
+  })
+})
+
+describe('ensureSettlementElder (plan settlements-npcs-045)', () => {
+  it('is a no-op for OUTPOST even if the single resident would otherwise qualify', () => {
+    for (let seed = 0; seed < 100; seed++) {
+      const families = generateFamilies(seed, 'OUTPOST', false, 'polish')
+      expect(ensureSettlementElder(families, 'OUTPOST', seed)).toEqual(families)
+    }
+  })
+
+  it('guarantees >=1 elderly/veryElderly member for every normal size, without adding/removing/reordering members', () => {
+    for (const size of ['SM', 'MD', 'LG', 'XL'] as const) {
+      for (let seed = 0; seed < 150; seed++) {
+        const families = generateFamilies(seed, size, false, 'polish')
+        const before = families.flatMap((f) => f.members.map((m) => m.name))
+        const result = ensureSettlementElder(families, size, seed)
+        expect(result.length).toBe(families.length)
+        expect(result.flatMap((f) => f.members.map((m) => m.name))).toEqual(before)
+        expect(result.map((f) => f.id)).toEqual(families.map((f) => f.id))
+        const hasElder = result.some((f) => f.members.some((m) => isElderAge(m.age)))
+        expect(hasElder).toBe(true)
+      }
+    }
+  })
+
+  it('keeps Anna/Piotr/Kasia/Marek present and ordered when the home roster needs a promoted elder', () => {
+    for (let seed = 0; seed < 150; seed++) {
+      const families = generateFamilies(seed, 'SM', true, 'polish')
+      const result = ensureSettlementElder(families, 'SM', seed)
+      expect(result.map((f) => f.id)).toEqual(families.map((f) => f.id))
+      const names = result.flatMap((f) => f.members.map((m) => m.name))
+      expect(names).toEqual(families.flatMap((f) => f.members.map((m) => m.name)))
+      for (const name of ['Anna', 'Piotr', 'Kasia', 'Marek']) expect(names).toContain(name)
+      expect(result.some((f) => f.members.some((m) => isElderAge(m.age)))).toBe(true)
+    }
+  })
+
+  it('never lowers an age and keeps spouse gap <=15 after promoting a married adult', () => {
+    for (let seed = 0; seed < 150; seed++) {
+      const families = generateFamilies(seed, 'LG', false, 'polish')
+      const result = ensureSettlementElder(families, 'LG', seed)
+      result.forEach((family, familyIndex) => {
+        family.members.forEach((member, memberIndex) => {
+          const originalAge = families[familyIndex]!.members[memberIndex]!.age
+          expect(member.age).toBeGreaterThanOrEqual(originalAge)
+        })
+        const husband = family.members.find((m) => m.relation === 'husband')
+        const wife = family.members.find((m) => m.relation === 'wife')
+        if (husband && wife) expect(Math.abs(husband.age - wife.age)).toBeLessThanOrEqual(15)
+      })
+    }
+  })
+
+  it('is a no-op when an authored family-story-* resident already satisfies the invariant, and never mutates it', () => {
+    const generated = generateFamilies(11, 'MD', false, 'polish')
+    const authoredElder = {
+      id: 'family-story-lost-treasure-elder',
+      members: [{ ...generated[0]!.members[0]!, name: 'Kazimierz', relation: 'single' as const, age: 74 }],
+    }
+    const withAuthored = [...generated, authoredElder]
+    expect(ensureSettlementElder(withAuthored, 'MD', 11)).toEqual(withAuthored)
+  })
+
+  it('is deterministic for the same families/size/seed', () => {
+    const families = generateFamilies(5, 'MD', false, 'polish')
+    const a = ensureSettlementElder(families, 'MD', 5)
+    const b = ensureSettlementElder(families, 'MD', 5)
+    expect(a).toEqual(b)
   })
 })

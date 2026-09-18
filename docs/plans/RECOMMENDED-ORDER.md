@@ -43,6 +43,8 @@
 
 1. `quests-progression-046` — **Lost Treasure Chronicles — integration, legacy catch-up and superseded quest cleanup**  
    🔴 `L` · 🔒 blocked · unlocks 0/0
+2. `npc-052` — **Contextual Elder Social Titles**  
+   ⚪ `S` · ✅ ready · unlocks 0/0
 
 ---
 
@@ -56,8 +58,8 @@
    🔴 `L` · ✅ ready · unlocks 1/1
 4. `quests-progression-049` — **Hunters Brotherhood — hunting-ground investigation**  
    🟡 `M` · ✅ ready · unlocks 1/2
-5. `settlements-npcs-045` — **Settlement Elder Demographics**  
-   🟡 `M` · ✅ ready · unlocks 3/3
+5. `settlements-npcs-022` — **Household help and age-based work participation**  
+   🔴 `M` · ✅ ready · unlocks 1/1
 
 ---
 
@@ -115,120 +117,120 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `L` · **Score:**  66  
    → **unlocks:** 0/0
 
-11. `settlements-npcs-045` — **Settlement Elder Demographics**  
-  🟡 `M` · **Score:**  59  
-   → **unlocks:** 3/3
-
-12. `settlements-npcs-022` — **Household help and age-based work participation**  
+11. `settlements-npcs-022` — **Household help and age-based work participation**  
   🔴 `M` · **Score:**  57  
    → **unlocks:** 1/1
 
-13. `quests-progression-053` — **Hunters Brotherhood — competing hunting strategies**  
+12. `quests-progression-053` — **Hunters Brotherhood — competing hunting strategies**  
   🟡 `L` · **Score:**  56  
    → **unlocks:** 1/1
 
-14. `settlements-npcs-043` — **Settlement Cultivation Hydration, Rain & Farmer Watering**  
+13. `settlements-npcs-043` — **Settlement Cultivation Hydration, Rain & Farmer Watering**  
   🔴 `L` · **Score:**  56  
    → **unlocks:** 1/1
 
-15. `world-031` — **Authored Persistent World Consequences**  
+14. `world-031` — **Authored Persistent World Consequences**  
   🔴 `M` · **Score:**  55  
    → **unlocks:** 2/2
 
-16. `fauna-037` — **Domestic livestock safe flee**  
+15. `fauna-037` — **Domestic livestock safe flee**  
   🔴 `M` · **Score:**  51  
    → **unlocks:** 1/2
 
-17. `quests-progression-057` — **Injured cow Medicine alternative**  
+16. `quests-progression-057` — **Injured cow Medicine alternative**  
   🟡 `M` · **Score:**  49  
    → **unlocks:** 1/1
 
-18. `settlements-004` — **Gold Economic Realization & Source Entitlements**  
+17. `settlements-004` — **Gold Economic Realization & Source Entitlements**  
   🔴 `M` · **Score:**  49  
    → **unlocks:** 1/1
 
-19. `quests-progression-010` — **Abandoned gold mine → mining colony integration**  
+18. `quests-progression-010` — **Abandoned gold mine → mining colony integration**  
   🔴 `M` · **Score:**  61  
    → **unlocks:** 0/0
 
-20. `quests-progression-060` — **Builder — Finish the Local Well**  
+19. `quests-progression-060` — **Builder — Finish the Local Well**  
   🔴 `M` · **Score:**  47  
    → **unlocks:** 0/0
 
-21. `quests-progression-054` — **Hunters Brotherhood — exceptional animal finale**  
+20. `quests-progression-054` — **Hunters Brotherhood — exceptional animal finale**  
   🟡 `L` · **Score:**  44  
    → **unlocks:** 0/0
 
-22. `npc-047` — **Shepherd livestock threat response**  
+21. `npc-047` — **Shepherd livestock threat response**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 1/1
 
-23. `settlements-npcs-044` — **Authored Outpost Occupants & Construction Lifecycle**  
+22. `settlements-npcs-044` — **Authored Outpost Occupants & Construction Lifecycle**  
   🔴 `L` · **Score:**  40  
    → **unlocks:** 1/1
 
-24. `npc-050` — **NPC-initiated player follow-ups and proactive dialogue**  
+23. `npc-050` — **NPC-initiated player follow-ups and proactive dialogue**  
   🔴 `M` · **Score:**  39  
    → **unlocks:** 0/0
 
-25. `quests-progression-058` — **Injured dog discovery thread**  
+24. `quests-progression-058` — **Injured dog discovery thread**  
   🟡 `M` · **Score:**  37  
    → **unlocks:** 0/0
 
-26. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
+25. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
   🔴 `M` · **Score:**  35  
    → **unlocks:** 0/0
 
-27. `npc-048` — **Local threat assistance and guard response**  
+26. `npc-048` — **Local threat assistance and guard response**  
   🔴 `M` · **Score:**  31  
    → **unlocks:** 0/0
 
-28. `tools-015` — **Chatterbox local voice generation pipeline**  
-  🔴 `M` · **Score:**  31  
-   → **unlocks:** 0/0
-
-29. `npc-049` — **NPC contextual life barks and local voice limiter**  
+27. `npc-049` — **NPC contextual life barks and local voice limiter**  
   🔴 `M` · **Score:**  29  
    → **unlocks:** 0/0
 
-30. `items-player-014` — **Rope-pullable resource transport**  
+28. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-31. `settlements-019` — **Settlement render submission budget**  
+29. `settlements-019` — **Settlement render submission budget**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-32. `tools-005` — **Seedvale Character Preparation Panel**  
+30. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-33. `world-terrain-038` — **Shadow caster/content budget v2**  
+31. `world-terrain-039` — **N8AO / post-process cost budget**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-34. `world-terrain-039` — **N8AO / post-process cost budget**  
+32. `world-terrain-040` — **Vegetation render budget v2**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-35. `world-terrain-040` — **Vegetation render budget v2**  
-  🔴 `M` · **Score:**  27  
-   → **unlocks:** 0/0
-
-36. `items-player-044` — **Shoulder and forearm equipment slots**  
+33. `items-player-044` — **Shoulder and forearm equipment slots**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-37. `world-terrain-041` — **Agent presentation render LOD**  
+34. `world-terrain-041` — **Agent presentation render LOD**  
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-38. `items-player-032` — **NPC player-storage resource and context rules**  
+35. `npc-053` — **NPC profession-aware weapon choice and armor use**  
+  🟡 `M` · **Score:**  21  
+   → **unlocks:** 0/0
+
+36. `settlements-npcs-046` — **Pasture Well & Trough Local Water Use**  
+  🟡 `S` · **Score:**  21  
+   → **unlocks:** 0/0
+
+37. `items-player-032` — **NPC player-storage resource and context rules**  
   🟡 `L` · **Score:**  20  
    → **unlocks:** 0/0
 
-39. `quests-progression-061` — **Builder — Complete an Unfinished Palisade Segment**  
+38. `quests-progression-061` — **Builder — Complete an Unfinished Palisade Segment**  
   🟡 `M` · **Score:**  17  
+   → **unlocks:** 0/0
+
+39. `npc-052` — **Contextual Elder Social Titles**  
+  ⚪ `S` · **Score:**  11  
    → **unlocks:** 0/0
 
 ---
@@ -456,6 +458,7 @@ graph TD
   npc_050["npc-050 — NPC-initiated player follow-ups and proactive dialogue"]
   npc_051["npc-051 — Elder Daily Life and Settlement Care"]
   npc_052["npc-052 — Contextual Elder Social Titles"]
+  npc_053["npc-053 — NPC profession-aware weapon choice and armor use"]
   persistence_001["persistence-001 — Full Simulation Persistence"]
   persistence_002["persistence-002 — save integrity guard"]
   persistence_003["persistence-003 — save schema versioning and future migrations"]
@@ -591,6 +594,7 @@ graph TD
   settlements_npcs_043["settlements-npcs-043 — Settlement Cultivation Hydration, Rain & Farmer Watering"]
   settlements_npcs_044["settlements-npcs-044 — Authored Outpost Occupants & Construction Lifecycle"]
   settlements_npcs_045["settlements-npcs-045 — Settlement Elder Demographics"]
+  settlements_npcs_046["settlements-npcs-046 — Pasture Well & Trough Local Water Use"]
   tools_000["tools-000 — Weapon Browser — Observatory/Admin"]
   tools_001["tools-001 — Performance Benchmark Determinism & Reliability"]
   tools_002["tools-002 — Trace Analyzer — Real Application CPU Attribution"]
@@ -835,10 +839,12 @@ graph TD
   items_player_025 --> fauna_023
   items_player_027 --> items_player_028
   items_player_027 --> npc_033
+  items_player_027 --> npc_053
   items_player_028 --> items_player_032
   items_player_028 --> npc_032
   items_player_028 --> npc_034
   items_player_029 --> items_player_030
+  items_player_029 --> npc_053
   items_player_030 --> items_player_031
   items_player_030 --> items_player_037
   items_player_030 --> items_player_039
@@ -864,6 +870,7 @@ graph TD
   items_player_046 --> quests_progression_057
   items_player_046 --> quests_progression_058
   items_player_046 --> quests_progression_059
+  items_player_047 --> npc_053
   npc_001 --> npc_019
   npc_002 --> npc_025
   npc_006 --> fauna_004
@@ -1035,6 +1042,7 @@ graph TD
   settlements_009 --> settlements_013
   settlements_009 --> settlements_014
   settlements_009 --> settlements_018
+  settlements_009 --> settlements_npcs_046
   settlements_011 --> settlements_014
   settlements_012 --> items_player_040
   settlements_012 --> settlements_013
@@ -1108,6 +1116,7 @@ graph TD
   settlements_npcs_033 --> settlements_npcs_042
   settlements_npcs_034 --> settlements_npcs_016
   settlements_npcs_034 --> settlements_npcs_017
+  settlements_npcs_035 --> settlements_npcs_046
   settlements_npcs_036 --> settlements_npcs_040
   settlements_npcs_036 --> settlements_npcs_042
   settlements_npcs_037 --> settlements_npcs_038

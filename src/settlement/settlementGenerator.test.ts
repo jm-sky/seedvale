@@ -3,6 +3,7 @@ import type { RegionParams } from '../terrain/chunkHeightmap'
 import type { TerrainSamplers } from './settlementTerrain'
 import type { VillagePlan } from './villagePlan'
 import { rollVillageSize } from './families'
+import { lifeStageForAge } from './npcPhysicalProfile'
 import { cellSeed, generateSettlementDef, generateVillagePlan, type SettlementDef } from './settlementGenerator'
 
 /** Flat dry plateau — site search always succeeds without resource bias. */
@@ -185,6 +186,22 @@ describe('generateVillagePlan / generateSettlementDef (plan 047 seam)', () => {
     expect(smSeed).toBeDefined()
     expect(defOf(cell, xlSeed!, flatHeight, 0, 56, samplers, 1, region, 'auto', undefined, 'LG').size).toBe('XL')
     expect(defOf(cell, smSeed!, flatHeight, 0, 56, samplers, 1, region, 'auto', undefined, 'LG').size).toBe('LG')
+  })
+
+  it('guarantees at least one elderly/veryElderly resident for every rolled non-OUTPOST size (plan settlements-npcs-045)', () => {
+    const cell = { gx: 2, gz: 3 }
+    const bySize = new Map<string, SettlementDef>()
+    for (let seed = 1; seed < 800 && bySize.size < 4; seed++) {
+      const def = defOf(cell, seed, flatHeight, 0, 56, samplers, 1, region)
+      if (def.size === 'OUTPOST') continue
+      if (!bySize.has(def.size)) bySize.set(def.size, def)
+    }
+    expect([...bySize.keys()].sort()).toEqual(['LG', 'MD', 'SM', 'XL'])
+    for (const def of bySize.values()) {
+      const hasElder = def.families.some((f) =>
+        f.members.some((m) => lifeStageForAge(m.age) === 'elderly' || lifeStageForAge(m.age) === 'veryElderly'))
+      expect(hasElder).toBe(true)
+    }
   })
 
   it('skips a non-home ocean cell instead of placing a village in the water', () => {

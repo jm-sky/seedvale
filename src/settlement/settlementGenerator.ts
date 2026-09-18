@@ -15,6 +15,7 @@ import {
 } from '../terrain/naturalResources'
 import { createSeededRandom } from '../world/parseSeed'
 import {
+  ensureSettlementElder,
   type FamilyDef,
   generateFamilies,
   maxRolledVillageSize,
@@ -614,9 +615,14 @@ function generateSettlementCore(
   const withAuthoredResident = identity.size !== 'OUTPOST' && authoredResidents.length > 0
     ? appendAuthoredResidentFamilies(generatedFamilies, authoredResidents)
     : generatedFamilies
+  // Elder demographic invariant (plan settlements-npcs-045) runs after
+  // authored residents are appended so an authored elder (e.g. Kazimierz)
+  // can already satisfy it, and before profession staffing so staffing sees
+  // the final adult roster.
+  const withElderInvariant = ensureSettlementElder(withAuthoredResident, identity.size, ctx.seedForCell)
   const families = applyProfessionFamilySurnames(
     resolveInitialProfessionStaffing(
-      withAuthoredResident,
+      withElderInvariant,
       {
         size: identity.size,
         terrain: identity.terrain,

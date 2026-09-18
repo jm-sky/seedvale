@@ -1,7 +1,7 @@
 # Plan: Settlement Elder Demographics
 
 **Created:** 2026-09-18
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Depends on:** none

@@ -5,6 +5,7 @@ import { type CharacterDef, characterForSeed, type NpcGender, RESERVED_CHARACTER
 import { generateFamilySurname, generateNpcName, surnameForGender } from '../ai/nameCultures'
 import { RESOURCE_ROLE } from '../terrain/naturalResources'
 import { createSeededRandom } from '../world/parseSeed'
+import { lifeStageForAge, NPC_AGE_MAX } from './npcPhysicalProfile'
 
 /** `OUTPOST` (plan 032 §7) is a single-house, single-NPC settlement, decided
  *  by `settlementGenerator.ts` before `rollVillageSize` even runs (a
@@ -268,11 +269,13 @@ function familyAgeSeed(seed: number, familyIndex: number): number {
   return (seed ^ Math.imul(familyIndex + 1, 0x27d4eb2f) ^ 0x41474553) >>> 0
 }
 
-/** Adult ages roll uniformly in this window (plan npc-001 §7) — wide enough
- *  to span young adults through elderly parents/singles, and its floor
- *  doubles as `MIN_PARENT_AGE_AT_CHILD` below so a child's age always has
- *  room to resolve to a valid non-negative value. */
-const ADULT_AGE_RANGE: readonly [number, number] = [18, 70]
+/** Overall adult age bounds (plan npc-001 §7, extended by plan
+ *  settlements-npcs-045 §3 to reach `NPC_AGE_MAX` instead of stopping at 70)
+ *  — used only to clamp `generateSpouseAge`, not to roll the adult's own age
+ *  (see `ADULT_AGE_BANDS`, which is weighted, not uniform, across this same
+ *  span). The floor doubles as `MIN_PARENT_AGE_AT_CHILD` below so a child's
+ *  age always has room to resolve to a valid non-negative value. */
+const ADULT_AGE_RANGE: readonly [number, number] = [18, NPC_AGE_MAX]
 
 /** Spouses roll within this many years of each other so couples don't come
  *  out wildly mismatched, while still allowing real variation. */
@@ -287,9 +290,41 @@ const MIN_PARENT_AGE_AT_CHILD = 18
 
 const CHILD_AGE_MAX = 17
 
+/** One inclusive `[min, max]` age band plus its selection weight. Weights
+ *  need not sum to exactly 1 — `rollBandedAge` falls back to the last band
+ *  for any leftover probability mass, so small calibration edits here never
+ *  need to re-balance every other band. */
+type AgeBand = { min: number, max: number, weight: number }
+
+/** Deterministic weighted adult-age distribution (plan settlements-npcs-045
+ *  §3) — replaces the old uniform `18..70` roll so ordinary adults still
+ *  dominate, `mature`/`elderly` occur naturally, and `veryElderly` is
+ *  reachable but rare. Bands intentionally span the same `[18, NPC_AGE_MAX]`
+ *  range as `ADULT_AGE_RANGE`/`lifeStageForAge`'s mature/elderly/veryElderly
+ *  thresholds, not an arbitrary re-slicing. */
+const ADULT_AGE_BANDS: readonly AgeBand[] = [
+  { min: 18, max: 49, weight: 0.68 },
+  { min: 50, max: 64, weight: 0.22 },
+  { min: 65, max: 84, weight: 0.08 },
+  { min: 85, max: NPC_AGE_MAX, weight: 0.02 },
+]
+
+/** Rolls one integer age from a weighted band table: one `random()` call to
+ *  pick the band, one more to roll uniformly inside it. Both calls come from
+ *  the caller's own isolated stream, so this stays fully deterministic. */
+function rollBandedAge(random: () => number, bands: readonly AgeBand[]): number {
+  const roll = random()
+  let cumulative = 0
+  for (const band of bands) {
+    cumulative += band.weight
+    if (roll < cumulative) return band.min + Math.floor(random() * (band.max - band.min + 1))
+  }
+  const last = bands[bands.length - 1]!
+  return last.min + Math.floor(random() * (last.max - last.min + 1))
+}
+
 function generateAdultAge(random: () => number): number {
-  const [min, max] = ADULT_AGE_RANGE
-  return min + Math.floor(random() * (max - min + 1))
+  return rollBandedAge(random, ADULT_AGE_BANDS)
 }
 
 /** Second spouse's age, within `MAX_SPOUSE_AGE_GAP` years of the first and
@@ -453,4 +488,100 @@ export function generateFamilies(
   }
 
   return families
+}
+
+/** Prefix shared by every authored story-resident household (Lost Treasure
+ *  Chronicles elder/archaeologist/specialist — see
+ *  `lostTreasureChroniclesElderResident.ts` and sibling files). Never a
+ *  promotion candidate for `ensureSettlementElder` below: authored ages are
+ *  fixed identity, not demographic roll output. */
+const AUTHORED_RESIDENT_FAMILY_ID_PREFIX = 'family-story-'
+
+function isAuthoredResidentFamilyId(id: string): boolean {
+  return id.startsWith(AUTHORED_RESIDENT_FAMILY_ID_PREFIX)
+}
+
+/** Elder is derived from the existing life-stage classification (plan
+ *  settlements-npcs-045 §1) — never a separate `isElder`/`elderType` field. */
+function isElderAge(age: number): boolean {
+  const stage = lifeStageForAge(age)
+  return stage === 'elderly' || stage === 'veryElderly'
+}
+
+/** Deterministic elder-only age-target seed (plan §5) — isolated from
+ *  `familySeed`/`familyAgeSeed` so promotion never perturbs any existing
+ *  role/trait/name/age roll for a settlement that already satisfies the
+ *  invariant. Same xor-magic-number idiom as `familySeed`/`familyAgeSeed`. */
+function elderPromotionSeed(seed: number): number {
+  return (seed ^ 0x454c4452) >>> 0 // "ELDR"
+}
+
+/** Target age for a promoted elder — mostly `elderly`, a minority reach
+ *  `veryElderly`, mirroring `ADULT_AGE_BANDS`'s old-age rarity. */
+const ELDER_TARGET_AGE_BANDS: readonly AgeBand[] = [
+  { min: 65, max: 84, weight: 0.8 },
+  { min: 85, max: NPC_AGE_MAX, weight: 0.2 },
+]
+
+/**
+ * Ensures at least one member of `families` resolves to `elderly |
+ * veryElderly` (plan settlements-npcs-045), by promoting the age of the
+ * oldest existing **generated/reserved** adult when the settlement's full
+ * roster — generated plus any already-appended authored residents — doesn't
+ * already have one. `OUTPOST` is exempt.
+ *
+ * Never adds, removes or reorders families/members, and never mutates an
+ * authored `family-story-*` resident (see `AUTHORED_RESIDENT_FAMILY_ID_PREFIX`)
+ * — those may already satisfy the invariant, but are not promotion
+ * candidates themselves. Only ages change: the promoted adult's, and — if
+ * needed to keep `MAX_SPOUSE_AGE_GAP` — their spouse's (upward only, so an
+ * existing child's parent-gap only grows, never breaks). Call this after
+ * authored residents are appended and before profession staffing, so
+ * staffing sees the final adult roster.
+ *
+ * @domain settlements-npcs
+ */
+export function ensureSettlementElder(
+  families: readonly FamilyDef[],
+  size: VillageSize,
+  seed: number,
+): FamilyDef[] {
+  if (size === 'OUTPOST') return [...families]
+
+  const hasElder = families.some((family) => family.members.some((member) => isElderAge(member.age)))
+  if (hasElder) return [...families]
+
+  let bestFamilyIndex = -1
+  let bestMemberIndex = -1
+  let bestAge = -1
+  families.forEach((family, familyIndex) => {
+    if (isAuthoredResidentFamilyId(family.id)) return
+    family.members.forEach((member, memberIndex) => {
+      if (member.relation === 'child') return
+      if (member.age > bestAge) {
+        bestAge = member.age
+        bestFamilyIndex = familyIndex
+        bestMemberIndex = memberIndex
+      }
+    })
+  })
+  if (bestFamilyIndex === -1) return [...families]
+
+  const targetAge = rollBandedAge(createSeededRandom(elderPromotionSeed(seed)), ELDER_TARGET_AGE_BANDS)
+  const promotedAge = Math.max(bestAge, targetAge)
+  const promotedRelation = families[bestFamilyIndex]!.members[bestMemberIndex]!.relation
+  const spouseRelation = promotedRelation === 'husband' ? 'wife' : promotedRelation === 'wife' ? 'husband' : null
+
+  return families.map((family, familyIndex) => {
+    if (familyIndex !== bestFamilyIndex) return family
+    const members = family.members.map((member, memberIndex) => {
+      if (memberIndex === bestMemberIndex) return { ...member, age: promotedAge }
+      if (spouseRelation && member.relation === spouseRelation) {
+        const gap = promotedAge - member.age
+        if (gap > MAX_SPOUSE_AGE_GAP) return { ...member, age: Math.min(NPC_AGE_MAX, promotedAge - MAX_SPOUSE_AGE_GAP) }
+      }
+      return member
+    })
+    return { ...family, members }
+  })
 }
