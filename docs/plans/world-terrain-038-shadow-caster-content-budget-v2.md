@@ -1,7 +1,7 @@
 # Plan: Shadow caster/content budget v2
 
 **Created:** 2026-09-17
-**Status:** `verification needed` 🔍
+**Status:** `done` ✅
 **Type:** optimization
 **Priority:** high · **Effort:** M
 **Depends on:** -
@@ -9,6 +9,7 @@
 **Subdomains:** `rendering`
 **Tags:** `shadows` `performance` `settlements` `agents`
 **Model:** Sonnet, Composer
+**Implemented at:** 2026-09-18 13:15
 
 ## Cel
 
@@ -113,4 +114,6 @@ Użytkownik:
 
 Utrzymać zmianę, jeśli w `settlement-heavy` daje mierzalny spadek render cost / shadow submissions bez widocznej utraty ważnych bliskich cieni. Jeśli efekt jest mały, nie dodawać kolejnych wyjątków tylko po to, by poprawić benchmark.
 
-> **Zrób git commit i push do main, rebase jeżeli trzeba**
+## Closed — 2026-09-18
+
+Content-budget loop complete: shadow/settlement census plumbing + create-time cuts (`storageGoods`, exterior lamps, household wells, garden plants with Dirt kept, wood overflow cap 2). Final diagnostic on `2026-09-18--027`; no further safe large-ROI settlement `castShadow` cut under this plan. Residuals (decor / houseStatic / terrain·vegetation shadows / post-process) → `settlements-019`, `world-terrain-039`, LOOSE-ENDS — not more 038 exceptions.

@@ -463,3 +463,60 @@ Evidence from `docs/performance/results/2026-09-18--027--benchmark-settlement-he
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
 
+## Implementation log — 2026-09-18 (final diagnostic — close plan)
+
+Last measured report: `docs/performance/results/2026-09-18--027--benchmark-settlement-heavy.md` (fixture `tools-001-v1`, seed 42, rain, XL Podgórze — same as 023–026).
+
+Isolation absolute ms in 025–027 is noisy/untrustworthy when probes invert or zero out; prefer census + relative `full` vs `no-shadows` on 023/024/027.
+
+### Before → after (comparable census)
+
+| Category / signal | Early measured (023/024/025) | 027 (last measured) | After post-027 production cuts (code; not re-benchmarked) |
+|---|---|---|---|
+| Settlement shadow total | 023: 1702 / 1.77M · 024: 1496 / 1.72M | **1081 / 1.37M** | lower still (household wells + garden plants + overflow cap) |
+| `storageGoods` | in `other` / storage piles casting | already no-shadow | held |
+| `fireHouseExteriorLamp` | 025: **324 / 22.5k** | **absent** | held |
+| `storageWood*` | 025 aggregate 478 / 674.8k; 026 household inflated by hidden `Pile_*` | Primary 12/9.1k · Secondary 6/16.9k · Household 66/29.4k · Overflow gone from census | overflow max extras **3→2** |
+| `landmarkWellHousehold` | in aggregate wells | **100 / 37.4k** | **no-shadow** (central/pasture still cast) |
+| `landmarkGarden` | in landmark / 026: 84 / 491.1k | **78 / 456.0k** | plant meshes no-shadow; **Dirt** bed grounding kept |
+| `full` → `no-shadows` | 023: 45.8→35.4 (−23%); 024: 47.5→34.6 (−27%) | 88.3→71.7 (−19%) — direction OK, abs ms not comparable | optional user re-run |
+
+### Shipped under this plan
+
+Diagnostics:
+
+- top-level `censusShadowCasters`
+- settlement sub-census + storage/fire/wood/landmark/well splits
+- effective-visibility census (`isEffectivelyVisible`)
+
+Production content cuts (create-time / template; no `shadowBudget` cadence changes; no NPC/fauna distance changes):
+
+1. `storageGoods` food-pile meshes — `castShadow=false`
+2. house exterior lantern fixtures — `disableCastShadow`
+3. household wells — `disableCastShadow` (central/pasture keep casting)
+4. garden plant meshes — no-shadow; Dirt bed keeps casting
+5. wood overflow extras capped at 2
+
+### Final recon — no further 038 cut
+
+No remaining settlement shadow category is simultaneously obvious, visually safe, and large-ROI for another `castShadow=false` under this plan:
+
+- `decor` (~198 / 399k in 027) — trees/flowers; high visual risk
+- `houseStatic` — structural; keep
+- garden **Dirt** grounding — intentionally retained
+- central/pasture wells — low tris vs household; keep
+- terrain (~5.60M) / vegetation (~738k) shadow casters — outside settlement content-budget scope
+
+027 `hide-settlement` ≈ −4 ms vs `full` (noisy) vs trustworthy 024 ≈ −14.5 ms — remaining settlement decorative shadow ROI is uncertain. Plan success gate: do not stack more exceptions for small/uncertain wins.
+
+### Residuals → other plans / LOOSE-ENDS
+
+- Settlement main-pass submissions / garden·decor geometry cost → `settlements-019`
+- N8AO / post-process → `world-terrain-039`
+- Optional whole-garden or Dirt shadow revisit only with explicit benchmark + visual OK (not another 038 session)
+- Terrain/vegetation shadow participation — only if a fresh benchmark shows they dominate after settlement work
+
+### Close
+
+Plan marked `done`. Content-budget loop complete: measure → cut → remeasure census → stop when no safe large ROI remains. No code change in this closing session.
+
