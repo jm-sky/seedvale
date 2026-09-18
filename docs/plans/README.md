@@ -99,6 +99,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `quests-progression-060-builder-finish-local-well.md`                       | 🔴 | M      | settlements-npcs-043                                                                                                                                                                                                                                                                       | quests-professions-and-world-consequences |
 | 💡 `quests-progression-061-builder-repair-or-complete-palisade.md`             | 🟡 | M      | -                                                                                                                                                                                                                                                                                          | quests-professions-and-world-consequences |
 | 💡 `settlements-npcs-045-settlement-elder-demographics.md`                     | 🟡 | M      | -                                                                                                                                                                                                                                                                                          | npc-professions-households-and-age        |
+| ◼️ `npc-053-profession-aware-weapon-choice-and-armor-use.md`                   | 🟡 | M      | ~~items-player-027~~, ~~items-player-029~~, ~~items-player-047~~                                                                                                                                                                                                                           | quests-travelling-merchant-journeys       |
 
 ---
 
@@ -214,7 +215,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - ai: `005`
 - fauna: `039`
 - items-player: `048`
-- npc: `053`
+- npc: `054`
 - persistence: `006`
 - quests-progression: `067`
 - settlements: `020`
