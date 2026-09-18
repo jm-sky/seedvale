@@ -2,6 +2,7 @@
 
 **Created:** 2026-09-17
 **Status:** `planned` 📋
+**Model:** Sonnet, Composer
 **Type:** optimization
 **Priority:** high · **Effort:** L
 **Depends on:** -
