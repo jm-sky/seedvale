@@ -99,6 +99,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `settlements-npcs-047-merchant-transport-capacity-infrastructure.md`        | 🟡 | S      | ~~settlements-npcs-038~~, ~~fauna-007~~, ~~fauna-020~~                                                                                                                                                                                                                                     | quests-travelling-merchant-journeys       |
 | 💡 `quests-progression-063-healer-injured-resident.md`                         | 🟡 | M      | ~~npc-025~~, ~~items-player-046~~, ~~quests-progression-015~~, ~~quests-progression-016~~                                                                                                                                                                                                  | quests-professions-and-world-consequences |
 | 💡 `quests-progression-065-blacksmith-missing-tools.md`                        | 🟡 | M      | ~~settlements-npcs-002~~, ~~settlements-npcs-016~~, ~~settlements-npcs-017~~, ~~settlements-npcs-021~~, settlements-npcs-024, ~~quests-progression-015~~, ~~quests-progression-016~~, ~~quests-progression-055~~                                                                           | quests-professions-and-world-consequences |
+| ◼️ `settlements-npcs-048-merchant-pack-animal-assignment-and-journey-continuity.md` | 🟡 | L      | settlements-npcs-047, ~~settlements-npcs-038~~, ~~fauna-007~~, ~~fauna-020~~                                                                                                                                                                                                               | quests-travelling-merchant-journeys       |
 
 ---
 
@@ -220,7 +221,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - persistence: `006`
 - quests-progression: `067`
 - settlements: `020`
-- settlements-npcs: `048`
+- settlements-npcs: `049`
 - tools: `017`
 - ui-input: `025`
 - world: `032`
