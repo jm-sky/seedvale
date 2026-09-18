@@ -1,7 +1,7 @@
 # Plan: Additional compact weapons and master hunting bow
 
 **Created:** 2026-09-18
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Depends on:** none

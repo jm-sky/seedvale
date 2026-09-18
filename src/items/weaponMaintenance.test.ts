@@ -14,8 +14,8 @@ import {
 } from './weaponMaintenance'
 
 describe('WEAPON_MAINTENANCE_KINDS (plan 161)', () => {
-  it('contains exactly the 13 supported kinds', () => {
-    expect(WEAPON_MAINTENANCE_KINDS.size).toBe(13)
+  it('contains exactly the 15 supported kinds', () => {
+    expect(WEAPON_MAINTENANCE_KINDS.size).toBe(15)
     expect(isWeaponMaintenanceKind('knife')).toBe(true)
     expect(isWeaponMaintenanceKind('short_sword')).toBe(true)
     expect(isWeaponMaintenanceKind('long_sword')).toBe(true)
@@ -29,6 +29,10 @@ describe('WEAPON_MAINTENANCE_KINDS (plan 161)', () => {
     expect(isWeaponMaintenanceKind('obsidian_sword')).toBe(true)
     expect(isWeaponMaintenanceKind('battle_axe')).toBe(true)
     expect(isWeaponMaintenanceKind('masterwork_sword')).toBe(true)
+    // Plan items-player-047
+    expect(isWeaponMaintenanceKind('dagger')).toBe(true)
+    expect(isWeaponMaintenanceKind('hatchet')).toBe(true)
+    expect(isWeaponMaintenanceKind('masterwork_hunting_bow')).toBe(false)
   })
 
   it('explicitly excludes shovel and pickaxe', () => {
@@ -49,6 +53,22 @@ describe('createWeaponInstance', () => {
     const a = createWeaponInstance('knife')
     const b = createWeaponInstance('knife')
     expect(a.id).not.toBe(b.id)
+  })
+})
+
+describe('dagger/hatchet (plan items-player-047)', () => {
+  it('create at full condition and sharpen like any other maintenance kind', () => {
+    const dagger = { ...createWeaponInstance('dagger'), sharpness: 0.4 }
+    const hatchet = { ...createWeaponInstance('hatchet'), sharpness: 0.4 }
+    expect(dagger.durability).toBe(1)
+    expect(hatchet.durability).toBe(1)
+    const inventory = new Inventory({ whetstone: 2 }, undefined, [dagger, hatchet])
+    expect(sharpenWeapon(inventory, dagger.id, 'whetstone')).toBe('ok')
+    expect(sharpenWeapon(inventory, hatchet.id, 'whetstone')).toBe('ok')
+    const updatedDagger = inventory.getInstance(dagger.id)
+    const updatedHatchet = inventory.getInstance(hatchet.id)
+    expect(updatedDagger && isWeaponItemInstance(updatedDagger) ? updatedDagger.sharpness : null).toBeGreaterThan(0.4)
+    expect(updatedHatchet && isWeaponItemInstance(updatedHatchet) ? updatedHatchet.sharpness : null).toBeGreaterThan(0.4)
   })
 })
 
@@ -212,6 +232,16 @@ describe('migrateWeaponCountsToInstances', () => {
     migrateWeaponCountsToInstances(inventory)
     migrateWeaponCountsToInstances(inventory)
     expect(inventory.countInstances('knife')).toBe(1)
+  })
+
+  it('converts a new plan items-player-047 kind (dagger) the same way', () => {
+    const inventory = new Inventory({ dagger: 1 })
+    migrateWeaponCountsToInstances(inventory)
+    expect(inventory.count('dagger')).toBe(0)
+    expect(inventory.countInstances('dagger')).toBe(1)
+    const [instance] = inventory.getInstances('dagger')
+    expect(instance && isWeaponItemInstance(instance) ? instance.durability : null).toBe(1)
+    expect(instance && isWeaponItemInstance(instance) ? instance.sharpness : null).toBe(1)
   })
 
   it('does not touch unrelated stackable kinds', () => {

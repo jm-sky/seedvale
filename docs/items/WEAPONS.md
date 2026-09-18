@@ -3,7 +3,7 @@
 **Purpose:** one table of implemented melee weapons (and tools that share the
 same combat stats) with combat numbers, block, weight and coin prices.
 
-**Last updated:** 2026-08-19
+**Last updated:** 2026-09-18 (dagger, hatchet, masterwork_hunting_bow — plan items-player-047)
 
 Sources of truth (code, not this file):
 
@@ -48,9 +48,11 @@ Sorted by damage, then cycle (faster first).
 | long_sword | miecz | 28 | 2.60 | 0.35 | 0.28 | 0.12 | 0.38 | 0.78 | 12 |
 | battle_axe | topór bojowy | 28 | 2.15 | 0.28 | 0.38 | 0.14 | 0.50 | 1.02 | 14 |
 | axe | siekiera | 20 | 2.00 | 0.40 | 0.30 | 0.12 | 0.40 | 0.82 | 10 |
+| hatchet | toporek | 18 | 1.85 | 0.42 | 0.20 | 0.10 | 0.28 | 0.58 | 7 |
 | short_sword | krótki miecz | 18 | 2.10 | 0.50 | 0.18 | 0.10 | 0.26 | 0.54 | 7 |
 | damascus_short_sword | krótki miecz damasceński | 24 | 2.15 | 0.50 | 0.16 | 0.10 | 0.22 | 0.48 | 7 |
 | damascus_knife | nóż damasceński | 16 | 1.60 | 0.60 | 0.11 | 0.08 | 0.16 | 0.35 | 4 |
+| dagger | sztylet | 14 | 1.70 | 0.58 | 0.11 | 0.08 | 0.17 | 0.36 | 4 |
 | spear | dzida | 20 | 3.00 | 0.60 | 0.24 | 0.10 | 0.30 | 0.64 | 9 |
 | pitchfork | widły | 14 | 2.40 | 0.50 | 0.20 | 0.12 | 0.28 | 0.60 | 7 |
 | knife | nóż | 12 | 1.60 | 0.60 | 0.12 | 0.08 | 0.18 | 0.38 | 4 |
@@ -66,7 +68,9 @@ Battle axe has the widest arc (`0.28`) and the slowest cycle.
 |------|-------|---:|-----:|--------:|-------:|--------:|---------:|------------|
 | knife | nóż | 0.40 | 0.12 | 0.35 | 12 | 12 | 6 | start + Kupiec |
 | damascus_knife | nóż damasceński | 0.35 | 0.16 | 0.40 | 90 | 90 | 45 | Kupiec; harvest jak nóż |
+| dagger | sztylet | 0.45 | 0.14 | 0.38 | 24 | 24 | 12 | Kupiec; harvest jak nóż |
 | sickle | sierp | 0.70 | 0.14 | 0.32 | 12 | 12 | 6 | wieś 1× + Kupiec |
+| hatchet | toporek | 1.00 | 0.16 | 0.40 | 34 | 34 | 17 | Kupiec |
 | short_sword | krótki miecz | 1.60 | 0.22 | 0.45 | 40 | 40 | 20 | Kupiec |
 | damascus_short_sword | krótki miecz damasceński | 1.50 | 0.26 | 0.50 | 140 | 140 | 70 | Kupiec |
 | spear | dzida | 1.80 | 0.18 | 0.40 | 32 | 32 | 16 | Kupiec |
@@ -87,10 +91,11 @@ Not a second stat table — just how the numbers cluster:
 
 | Rola | Kind | Charakter |
 |------|------|-----------|
-| Najszybsze | `damascus_knife`, `knife` | krótki zasięg, wąski łuk, niski stam |
+| Najszybsze | `damascus_knife`, `dagger`, `knife` | krótki zasięg, wąski łuk, niski stam |
 | Zasięg | `spear` | 3.0, wąski thrust |
 | Uniwersalne miecze | `short_sword` → `long_sword` → `masterwork_sword` → `damascus_long_sword` | rosnący dmg / blok, szerszy/wolniejszy łuk |
 | Peak dmg | `obsidian_sword` | 46, lżejszy cykl niż damasceński długi; słabszy blok |
+| Kompaktowa broń bojowa | `dagger` → `hatchet` | lekki sztylet między nożem a damasceńskim; toporek mocniejszy, ale krótszy i wolniejszy niż krótki miecz |
 | Ciężkie | `axe`, `battle_axe` | wolny cykl, siekiera/topór tną drzewa |
 | Narzędzia | `sickle`, `pitchfork`, `shovel` | niski dmg; widły mają przyzwoity zasięg i blok |
 
@@ -110,7 +115,13 @@ monet) restores sharpness only via `sharpenWeapon()`.
 |------|-------|----:|-------:|------------------:|-----:|----:|-----:|---------:|-------:|-------:|
 | short_bow | krótki łuk | 14 | 11 | 26 | 0.32 | 0.22 | 6 | 0.72 | — | 45 |
 | hunting_bow | łuk myśliwski | 20 | 15 | 30 | 0.45 | 0.30 | 8 | 0.78 | 0.05 | 75 |
+| masterwork_hunting_bow | mistrzowski łuk myśliwski | 24 | 17 | 32 | 0.38 | 0.25 | 7 | 0.90 | 0.10 | — |
 | long_bow | długi łuk | 28 | 20 | 34 | 0.65 | 0.40 | 11 | 0.70 | 0.08 | 120 |
+
+`masterwork_hunting_bow` is a quest/exceptional reward — never `MERCHANT_STOCK`
+or `PREMIUM_MERCHANT_KINDS` — trading fastest draw/recovery and highest
+accuracy of the three bows for less raw damage than `long_bow`; its `Wartość`
+(barter/inventory value) is 220.
 
 Ammo (`arrow` +0 / `broadhead_arrow` +4 / `war_arrow` +8 damage) is ordinary
 stackable count — no per-arrow instance or recovery. `archery` skill raises

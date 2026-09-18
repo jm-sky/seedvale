@@ -196,6 +196,26 @@ export const HELD_ATTACH: Record<ToolKind, HeldAttach> = {
     scale: 1.05,
     gripLocalOffset: [0, 0, -0.35],
   },
+  // Plan items-player-047 — knife family, no dedicated GLB yet (procedural fallback).
+  dagger: {
+    position: [0, 0.12, -0.01],
+    rotation: [Math.PI, 0, Math.PI / 2],
+    scale: 1.2,
+  },
+  // Plan items-player-047 — compact one-handed axe family, no dedicated GLB yet.
+  hatchet: {
+    position: [0.02, 0.12, -0.02],
+    rotation: [Math.PI / 2, Math.PI / 2, 0],
+    scale: 1.05,
+    gripLocalOffset: [0, 0, -0.22],
+  },
+  // Plan items-player-047 — hunting_bow family, no dedicated GLB yet.
+  masterwork_hunting_bow: {
+    position: [-0.45, 0.13, -0.02],
+    rotation: [Math.PI / 2, -Math.PI / 2, 0],
+    scale: 0.98,
+    gripLocalOffset: [0, 0, -0.3],
+  },
 }
 
 /**
@@ -325,7 +345,7 @@ export async function createHeldToolObject(kind: ToolKind): Promise<Object3D> {
   }
 
   const mesh = createItemMesh(kind)
-  mesh.scale.setScalar(kind === 'knife' || kind === 'damascus_knife' ? 0.95 : 0.85)
+  mesh.scale.setScalar(kind === 'knife' || kind === 'damascus_knife' || kind === 'dagger' ? 0.95 : 0.85)
   return mesh
 }
 

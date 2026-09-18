@@ -42,6 +42,9 @@ export const MERCHANT_PRICES: Readonly<Partial<Record<ItemKind, number>>> = {
   damascus_short_sword: 140,
   masterwork_sword: 160,
   battle_axe: 110,
+  // Plan items-player-047 — compact weapon niches between knife/short_sword.
+  dagger: 24,
+  hatchet: 34,
   leather_armor: 65,
   chainmail: 150,
   leather_pauldron: 25,
@@ -129,6 +132,8 @@ export const MERCHANT_STOCK: readonly ItemKind[] = [
   'damascus_short_sword',
   'masterwork_sword',
   'battle_axe',
+  'dagger',
+  'hatchet',
   'leather_armor',
   'chainmail',
   'leather_pauldron',
@@ -206,6 +211,9 @@ const RESOURCE_TRADE_VALUE: Partial<Record<ItemKind, number>> = {
   diamond_large: 400,
   damascus_long_sword: 240,
   obsidian_sword: 320,
+  // Plan items-player-047 — quest/exceptional reward, not Kupiec stock; keeps
+  // inventory-value/barter semantics without making it purchasable.
+  masterwork_hunting_bow: 220,
   signet_ring: 40,
   bandit_ledger: 15,
   marked_valuable: 55,

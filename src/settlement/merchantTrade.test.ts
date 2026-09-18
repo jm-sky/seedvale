@@ -330,6 +330,42 @@ describe('premium kinds stay catalog members', () => {
   })
 })
 
+describe('compact weapons and masterwork hunting bow (plan items-player-047)', () => {
+  it('dagger and hatchet are eligible for weapons-tools and not premium', () => {
+    expect(specializationAffinity('dagger', 'weapons-tools')).toBeGreaterThan(0)
+    expect(specializationAffinity('hatchet', 'weapons-tools')).toBeGreaterThan(0)
+    expect(isPremiumMerchantGood('dagger')).toBe(false)
+    expect(isPremiumMerchantGood('hatchet')).toBe(false)
+    expect(isPremiumMerchantGood('masterwork_hunting_bow')).toBe(false)
+  })
+
+  it('dagger can appear for a small general merchant', () => {
+    let hits = 0
+    for (let seed = 0; seed < 80; seed++) {
+      const profiles = resolveMerchantProfiles(['m0'], 'swamp')
+      const byNpc = generateMerchantAssortment(ctx({ size: 'SM', terrain: 'swamp', seed }), profiles)
+      const found = [...byNpc.values()].some((stock) => (stock.dagger ?? 0) > 0)
+      if (found) hits++
+    }
+    expect(hits).toBeGreaterThan(0)
+  })
+
+  it('masterwork hunting bow never appears in generated assortment or premium assignment', () => {
+    for (let seed = 0; seed < 60; seed++) {
+      const profiles = resolveMerchantProfiles(['m0', 'm1', 'm2'], 'mountain')
+      const context = ctx({ size: 'XL', terrain: 'mountain', seed })
+      const byNpc = generateMerchantAssortment(context, profiles)
+      for (const stock of byNpc.values()) {
+        expect(stock.masterwork_hunting_bow ?? 0).toBe(0)
+      }
+      const premium = resolvePremiumMerchantAssignment(context, profiles)
+      expect(premium?.kind).not.toBe('masterwork_hunting_bow')
+    }
+    expect(MERCHANT_STOCK).not.toContain('masterwork_hunting_bow')
+    expect(PREMIUM_MERCHANT_KINDS).not.toContain('masterwork_hunting_bow')
+  })
+})
+
 describe('merchant armor quality generation (plan items-player-040)', () => {
   it('is deterministic for the same seed, merchant, kind and unit index', () => {
     const a = resolveMerchantArmorQuality({

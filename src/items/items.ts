@@ -80,6 +80,10 @@ export type ItemKind =
   | 'obsidian_sword'
   | 'battle_axe'
   | 'masterwork_sword'
+  /** Plan items-player-047 — compact weapon niches: dagger sits between
+   *  `knife` and `damascus_knife`, hatchet between `dagger` and `battle_axe`. */
+  | 'dagger'
+  | 'hatchet'
   /** Plan items-player-029 — wearable body-armor kinds (`items/equipment.ts`). */
   | 'leather_armor'
   | 'chainmail'
@@ -104,6 +108,9 @@ export type ItemKind =
   | 'short_bow'
   | 'hunting_bow'
   | 'long_bow'
+  /** Plan items-player-047 — elite quest-reward hunting bow: faster/lighter/
+   *  more accurate than `hunting_bow`, but less raw damage than `long_bow`. */
+  | 'masterwork_hunting_bow'
   /** Plan quests-progression-025 — identity-backed family heirloom. */
   | 'signet_ring'
   /** Sellable jewelry loot (Quaternius Ultimate RPG Pack) — no wear mechanics; `EquipmentSlot` has no `finger` slot. */
@@ -913,6 +920,24 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     color: 0xe4ce75,
     description: 'Wysokiej jakości stalowy miecz kowalski. Lepszy od zwykłego miecza, mniej egzotyczny niż damasceńskie ostrza.'
   },
+  dagger: {
+    kind: 'dagger',
+    label: 'sztylet',
+    categories: ['weapon', 'tool'],
+    weight: 0.45,
+    size: 'SM',
+    color: 0x9099a3,
+    description: 'Lekki, bojowy sztylet — lepszy od zwykłego noża, wciąż wyraźnie słabszy od miecza.'
+  },
+  hatchet: {
+    kind: 'hatchet',
+    label: 'toporek',
+    categories: ['weapon'],
+    weight: 1.0,
+    size: 'SM',
+    color: 0x6b6f76,
+    description: 'Kompaktowy toporek bojowy. Mocniejszy od sztyletu, ale krótszy i mniej uniwersalny niż miecz.'
+  },
   leather_armor: {
     kind: 'leather_armor',
     label: 'skórzana zbroja',
@@ -1200,6 +1225,15 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     size: 'LG',
     color: 0x5a3a22,
     description: 'Długi, potężny łuk. Największy zasięg i obrażenia, ale wolniejsze naciąganie.'
+  },
+  masterwork_hunting_bow: {
+    kind: 'masterwork_hunting_bow',
+    label: 'mistrzowski łuk myśliwski',
+    categories: ['weapon'],
+    weight: 1.15,
+    size: 'MD',
+    color: 0x8a6a3f,
+    description: 'Wyjątkowy łuk myśliwski wykonany mistrzowską ręką. Szybszy, celniejszy i wygodniejszy niż zwykły łuk myśliwski.'
   },
   arrow: {
     kind: 'arrow',
@@ -1714,7 +1748,7 @@ function buildProceduralItemMesh(kind: ItemKind): THREE.Object3D {
     mesh.castShadow = true
     return mesh
   }
-  if (kind === 'knife' || kind === 'damascus_knife') {
+  if (kind === 'knife' || kind === 'damascus_knife' || kind === 'dagger') {
     const group = new THREE.Group()
     const blade = new THREE.Mesh(
       new THREE.ConeGeometry(0.035, 0.22, 4),
@@ -1824,22 +1858,24 @@ function buildProceduralItemMesh(kind: ItemKind): THREE.Object3D {
     group.add(blade)
     return group
   }
-  if (kind === 'axe' || kind === 'battle_axe') {
+  if (kind === 'axe' || kind === 'battle_axe' || kind === 'hatchet') {
     const group = new THREE.Group()
     const heavy = kind === 'battle_axe'
+    const compact = kind === 'hatchet'
+    const handleLength = heavy ? 0.48 : compact ? 0.3 : 0.42
     const handle = new THREE.Mesh(
-      new THREE.CylinderGeometry(heavy ? 0.024 : 0.02, heavy ? 0.024 : 0.02, heavy ? 0.48 : 0.42, 6),
+      new THREE.CylinderGeometry(heavy ? 0.024 : 0.02, heavy ? 0.024 : 0.02, handleLength, 6),
       new THREE.MeshStandardMaterial({ color: 0x5a3a22, flatShading: true }),
     )
     handle.rotation.x = Math.PI / 2.2
-    handle.position.set(0, 0.14, -0.02)
+    handle.position.set(0, compact ? 0.1 : 0.14, -0.02)
     handle.castShadow = true
     group.add(handle)
     const head = new THREE.Mesh(
-      new THREE.BoxGeometry(heavy ? 0.22 : 0.16, heavy ? 0.11 : 0.08, heavy ? 0.06 : 0.05),
+      new THREE.BoxGeometry(heavy ? 0.22 : compact ? 0.13 : 0.16, heavy ? 0.11 : compact ? 0.07 : 0.08, heavy ? 0.06 : compact ? 0.04 : 0.05),
       new THREE.MeshStandardMaterial({ color: ITEM_DEFS[kind].color, flatShading: true, metalness: 0.45 }),
     )
-    head.position.set(0.02, 0.18, 0.14)
+    head.position.set(0.02, compact ? 0.13 : 0.18, compact ? 0.1 : 0.14)
     head.castShadow = true
     group.add(head)
     return group
@@ -2309,9 +2345,9 @@ function buildProceduralItemMesh(kind: ItemKind): THREE.Object3D {
     group.add(line)
     return group
   }
-  if (kind === 'short_bow' || kind === 'hunting_bow' || kind === 'long_bow') {
+  if (kind === 'short_bow' || kind === 'hunting_bow' || kind === 'long_bow' || kind === 'masterwork_hunting_bow') {
     const group = new THREE.Group()
-    const height = kind === 'short_bow' ? 0.5 : kind === 'hunting_bow' ? 0.68 : 0.85
+    const height = kind === 'short_bow' ? 0.5 : kind === 'hunting_bow' || kind === 'masterwork_hunting_bow' ? 0.68 : 0.85
     const limb = new THREE.Mesh(
       new THREE.TorusGeometry(height / 2, 0.014, 4, 10, Math.PI * 0.92),
       new THREE.MeshStandardMaterial({ color: ITEM_DEFS[kind].color, flatShading: true }),

@@ -108,6 +108,7 @@ export const HOME_STARTER_MERCHANT_KINDS: readonly ItemKind[] = [
 const BASIC_WEAPON_TOOL_ARMOR_KINDS = new Set<ItemKind>([
   'arrow',
   'axe',
+  'dagger',
   'knife',
   'leather_pauldron',
   'pickaxe',
@@ -120,8 +121,10 @@ const METAL_KINDS = new Set<ItemKind>([
   'axe',
   'battle_axe',
   'chainmail',
+  'dagger',
   'damascus_knife',
   'damascus_short_sword',
+  'hatchet',
   'iron_rod',
   'knife',
   'long_sword',

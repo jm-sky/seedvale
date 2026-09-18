@@ -78,6 +78,18 @@ describe('tradeCatalog (plan 090)', () => {
     expect(tradeValue('obsidian_sword')).toBe(320)
   })
 
+  it('stocks plan items-player-047 compact weapons and keeps the masterwork bow quest-only', () => {
+    expect(merchantPrice('dagger')).toBe(24)
+    expect(merchantPrice('hatchet')).toBe(34)
+    expect(tradeValue('dagger')).toBe(24)
+    expect(tradeValue('hatchet')).toBe(34)
+    expect(MERCHANT_STOCK).toContain('dagger')
+    expect(MERCHANT_STOCK).toContain('hatchet')
+    expect(merchantPrice('masterwork_hunting_bow')).toBeNull()
+    expect(MERCHANT_STOCK).not.toContain('masterwork_hunting_bow')
+    expect(tradeValue('masterwork_hunting_bow')).toBe(220)
+  })
+
   it('does not sell raw materials', () => {
     expect(merchantPrice('stone')).toBeNull()
     expect(merchantPrice('branch')).toBeNull()

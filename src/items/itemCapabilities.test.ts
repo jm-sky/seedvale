@@ -48,7 +48,7 @@ describe('item capability lookup', () => {
 
   it('derives CAPABILITY_KINDS from the catalog, best (highest melee damage) first', () => {
     expect(CAPABILITY_KINDS.wood_chopping).toEqual(['battle_axe', 'axe'])
-    expect(CAPABILITY_KINDS.meat_harvesting).toEqual(['damascus_knife', 'knife'])
+    expect(CAPABILITY_KINDS.meat_harvesting).toEqual(['damascus_knife', 'dagger', 'knife'])
     expect(CAPABILITY_KINDS.soil_digging).toEqual(['shovel'])
     expect(CAPABILITY_KINDS.rock_mining).toEqual(['pickaxe'])
     expect(CAPABILITY_KINDS.textile_repair).toEqual(['sewing_kit'])

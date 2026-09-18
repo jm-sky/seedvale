@@ -94,6 +94,9 @@ export type WeaponMaintenanceKind =
   | 'obsidian_sword'
   | 'battle_axe'
   | 'masterwork_sword'
+  /** Plan items-player-047. */
+  | 'dagger'
+  | 'hatchet'
 
 /** Ordered list form of `WEAPON_MAINTENANCE_KINDS` — the single declaration
  *  the set is built from, so callers that need to *iterate* the kinds (the
@@ -101,9 +104,11 @@ export type WeaponMaintenanceKind =
 export const WEAPON_MAINTENANCE_KIND_LIST: readonly WeaponMaintenanceKind[] = [
   'axe',
   'battle_axe',
+  'dagger',
   'damascus_knife',
   'damascus_long_sword',
   'damascus_short_sword',
+  'hatchet',
   'knife',
   'long_sword',
   'masterwork_sword',
