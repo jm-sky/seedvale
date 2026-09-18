@@ -4,6 +4,7 @@
 **Status:** `planned` 📋
 **Type:** feature
 **Priority:** medium · **Effort:** M
+**Model:** Opus, Sonnet
 **Depends on:** none
 **Domain:** `npc`
 **Subdomains:** `decision-making` `work` `combat`
