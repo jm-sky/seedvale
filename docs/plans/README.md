@@ -98,6 +98,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `npc-055-semantic-profession-and-activity-animation-coverage.md`            | 🔴 | L      | ~~items-player-035~~, ~~npc-039~~                                                                                                                                                                                                                                                          | -                                         |
 | ◼️ `npc-057-npc-destination-threat-assessment.md`                              | 🟡 | M      | -                                                                                                                                                                                                                                                                                          | -                                         |
 | ◼️ `quests-progression-069-quest-offer-pacing-and-conservative-settlement-gating.md` | 🔴 | M      | ~~quests-progression-004~~, ~~quests-progression-033~~, ~~quests-progression-034~~                                                                                                                                                                                                         | quests-and-reputation                     |
+| ◼️ `world-terrain-042-medicinal-herb-meadow-patches.md`                        | 🟡 | M      | -                                                                                                                                                                                                                                                                                          | -                                         |
 
 ---
 
@@ -230,7 +231,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - tools: `017`
 - ui-input: `025`
 - world: `033`
-- world-terrain: `042`
+- world-terrain: `043`
 
 This ids section is maintained automatically from the plan files.
 

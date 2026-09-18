@@ -1,13 +1,13 @@
 # Plan: Medicinal herb meadow patches
 
 **Created:** 2026-09-18
-**Status:** \`planned\` 📋
+**Status:** `planned` 📋
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Depends on:** none
-**Domain:** \`world-terrain\`
-**Subdomains:** \`vegetation\` \`terrain\` \`resources\`
-**Tags:** \`herbs\` \`meadow\` \`world-generation\` \`resources\`
+**Domain:** `world-terrain`
+**Subdomains:** `\` `vegetation\` `\` `terrain\` `\` `resources\`
+**Tags:** `\` `herbs\` `\` `meadow\` `\` `world-generation\` `\` `resources\`
 **Roadmap:** -
 
 ## Goal
