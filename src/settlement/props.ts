@@ -101,8 +101,9 @@ import {
   createTrough,
   createWell,
   createWheatField,
+  cropsBedPlacements,
   disableGardenPlantCastShadow,
-  layoutCropsGarden,
+  wellPropPlacement,
 } from './settlementStructures'
 import {
   type SettlementVillageTorch,
@@ -170,6 +171,11 @@ export type SettlementHouseBed = {
 export type SettlementWellLandmark = {
   id: string
   position: THREE.Vector3
+  /** Anchor-only transform carrier (`wellTemplate.clone(false)` — no meshes/
+   *  children) used solely by `buildWellInteractionQueueConfig` to resolve the
+   *  drink-queue anchor/footprint (plan settlements-019). Wells render through
+   *  settlement-owned `InstancedMesh` batches in `group`, not through this
+   *  object — gameplay never depends on the InstancedMesh render batch. */
   prop?: THREE.Object3D
   familyIndex: number | null
   isCentral: boolean
@@ -178,7 +184,8 @@ export type SettlementWellLandmark = {
 
 export type SettlementLandmarks = {
   well: THREE.Vector3
-  /** Well mesh (GLB or procedural fallback) — drink-queue anchors (Phase 6). */
+  /** Central-well anchor-only transform carrier — drink-queue anchors (Phase
+   *  6). See {@link SettlementWellLandmark.prop}: not the rendered mesh. */
   wellProp?: THREE.Object3D
   /**
    * Central plaza well plus household wells (plan settlements-npcs-035).
@@ -862,16 +869,29 @@ export async function buildSettlementProps(
   const wellX = wellLm?.x ?? site.x
   const wellZ = wellLm?.z ?? site.z
   const wellTemplate = await loadPropOrFallback(WELL_URL, WELL_HEIGHT, createWell)
-  const well = wellTemplate.clone(true)
-  placeOnGround(well, wellX, wellZ, sampleHeight)
-  tagSettlementShadowKind(well, 'landmarkWellCentral')
-  group.add(well)
+  // One-time no-shadow flatten root for household wells (world-terrain-038)
+  // — same shared geometry/material as `wellTemplate`, only `castShadow`
+  // differs, so `buildInstancedProps`'s per-root flatten cache can keep the
+  // two shadow policies in separate InstancedMesh buckets.
+  const wellTemplateNoShadow = disableCastShadow(wellTemplate.clone(true))
+
+  const centralWellPlacements: PropPlacement[] = []
+  const householdWellPlacements: PropPlacement[] = []
+  const pastureWellPlacements: PropPlacement[] = []
+
   landmarks.well.set(wellX, sampleHeight(wellX, wellZ), wellZ)
-  landmarks.wellProp = well
+  const wellId = wellLm?.id ?? 'landmark-well-0'
+  centralWellPlacements.push(wellPropPlacement(wellX, wellZ, landmarks.well.y, wellId))
+  // Anchor-only transform carrier (no meshes/children — `wellTemplate.clone(false)`
+  // copies only position/quaternion/scale) so `buildWellInteractionQueueConfig`'s
+  // anchor/footprint math stays independent of the InstancedMesh render batch.
+  const wellAnchor = wellTemplate.clone(false)
+  placeOnGround(wellAnchor, wellX, wellZ, sampleHeight)
+  landmarks.wellProp = wellAnchor
   const wells: SettlementWellLandmark[] = [{
-    id: wellLm?.id ?? 'landmark-well-0',
+    id: wellId,
     position: landmarks.well,
-    prop: well,
+    prop: wellAnchor,
     familyIndex: null,
     isCentral: true,
     queueId: settlementWellQueueId(settlementId, null),
@@ -882,18 +902,17 @@ export async function buildSettlementProps(
   for (const lm of householdWellLandmarks) {
     const familyIndex = parseHouseholdWellFamilyIndex(lm.plotId!)
     if (familyIndex == null) continue
-    const hw = wellTemplate.clone(true)
-    placeOnGround(hw, lm.x, lm.z, sampleHeight)
-    tagSettlementShadowKind(hw, 'landmarkWellHousehold')
+    const groundY = sampleHeight(lm.x, lm.z)
     // Yard wells: keep main-pass / colliders / queues; drop shadow submission
     // (world-terrain-038 — ~5 draws each, weak visual value vs central well).
-    disableCastShadow(hw)
-    group.add(hw)
-    const position = new THREE.Vector3(lm.x, sampleHeight(lm.x, lm.z), lm.z)
+    householdWellPlacements.push(wellPropPlacement(lm.x, lm.z, groundY, lm.id))
+    const hwAnchor = wellTemplate.clone(false)
+    placeOnGround(hwAnchor, lm.x, lm.z, sampleHeight)
+    const position = new THREE.Vector3(lm.x, groundY, lm.z)
     wells.push({
       id: lm.id,
       position,
-      prop: hw,
+      prop: hwAnchor,
       familyIndex,
       isCentral: false,
       queueId: settlementWellQueueId(settlementId, familyIndex),
@@ -901,19 +920,20 @@ export async function buildSettlementProps(
   }
   const pasturePlan = plan?.pasture
   if (pasturePlan) {
-    const pw = wellTemplate.clone(true)
-    placeOnGround(pw, pasturePlan.well.x, pasturePlan.well.z, sampleHeight)
-    tagSettlementShadowKind(pw, 'landmarkWellPasture')
-    group.add(pw)
+    const groundY = sampleHeight(pasturePlan.well.x, pasturePlan.well.z)
+    const pastureWellId = pastureWellLandmarkId()
+    pastureWellPlacements.push(wellPropPlacement(pasturePlan.well.x, pasturePlan.well.z, groundY, pastureWellId))
+    const pwAnchor = wellTemplate.clone(false)
+    placeOnGround(pwAnchor, pasturePlan.well.x, pasturePlan.well.z, sampleHeight)
     const position = new THREE.Vector3(
       pasturePlan.well.x,
-      sampleHeight(pasturePlan.well.x, pasturePlan.well.z),
+      groundY,
       pasturePlan.well.z,
     )
     wells.push({
-      id: pastureWellLandmarkId(),
+      id: pastureWellId,
       position,
-      prop: pw,
+      prop: pwAnchor,
       familyIndex: null,
       isCentral: false,
       queueId: pastureWellQueueId(settlementId),
@@ -969,6 +989,33 @@ export async function buildSettlementProps(
   }
   if (householdWellLandmarks.length > 0 || pasturePlan) await yieldProp()
   landmarks.wells = wells
+
+  // Settlement-owned instanced render batches for wells (plan settlements-019)
+  // — replaces the per-well `wellTemplate.clone(true)` render trees above.
+  // Central/pasture keep the shadow-casting template; household wells use the
+  // no-shadow one built above. Gameplay (position/colliders/queue) reads
+  // `wells`/`landmarks.wellProp` above, never these InstancedMesh groups.
+  const centralWellInstances = buildInstancedProps(
+    [wellTemplate], centralWellPlacements, 'settlement-well-central',
+  )
+  if (centralWellInstances) {
+    tagSettlementShadowKind(centralWellInstances.group, 'landmarkWellCentral')
+    group.add(centralWellInstances.group)
+  }
+  const householdWellInstances = buildInstancedProps(
+    [wellTemplateNoShadow], householdWellPlacements, 'settlement-well-household',
+  )
+  if (householdWellInstances) {
+    tagSettlementShadowKind(householdWellInstances.group, 'landmarkWellHousehold')
+    group.add(householdWellInstances.group)
+  }
+  const pastureWellInstances = buildInstancedProps(
+    [wellTemplate], pastureWellPlacements, 'settlement-well-pasture',
+  )
+  if (pastureWellInstances) {
+    tagSettlementShadowKind(pastureWellInstances.group, 'landmarkWellPasture')
+    group.add(pastureWellInstances.group)
+  }
 
   const { x: stockX, z: stockZ } = placeAtPlannedAnchor(
     site, landmarkOf(plan, 'stockpile', 0), 4, 1.5,
@@ -1058,6 +1105,11 @@ export async function buildSettlementProps(
   } catch (err) {
     console.warn('[settlement] crops.glb unavailable — garden GLB / procedural fallback', err)
   }
+  // Settlement-owned instanced render batch for every garden's crop beds
+  // (plan settlements-019) — replaces one `cropsTemplate.clone(true)` render
+  // tree per bed with placement data feeding a single shared InstancedMesh
+  // set per primitive, regardless of how many gardens/beds this settlement has.
+  const cropsBedPlacementsAll: PropPlacement[] = []
   for (let gi = 0; gi < gardenCount; gi++) {
     const lm = gardenLms[gi]
     const scale: GardenScale = lm?.gardenScale ?? 'S'
@@ -1083,17 +1135,31 @@ export async function buildSettlementProps(
     // Gardens are vegetable beds (`crops.glb`), never wheat `garden.glb`
     // (same mesh as the field). M/L tile extra beds; fallback is procedural.
     const beds = gardenBedCount(scale)
-    const garden = cropsTemplate
-      ? layoutCropsGarden(cropsTemplate, beds)
-      : createGarden(scale)
-    placeOnGround(garden, gardenX, gardenZ, sampleHeight)
-    garden.name = `garden:${scale}`
-    tagSettlementShadowKind(garden, 'landmarkGarden')
-    group.add(garden)
-    const foot = new THREE.Vector3(gardenX, sampleHeight(gardenX, gardenZ), gardenZ)
+    const groundY = sampleHeight(gardenX, gardenZ)
+    if (cropsTemplate) {
+      cropsBedPlacementsAll.push(
+        ...cropsBedPlacements(gardenX, gardenZ, groundY, beds, lm?.id ?? `garden-${gi}`),
+      )
+    } else {
+      const garden = createGarden(scale)
+      placeOnGround(garden, gardenX, gardenZ, sampleHeight)
+      garden.name = `garden:${scale}`
+      tagSettlementShadowKind(garden, 'landmarkGarden')
+      group.add(garden)
+    }
+    const foot = new THREE.Vector3(gardenX, groundY, gardenZ)
     landmarks.gardens.push(foot)
     landmarks.cultivationAnchors ??= []
     landmarks.cultivationAnchors.push(cultivationAnchorFromSettlementGarden({ x: gardenX, z: gardenZ }, scale))
+  }
+  if (cropsTemplate) {
+    const cropsInstances = buildInstancedProps(
+      [cropsTemplate], cropsBedPlacementsAll, 'settlement-garden-crops',
+    )
+    if (cropsInstances) {
+      tagSettlementShadowKind(cropsInstances.group, 'landmarkGarden')
+      group.add(cropsInstances.group)
+    }
   }
   if (landmarks.gardens[0]) {
     landmarks.garden.copy(landmarks.gardens[0])

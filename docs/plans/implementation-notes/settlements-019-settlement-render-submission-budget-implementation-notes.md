@@ -167,3 +167,36 @@ User after Stage 1:
 Stage 1 succeeds when wells and crops beds no longer materialize one full render object tree per repeated placement, while gameplay contracts and visuals remain equivalent.
 
 After that, stop production work. Continue with diagnostic Stage 2 only if the user's benchmark shows settlement main-pass cost remains worth pursuing.
+
+## Stage 1 — implemented (2026-09-18)
+
+Both targets done in `src/settlement/props.ts` (`buildSettlementProps`), reusing `buildInstancedProps()` directly — no new manager/renderer added.
+
+### Wells
+
+- `wellTemplate` is now flattened into instanced buckets instead of `clone(true)`-ed per well. A one-time `wellTemplateNoShadow = disableCastShadow(wellTemplate.clone(true))` gives household wells their own flatten-cache root (`flattenPropTemplate` in `render/instancedProps.ts` caches by root object identity, so two shadow policies need two distinct roots even though geometry/material stay shared).
+- Three separate `buildInstancedProps()` calls/groups (not one merged bucket): `settlement-well-central` (shadow-casting), `settlement-well-household` (no-shadow), `settlement-well-pasture` (shadow-casting) — kept distinct rather than merging central+pasture so the existing `landmarkWellCentral` / `landmarkWellHousehold` / `landmarkWellPasture` census kinds (`perf/sceneCensus.ts`) stay exactly as before; each group's root is tagged via the existing `tagSettlementShadowKind()`.
+- New pure helper `settlementStructures.ts::wellPropPlacement(x, z, groundY, key?)` builds the `PropPlacement` (fixed `rotationY: 0`, `scale: 1` — wells are never rotated/rescaled individually, only `placeOnGround`-translated).
+- **Interaction queue decoupled from the render clone**: `buildWellInteractionQueueConfig()` (`wellInteractionQueue.ts`) was *not* changed — its `settlement:well` anchor is `space: 'assetLocal'` (`assets/assetAnchorData.ts`), so it only ever reads the passed root's own `matrixWorld`, never traverses into child meshes. `SettlementWellLandmark.prop` / `landmarks.wellProp` are now `wellTemplate.clone(false)` (shallow — copies only position/quaternion/scale, zero children/meshes) + `placeOnGround()`, instead of the old full render clone. Verified this produces an identical anchor to the old full-mesh clone (`wellInteractionQueue.test.ts`'s new "bare Object3D" test). This object is never added to `group`/the scene — it exists purely as a transform carrier for the queue anchor math, so gameplay never depends on the `InstancedMesh` batch.
+- Colliders/positions/queue IDs were already reading `well.position`/`well.queueId` everywhere (`createSettlement.ts`, `interactables.ts`, `placementActions.ts`, `NpcAgent.ts`) — none of those needed changes.
+
+### Gardens / crops
+
+- `layoutCropsGarden()` (clone-per-bed) removed from `settlementStructures.ts` — it had exactly one call site. Replaced by `cropsBedPlacements(gardenX, gardenZ, groundY, beds, keyPrefix?)`, a pure function reproducing the same spacing math (`GARDEN_BED_W`/`GARDEN_BED_GAP`), returning `PropPlacement[]` instead of a cloned `THREE.Group`.
+- `props.ts` collects every garden's bed placements into one array across the whole settlement and calls `buildInstancedProps()` once (`settlement-garden-crops`) — so total draws for crop beds are fixed at `cropsTemplate`'s primitive count (6) regardless of garden count/size, not `beds × 6`.
+- `groundY` is sampled once per garden (matching the old behavior: the removed code sampled height once via `placeOnGround` on the bed-group parent, not per bed).
+- The `crops.glb`-load-failure fallback (`createGarden(scale)`, procedural cones) is untouched — still one `THREE.Group` per garden added directly, since it's an edge case outside this plan's scope (GLB path only).
+- Cultivation anchors (`cultivationAnchorFromSettlementGarden`) were already position-only and untouched.
+
+### Not touched (by design)
+
+`SettlementLandmarks`/`SettlementWellLandmark` type shapes are unchanged (only doc comments updated to describe `prop` as an anchor-only transform carrier, not a rendered mesh). No changes to `render/instancedProps.ts` — the existing `PropPlacement`/`buildInstancedProps()` contract was sufficient for both targets, so no generic extension was needed. Disposal needed no new code: `disposeSettlementGroup()` already calls `disposeObject3D(group)`, which already recurses into `InstancedMesh` children (frees only the instance buffer, skips `sharedGpu`-flagged geometry/material) — the same path barrels/troughs/hay already rely on.
+
+### Tests added
+
+- `settlementStructures.test.ts` (new): `wellPropPlacement`/`cropsBedPlacements` pure-function coverage (spacing, centering, shared `groundY`, key prefixing, `GardenScale` bed counts), plus a `buildInstancedProps` test proving the central/household well split keeps `castShadow` different per bucket while both buckets reference the *same* geometry/material object (no GPU duplication from the one-time `clone(true)`).
+- `wellInteractionQueue.test.ts`: added a test proving `buildWellInteractionQueueConfig` returns an identical anchor for a full-mesh `createWell()` root vs. a bare childless `Object3D` at the same transform — the concrete evidence for "gameplay does not depend on the render clone".
+
+### Verification run
+
+`pnpm vitest run` (7423 tests, all green), `npx tsc --noEmit` (clean), `pnpm lint` on changed files (clean), `pnpm run build` (clean; pre-existing >500kB chunk warning unrelated to this change). No browser verification performed — left to the user's `?benchmark=settlement-heavy` pass per this plan's Verification section.
