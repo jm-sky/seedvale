@@ -1,12 +1,11 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-18 13:47:13  
+> Date: 2026-09-18 14:21:29  
 
 ## PLANS
 
 - `npc-054-npc-desired-gifts-gift-acceptance-and-relationship-rewards.md`
-- `npc-055-semantic-profession-and-activity-animation-coverage.md`
 - `quests-progression-010-abandoned-gold-mine-colony.md`
 - `quests-progression-044-lost-treasure-chronicles-final-treasure-claims-and-resolution.md`
 - `quests-progression-045-lost-treasure-chronicles-property-grant-deed-and-persistent-land-reward.md`
@@ -50,43 +49,6 @@ Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną
 Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
 
 Po ukończeniu implementation notes zaktualizuj też `docs/plans/npc-054-npc-desired-gifts-gift-acceptance-and-relationship-rewards.md` i dodaj/ustaw metadata:
-`**Model:** <best>, <cheaper-safe-fallback>`
-Wybierz dokładnie dwa modele spośród: Composer, Grok, Sonnet, Opus.
-Pierwszy ma być najlepszym wyborem do implementacji, drugi tańszym wariantem o minimalnym dodatkowym ryzyku.
-Dobierz modele na podstawie wykonanego reconu i implementation notes, zgodnie z `docs/plans/PLANNING.md`.
-
-Pliki dodaj na branch `main` w repozytorium.
-```
-
-### `npc-055-semantic-profession-and-activity-animation-coverage.md`
-
-Prompt:
-
-```
-Zrób review planu `npc-055-semantic-profession-and-activity-animation-coverage.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/npc-055-semantic-profession-and-activity-animation-coverage.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/npc-055-semantic-profession-and-activity-animation-coverage-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
-
-Po ukończeniu implementation notes zaktualizuj też `docs/plans/npc-055-semantic-profession-and-activity-animation-coverage.md` i dodaj/ustaw metadata:
 `**Model:** <best>, <cheaper-safe-fallback>`
 Wybierz dokładnie dwa modele spośród: Composer, Grok, Sonnet, Opus.
 Pierwszy ma być najlepszym wyborem do implementacji, drugi tańszym wariantem o minimalnym dodatkowym ryzyku.

@@ -99,7 +99,8 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `settlements-npcs-048-merchant-pack-animal-assignment-and-journey-continuity.md` | 🟡 | L      | settlements-npcs-047, ~~settlements-npcs-038~~, ~~fauna-007~~, ~~fauna-020~~                                                                                                                                                                                                               | quests-travelling-merchant-journeys       |
 | ◼️ `settlements-npcs-049-merchant-wealth-tiers-and-travel-party-profile.md`    | 🔴 | L      | settlements-npcs-048, ~~npc-053~~, ~~items-player-047~~, ~~npc-030~~                                                                                                                                                                                                                       | quests-travelling-merchant-journeys       |
 | ◼️ `npc-054-npc-desired-gifts-gift-acceptance-and-relationship-rewards.md`     | 🔴 | L      | ~~npc-053~~                                                                                                                                                                                                                                                                                | quests-travelling-merchant-journeys       |
-| ◼️ `npc-055-semantic-profession-and-activity-animation-coverage.md`            | 🔴 | L      | ~~items-player-035~~, ~~npc-039~~                                                                                                                                                                                                                                                          | -                                         |
+| 💡 `npc-055-semantic-profession-and-activity-animation-coverage.md`            | 🔴 | L      | ~~items-player-035~~, ~~npc-039~~                                                                                                                                                                                                                                                          | -                                         |
+| 💡 `npc-056-npc-voice-full-migration-and-legacy-cleanup.md`                    | 🔴 | M      | ~~npc-044~~, ~~npc-049~~                                                                                                                                                                                                                                                                   | -                                         |
 
 ---
 
@@ -221,7 +222,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - ai: `005`
 - fauna: `040`
 - items-player: `048`
-- npc: `056`
+- npc: `057`
 - persistence: `006`
 - quests-progression: `069`
 - settlements: `020`
