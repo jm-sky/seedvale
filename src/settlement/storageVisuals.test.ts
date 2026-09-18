@@ -4,6 +4,7 @@ import * as loadGltf from '../assets/loadGltf'
 import { createSettlementEconomy } from '../economy/settlementEconomy'
 import { FOOD_ITEM_KINDS } from '../items/foodItems'
 import { Inventory } from '../items/Inventory'
+import { SETTLEMENT_SHADOW_KIND_USERDATA } from '../perf/sceneCensus'
 import { createHousehold, type Household } from './household'
 import {
   allocateFoodRepresentatives,
@@ -346,6 +347,19 @@ describe('createFoodStorageVisual', () => {
     const visual = createFoodStorageVisual(group, { x: 0, z: 0 }, sampleHeight)
     visual.sync(new Inventory())
     expect(group.children.length).toBe(0)
+  })
+
+  it('does not cast shadows (presentation-only pile on crates)', () => {
+    const group = new THREE.Group()
+    const visual = createFoodStorageVisual(group, { x: 0, z: 0 }, sampleHeight)
+    visual.sync(new Inventory({ carrot: 2 }))
+    for (const root of allMeshesInGroup(group)) {
+      expect(root.userData[SETTLEMENT_SHADOW_KIND_USERDATA]).toBe('storageGoods')
+      root.traverse((node) => {
+        const mesh = node as THREE.Mesh
+        if (mesh.isMesh) expect(mesh.castShadow).toBe(false)
+      })
+    }
   })
 
   it('lazily creates meshes for stored food and grows with quantity', () => {

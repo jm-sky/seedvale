@@ -251,4 +251,28 @@ Evidence from `docs/performance/results/2026-09-18--023--benchmark-settlement-he
 - `pnpm build`: pass.
 - No browser verification; no `pnpm docs:sync`.
 
+## Implementation log — 2026-09-18 (storageGoods no-shadow)
+
+Evidence from updated `docs/performance/results/2026-09-18--023--benchmark-settlement-heavy.md` (Generated 09:10Z):
+
+- Isolation: `full 45.8 ms` → `no-shadows 35.4 ms` (−10.5 ms / −23%).
+- Settlement shadow: `other 601/65.4k`, `storage 418/534.7k`, `landmark 206/434.6k`, `decor 197/391.6k`, `houseStatic 145/259.2k`.
+- NPC+fauna still tiny — unchanged.
+
+### Recon
+
+- **other (~601 draws, ~65.4k tris):** mostly untagged meshes under settlement — dominant source is `createFoodStorageVisual` item piles (`createItemMesh` GLB/procedural submeshes on household + settlement crates). Also house chest / exterior+interior lamps parented under `house:*` outside `house-static`/`house-interactive`.
+- **storage (~418 / 534.7k):** tagged stockpiles, wood-pile extras, household wood, instanced barrels/hay/storage/troughs (`settlement-*` names).
+- **decor (~197 / 391.6k):** tagged trees/flowers + `settlement-bushes` / plaza cobble/paving names.
+
+### Production change (exactly one)
+
+- `createFoodStorageVisual` materialize: `tagSettlementShadowKind(..., 'storageGoods')` + `castShadow = false` on all meshes.
+- New census kind `storageGoods` (diagnostic). Classification-only tags on house chest (`storage`) and house lamps (`fireLight`) so remaining `other` is clearer — no castShadow change there.
+- Did not touch houseStatic/Interactive, fence, terrain, shadowBudget cadence, NPC/fauna distances.
+
+### Gate
+
+- User re-runs `?benchmark=settlement-heavy` to measure shadow/render impact of storageGoods cut.
+
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

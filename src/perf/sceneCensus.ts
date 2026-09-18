@@ -34,6 +34,7 @@ export const SETTLEMENT_CONTENT_KINDS = [
   'houseInteractive',
   'fence',
   'storage',
+  'storageGoods',
   'workplace',
   'landmark',
   'fireLight',

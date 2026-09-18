@@ -3,7 +3,7 @@ import type { Inventory } from '../items/Inventory'
 import { disposeObject3D } from '../assets/loadGltf'
 import { FOOD_ITEM_KINDS, foodItemCount } from '../items/foodItems'
 import { createItemMesh, type ItemKind } from '../items/items'
-import { placeOnGround, rotateOffsetY, type TerrainSampler } from './propUtils'
+import { placeOnGround, rotateOffsetY, tagSettlementShadowKind, type TerrainSampler } from './propUtils'
 
 /**
  * Shared physical-storage visual mechanism (plan settlements-npcs-010) — the
@@ -293,6 +293,13 @@ export function createFoodStorageVisual(
 
   const materialize = (kind: ItemKind): THREE.Object3D => {
     const mesh = createItemMesh(kind)
+    // Presentation-only pile on crates — tiny meshes that previously dominated
+    // settlement shadow `other` (plan world-terrain-038). Main visibility unchanged.
+    tagSettlementShadowKind(mesh, 'storageGoods')
+    mesh.traverse((node) => {
+      const child = node as THREE.Mesh
+      if (child.isMesh) child.castShadow = false
+    })
     group.add(mesh)
     getPool(kind).push(mesh)
     return mesh

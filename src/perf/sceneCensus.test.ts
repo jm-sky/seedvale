@@ -145,6 +145,12 @@ describe('classifySettlementContent', () => {
     mesh.userData[SETTLEMENT_SHADOW_KIND_USERDATA] = 'workplace'
     expect(classifySettlementContent(mesh)).toBe('workplace')
   })
+
+  it('classifies storageGoods tags used by food presentation piles', () => {
+    const mesh = namedMesh('apple')
+    mesh.userData[SETTLEMENT_SHADOW_KIND_USERDATA] = 'storageGoods'
+    expect(classifySettlementContent(mesh)).toBe('storageGoods')
+  })
 })
 
 describe('censusSettlementShadowCasters', () => {

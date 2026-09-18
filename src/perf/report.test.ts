@@ -477,6 +477,7 @@ describe('buildReport', () => {
       houseInteractive: { meshes: 0, instancedMeshes: 0, instances: 0, drawCalls: 0, triangles: 0 },
       fence: { meshes: 3, instancedMeshes: 3, instances: 80, drawCalls: 3, triangles: 40000 },
       storage: { meshes: 0, instancedMeshes: 0, instances: 0, drawCalls: 0, triangles: 0 },
+      storageGoods: { meshes: 0, instancedMeshes: 0, instances: 0, drawCalls: 0, triangles: 0 },
       workplace: { meshes: 0, instancedMeshes: 0, instances: 0, drawCalls: 0, triangles: 0 },
       landmark: { meshes: 1, instancedMeshes: 0, instances: 1, drawCalls: 1, triangles: 2000 },
       fireLight: { meshes: 0, instancedMeshes: 0, instances: 0, drawCalls: 0, triangles: 0 },

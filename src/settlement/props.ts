@@ -1329,6 +1329,7 @@ export async function buildSettlementProps(
         chest.position.set(chestFurniture.position.x, chestFurniture.position.y, chestFurniture.position.z)
         chest.rotation.y = chestFurniture.rotationY
         chest.scale.multiplyScalar(invHouseScaleFurniture)
+        tagSettlementShadowKind(chest, 'storage')
         hut.add(chest)
       }
       // Static mesh only — no independent PointLight. The house's existing
@@ -1343,6 +1344,7 @@ export async function buildSettlementProps(
         lampMesh.position.set(lampFurniture.position.x, lampFurniture.position.y, lampFurniture.position.z)
         lampMesh.rotation.y = lampFurniture.rotationY
         lampMesh.scale.multiplyScalar(invHouseScaleFurniture)
+        tagSettlementShadowKind(lampMesh, 'fireLight')
         hut.add(lampMesh)
       }
     }
@@ -1376,6 +1378,7 @@ export async function buildSettlementProps(
     for (const child of houseLight.object.children) {
       child.scale.multiplyScalar(invHouseScale)
     }
+    tagSettlementShadowKind(houseLight.object, 'fireLight')
     hut.add(houseLight.object)
     houseLights.push(houseLight)
 
