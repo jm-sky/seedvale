@@ -182,6 +182,23 @@ export type AnimalDef = {
    *  means this species never defends a den regardless of `spawnPointId`/
    *  `role`. */
   territorial?: TerritorialConfig
+  /** Presence of this field IS the saddlebags/pack-carrying capability (plan
+   *  fauna-039) — same "no separate boolean, no per-species branch" shape as
+   *  `mount`/`lead`/`draft` above. Only a player-owned animal may actually
+   *  equip a pack (`canEquipAnimalPack`), but the capability itself is pure
+   *  species data. */
+  pack?: PackConfig
+}
+
+/** Cargo capacity for an equipped `saddlebags` pack (plan fauna-039) — the
+ *  gameplay-authoritative source `AnimalPackState`'s `Inventory` is
+ *  constructed from (`animalPack.ts`). Independent of/never added to the
+ *  player's own carry capacity — the animal carries this weight, not the
+ *  rider. `cargoCapacityUnits` uses the same abstract gabarite units as
+ *  `ITEM_SIZE_UNITS`/`ContainerDef.capacityUnits`. */
+export type PackConfig = {
+  cargoCapacityKg: number
+  cargoCapacityUnits: number
 }
 
 /** Per-species day/night activity bias (plan fauna-034 §1) — the input
@@ -575,6 +592,8 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     },
     lead: {},
     draft: { hitchDistance: 2.35 },
+    // Plan fauna-039 — matches the existing chest's 32-unit gabarite capacity.
+    pack: { cargoCapacityKg: 50, cargoCapacityUnits: 32 },
     metabolism: DEFAULT_ANIMAL_METABOLISM,
     diet: HERBIVORE_DIET,
     fearBaseline: 0.55,
@@ -602,6 +621,8 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     },
     lead: {},
     draft: { hitchDistance: 2.15 },
+    // Plan fauna-039 — smaller than the horse, still a meaningful pack mule.
+    pack: { cargoCapacityKg: 40, cargoCapacityUnits: 24 },
     metabolism: DEFAULT_ANIMAL_METABOLISM,
     diet: HERBIVORE_DIET,
     fearBaseline: 0.5,

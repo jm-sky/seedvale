@@ -19,12 +19,12 @@ useTouchScroll(playerPanel)
  *  controls the player could legally use, so it gets its own source label
  *  and an empty-state line instead of reusing the chest's "W skrzyni"
  *  wording (or accepting a click that only bounced with an error toast). */
-const SOURCE_LABEL: Record<ContainerScreenMode, string> = { container: 'W skrzyni', corpse: 'Łup' }
-const SOURCE_EMPTY_LABEL: Record<ContainerScreenMode, string> = { container: 'Skrzynia jest pusta.', corpse: 'Przy zwłokach nic nie ma.' }
+const SOURCE_LABEL: Record<ContainerScreenMode, string> = { container: 'W skrzyni', corpse: 'Łup', pack: 'W jukach' }
+const SOURCE_EMPTY_LABEL: Record<ContainerScreenMode, string> = { container: 'Skrzynia jest pusta.', corpse: 'Przy zwłokach nic nie ma.', pack: 'Juki są puste.' }
 
 const sourceLabel = computed(() => SOURCE_LABEL[ui.containerScreen.mode])
 const sourceEmptyLabel = computed(() => SOURCE_EMPTY_LABEL[ui.containerScreen.mode])
-const canDeposit = computed(() => ui.containerScreen.mode === 'container')
+const canDeposit = computed(() => ui.containerScreen.mode === 'container' || ui.containerScreen.mode === 'pack')
 const canTakeAll = computed(() => ui.containerScreen.containerGroups.length > 0)
 
 function deposit(kind: ItemKind, count: number): void {

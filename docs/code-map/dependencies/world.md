@@ -51,6 +51,29 @@ Generated from TypeScript imports.
 - `fauna/createFauna.ts`
 - `world/createPlacedTraps.ts`
 
+## `world/animalPackHandoff.test.ts`
+
+**Imports**
+
+- `fauna/AnimalAgent.ts`
+- `fauna/animalDefs.ts`
+- `terrain/waterSample.ts`
+- `world/animalPackHandoff.ts`
+- `world/createPlacedContainers.ts`
+
+## `world/animalPackHandoff.ts`
+
+**Imports**
+
+- `fauna/AnimalAgent.ts`
+- `fauna/animalPack.ts`
+- `world/createPlacedContainers.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `world/animalPackHandoff.test.ts`
+
 ## `world/animalTraps.test.ts`
 
 **Imports**
@@ -1957,6 +1980,13 @@ Generated from TypeScript imports.
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
 
+## `world/createPlacedContainers.test.ts`
+
+**Imports**
+
+- `items/Inventory.ts`
+- `world/createPlacedContainers.ts`
+
 ## `world/createPlacedContainers.ts`
 
 **Imports**
@@ -1975,6 +2005,9 @@ Generated from TypeScript imports.
 - `app/interactables.ts`
 - `app/worldBundle.ts`
 - `quests/dungeonBanditTreasure.test.ts`
+- `world/animalPackHandoff.test.ts`
+- `world/animalPackHandoff.ts`
+- `world/createPlacedContainers.test.ts`
 - `world/helperDeliveryHooks.ts`
 - `world/locations/treasureMapBearCave.ts`
 

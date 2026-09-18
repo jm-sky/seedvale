@@ -257,6 +257,12 @@ export type SettlementsManager = {
   countAliveRats: (settlementId: string) => number
   /** Public persistent-animal lookup (plan fauna-020). */
   resolvePersistentAnimal: (animalId: string) => AnimalAgent | null
+  /** The animal's *origin* settlement id (plan fauna-039 §21) — the same
+   *  namespace `removedKey`/`resolvePersistenceSettlementId` already use
+   *  internally, needed wherever a caller must build a stable id that
+   *  survives an `animalId` colliding across settlements (the death-handoff
+   *  ground container). `null` if the animal isn't currently resolvable. */
+  resolvePersistentAnimalOrigin: (animalId: string) => string | null
   transferAnimalOwnership: (animalId: string, owner: AnimalOwner) => boolean
   setOwnedAnimalControl: (animalId: string, mode: OwnedAnimalControlMode) => boolean
   getDetachedLivestock: () => AnimalAgent[]
@@ -1266,6 +1272,7 @@ export async function createSettlementsManager(
       return entry.settlement.rats.reduce((n, rat) => n + (rat.isDead() ? 0 : 1), 0)
     },
     resolvePersistentAnimal: (animalId) => resolveLivePersistentAnimal(persistentLivestockCtx, animalId)?.animal ?? null,
+    resolvePersistentAnimalOrigin: (animalId) => resolveLivePersistentAnimal(persistentLivestockCtx, animalId)?.originSettlementId ?? null,
     transferAnimalOwnership: (animalId, owner) => transferAnimalOwnership(persistentLivestockCtx, animalId, owner),
     setOwnedAnimalControl: (animalId, mode) => setOwnedAnimalControl(persistentLivestockCtx, animalId, mode),
     getDetachedLivestock: () => detachedLivestock,

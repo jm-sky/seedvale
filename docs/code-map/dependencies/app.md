@@ -128,6 +128,7 @@ Generated from TypeScript imports.
 - `app/actions/containerInstanceTransfer.ts`
 - `app/actions/placementActions.ts`
 - `app/actions/placementYaw.ts`
+- `fauna/AnimalAgent.ts`
 - `input/MouseLook.ts`
 - `items/Inventory.ts`
 - `items/container.ts`
@@ -1064,6 +1065,7 @@ Generated from TypeScript imports.
 - `ui/createQuickActions.ts`
 - `ui/createTimeSkipOverlay.ts`
 - `ui/createToast.ts`
+- `world/animalPackHandoff.ts`
 - `world/animalTraps.ts`
 - `world/beehives.ts`
 - `world/clouds.ts`
@@ -1389,6 +1391,7 @@ Generated from TypeScript imports.
 - `interaction/Interactable.ts`
 - `items/HeldTool.ts`
 - `items/Inventory.ts`
+- `items/container.ts`
 - `items/createDroppedItems.ts`
 - `items/createItemSpawners.ts`
 - `items/createPlacedTents.ts`

@@ -1,7 +1,7 @@
 # Plan: Animal saddlebags and persistent pack inventory
 
 **Created:** 2026-09-18
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** high · **Effort:** M/L
 **Depends on:** none
 **Domain:** `fauna`

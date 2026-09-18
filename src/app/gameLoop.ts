@@ -499,6 +499,15 @@ export type GameLoopDeps = {
   /** Plan items-player-026 — force a locked systemic treasure chest. */
   forceOpenContainer?: (id: string) => boolean
   describeWorldGeneratedContainer?: (id: string) => string | null
+  /** Otwórz juki on a player-owned pack-capable animal (plan fauna-039 §10). */
+  openAnimalPack?: (animalId: string) => void
+  /** Załóż juki (plan fauna-039 §7) — spends one `saddlebags` item. */
+  equipAnimalPack?: (animalId: string) => void
+  /** Zdejmij juki (plan fauna-039 §14) — only legal for an empty pack. */
+  unequipAnimalPack?: (animalId: string) => void
+  /** Podnieś juki — recovers an empty *ground* saddlebags container as a
+   *  carried item (plan fauna-039 §26). */
+  pickUpGroundSaddlebags?: (id: string) => void
   /** Runs one active-work session on a player-built well (plan 127, revised
    *  — active work, not elapsed world time) — validates tool/materials,
    *  transitions into the next stage when needed, and starts a work-bout
@@ -705,6 +714,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, sleepInHay, openTrapArmDialog, disarmTrap, collectTrap,
     startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive, harvestCrop, tidyGardenPlot, waterGardenPlot,
     openContainer, openNpcCorpse, openHouseholdResourceTransfer, pickUpContainer, forceOpenContainer, describeWorldGeneratedContainer, workOnWell, describeWellWork, describeWellRoofRepair, workOnWellRoofRepair, describeStructureRepair, workOnStructureRepair, igniteStandingTorch, workOnStandingTorch, workOnPlayerTrough, fillPlayerTrough, workOnPalisade, removePalisadeSegment, supplyResidentialBuildingMaterials, workOnResidentialBuilding, cancelResidentialBuilding, sleepInOwnedHouse, repairSettlementStorage, destroyRatNest, openNoticeBoard, openGrindstoneSharpen,
+    openAnimalPack, equipAnimalPack, unequipAnimalPack, pickUpGroundSaddlebags,
     describePalisadeWork, describeStandingTorchWork, describePlayerTroughWork, describePlayerTroughFill, describeResidentialWork,
     previewActionConsequence, previewForeignMount,
     previewPalisadeRemoval, previewStandingTorchRemoval, removeStandingTorch, igniteVillageTorch, previewPlayerTroughRemoval, removePlayerTrough,
@@ -1882,7 +1892,13 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       } else if (target?.kind === 'container') {
         if (interactPressed) openContainer?.(target.id)
         if (altInteractPressed) {
-          if (!forceOpenContainer?.(target.id)) pickUpContainer?.(target.id)
+          // A ground saddlebags container is `empty-to-item` (plan
+          // fauna-039 §23/§26) — never `forceOpenContainer`/carry-pickup.
+          if (bundle.placedContainers.find(target.id)?.kind === 'saddlebags') {
+            pickUpGroundSaddlebags?.(target.id)
+          } else if (!forceOpenContainer?.(target.id)) {
+            pickUpContainer?.(target.id)
+          }
         }
       } else if (target?.kind === 'playerWell') {
         // Unfinished: `[E]` construction bout; requirements live on `[V]`
@@ -2247,6 +2263,33 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
                 consequenceTone: mountPreview?.tone,
                 run: () => { mount.tryMount(target.animal) },
               })
+            }
+            // Pack actions (plan fauna-039 §6/§10/§14) — only for a
+            // player-owned pack-capable animal; V1 requires dismount, same
+            // as every other action in this dialog (mounted routing already
+            // suppresses this world interaction entirely).
+            if (target.animal.isPlayerOwned() && target.animal.hasPackCapability()) {
+              if (target.animal.hasPack()) {
+                actions.push({
+                  label: 'Otwórz juki',
+                  enabled: true,
+                  reasonLabel: '',
+                  run: () => { openAnimalPack?.(target.animal.animalId) },
+                })
+                actions.push({
+                  label: 'Zdejmij juki',
+                  enabled: true,
+                  reasonLabel: '',
+                  run: () => { unequipAnimalPack?.(target.animal.animalId) },
+                })
+              } else {
+                actions.push({
+                  label: 'Załóż juki',
+                  enabled: true,
+                  reasonLabel: '',
+                  run: () => { equipAnimalPack?.(target.animal.animalId) },
+                })
+              }
             }
             vueUi.openFlavorDialog(
               target.animal.isPlayerOwned() ? `Steruj: ${label}` : label,

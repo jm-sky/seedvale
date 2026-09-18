@@ -4,7 +4,8 @@ import type { ItemKind } from '../items/items'
 import type { HeightSampler } from '../player/PlayerController'
 import { CONTAINER_DEFS, type ContainerKind, containerTotalWeight } from '../items/container'
 import { STORED_FOOD_DECAY } from '../items/foodFreshness'
-import { type FoodBatch, Inventory, type SaveItemInstance } from '../items/Inventory'
+import { type FoodBatch, Inventory, type InventoryContentsSnapshot, type SaveItemInstance } from '../items/Inventory'
+import { createItemMesh } from '../items/items'
 import { placeOnGround } from '../settlement/props'
 import { createPlacedContainerProp, disposePlacedContainerProp } from './containerProp'
 
@@ -54,6 +55,19 @@ export type PlacedContainers = {
   /** Places a fresh, empty container — the purchase→place flow (mirrors
    *  `PlacedTents.place`). */
   place: (kind: ContainerKind, x: number, z: number, yaw: number) => PlacedContainerRecord
+  /** Idempotently materializes a container at a caller-supplied stable id
+   *  (plan fauna-039 §20/§21 — the animal-pack death handoff). If `id`
+   *  already exists, this is a no-op (`false`, existing contents
+   *  untouched) — the single reconciliation guard against duplicating a
+   *  ground pack across repeated death/restore calls. Returns `true` only
+   *  when a new entry was actually created from `snapshot`. */
+  materialize: (id: string, kind: ContainerKind, x: number, z: number, yaw: number, snapshot: InventoryContentsSnapshot) => boolean
+  /** Removes one container entirely without ever entering carried state
+   *  (plan fauna-039 §23/§26) — the `empty-to-item` pickup transaction's
+   *  primitive; the caller is responsible for verifying it's empty and for
+   *  granting the recovered `ItemKind` to the player. `false` if `id` is
+   *  unknown. */
+  remove: (id: string) => boolean
   /** World → carried (plan 164 §15): the *same* `contents` Inventory moves
    *  with the record, never copied into player `Inventory`. False if `id`
    *  is unknown or something is already carried (one at a time). */
@@ -111,6 +125,18 @@ function toRecord(entry: { id: string, kind: ContainerKind, x: number, z: number
 
 let nextContainerId = 0
 
+/** Presentation factory per `ContainerKind` (plan fauna-039 §25) —
+ *  `chest`/`casket` keep the existing procedural prop unchanged;
+ *  `saddlebags` reuses the standard item-ground GLB pipeline (same
+ *  synchronous "clone or procedural fallback" contract as every other
+ *  `createItemMesh` caller, never a second loader/cache path). Ground
+ *  transform is independent of the animal-attached `SADDLEBAGS_PLACEMENT`
+ *  (plan fauna-039 §8) — `placeOnGround` below positions it like any other
+ *  dropped item. */
+function createContainerMesh(kind: ContainerKind): Object3D {
+  return kind === 'saddlebags' ? createItemMesh('saddlebags') : createPlacedContainerProp()
+}
+
 /**
  * Player-placed storage containers (plan 164) — same "player chose the spot,
  * whole record round-trips through the save" shape as `PlacedTents`/
@@ -130,7 +156,7 @@ export function createPlacedContainers(
 
   const spawn = (record: PlacedContainerRecord): void => {
     const def = CONTAINER_DEFS[record.kind]
-    const mesh = createPlacedContainerProp()
+    const mesh = createContainerMesh(record.kind)
     mesh.rotation.y = record.yaw
     placeOnGround(mesh, record.x, record.z, sampleHeight)
     scene.add(mesh)
@@ -175,10 +201,36 @@ export function createPlacedContainers(
       spawn(record)
       return record
     },
+    materialize(id, kind, x, z, yaw, snapshot) {
+      if (find(id)) return false
+      spawn({
+        id,
+        kind,
+        x,
+        z,
+        yaw,
+        counts: snapshot.counts,
+        instances: [...snapshot.instances],
+        foodBatches: snapshot.foodBatches as Partial<Record<ItemKind, FoodBatch[]>> | undefined,
+      })
+      return true
+    },
+    remove(id) {
+      const index = containers.findIndex((entry) => entry.id === id)
+      if (index === -1) return false
+      const [entry] = containers.splice(index, 1)
+      if (!entry) return false
+      disposePlacedContainerProp(entry.mesh)
+      return true
+    },
     pickUp(id) {
       if (carried) return false
       const index = containers.findIndex((entry) => entry.id === id)
       if (index === -1) return false
+      // Policy guard (plan fauna-039 §23/§24): only `carry-container` kinds
+      // may ever enter the carried-container concept — a dropped
+      // `saddlebags` pack goes through `remove()` (empty-to-item) instead.
+      if (CONTAINER_DEFS[containers[index].kind].pickupPolicy !== 'carry-container') return false
       const [entry] = containers.splice(index, 1)
       if (!entry) return false
       disposePlacedContainerProp(entry.mesh)
@@ -194,7 +246,7 @@ export function createPlacedContainers(
       : null),
     putDownCarried(x, z, yaw) {
       if (!carried) return null
-      const mesh = createPlacedContainerProp()
+      const mesh = createContainerMesh(carried.kind)
       mesh.rotation.y = yaw
       placeOnGround(mesh, x, z, sampleHeight)
       scene.add(mesh)

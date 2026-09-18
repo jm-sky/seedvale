@@ -1,5 +1,6 @@
 import type { NpcAgent } from '../../ai/NpcAgent'
-import type { Inventory } from '../../items/Inventory'
+import type { AnimalAgent } from '../../fauna/AnimalAgent'
+import type { FoodBatch, Inventory } from '../../items/Inventory'
 import type { ItemKind } from '../../items/items'
 import type { VueUi } from '../../ui-vue/mount'
 import type { GroundPlacementDefinition, PlacementBlocker, PlacementPreviewResult } from './placementActions'
@@ -51,6 +52,38 @@ function maxTransferable(inventory: Inventory, kind: ItemKind, available: number
   return n
 }
 
+/** Same batch-preserving partial-accept algorithm as
+ *  `PlacedContainers.deposit()` (`world/createPlacedContainers.ts`),
+ *  reused directly against a live pack `Inventory` (plan fauna-039 §12) —
+ *  an equipped pack has no `id`-keyed store of its own to route through
+ *  `containerContents()`, just the animal's own `Inventory`. Returns the
+ *  amount actually accepted so the caller can return any remainder to the
+ *  player, same "partial success, never lost" contract. */
+function depositBatchesInto(
+  target: Inventory,
+  kind: ItemKind,
+  amount: number,
+  nowDays: number,
+  batches?: readonly FoodBatch[],
+): number {
+  if (amount <= 0) return 0
+  if (batches && batches.length > 0) {
+    let accepted = 0
+    let remaining = amount
+    for (const batch of batches) {
+      if (remaining <= 0) break
+      const take = Math.min(batch.count, remaining)
+      if (!target.addWithFreshness(kind, take, [{ ...batch, count: take }], nowDays)) break
+      accepted += take
+      remaining -= take
+    }
+    return accepted
+  }
+  let accepted = 0
+  while (accepted < amount && target.add(kind, 1, nowDays)) accepted++
+  return accepted
+}
+
 /** Everything the generic player storage (plan 164) does from the app layer:
  *  putting a bought chest down, carrying one, and the transfer screen that
  *  moves items between a `PlacedContainerEntry`'s own `Inventory` and the
@@ -68,6 +101,19 @@ export type ContainerActions = {
   openContainer: (id: string) => void
   openNpcCorpse: (npc: NpcAgent) => void
   pickUpContainer: (id: string) => void
+  /** Opens an equipped animal's pack in the shared transfer screen (plan
+   *  fauna-039 §10) — `animalId` is re-resolved to the live `AnimalAgent`
+   *  on every subsequent mutation, never held as a direct reference. */
+  openAnimalPack: (animalId: string) => void
+  /** Załóż juki (plan fauna-039 §7) — spends exactly one `saddlebags` from
+   *  the player's inventory; rolls it back if pack installation fails. */
+  equipAnimalPack: (animalId: string) => void
+  /** Zdejmij juki (plan fauna-039 §14) — only legal for an empty pack;
+   *  grants exactly one `saddlebags` back to the player. */
+  unequipAnimalPack: (animalId: string) => void
+  /** Recovers an empty *ground* saddlebags container as a carried item
+   *  (plan fauna-039 §26) — the `empty-to-item` pickup policy transaction. */
+  pickUpGroundSaddlebags: (id: string) => void
   /** Plan items-player-026 — force a locked systemic treasure chest. Returns
    *  true when this chest is a force-entry candidate (so `[R]` must not fall
    *  through to pick-up). */
@@ -97,15 +143,41 @@ export function createContainerActions(
   const { bundle, player, inventory, hud, toast, busy, mouseLook } = ctx
   const { vueUi, tentBlockers, rendererElement, unlockedTreasureContainerIds, treasureChestMutations, tryExtractTreasureMapBearCasket, confirmOpenAuthoredCasket } = deps
 
-  /** The transfer screen currently shown — a placed chest or an NPC corpse
-   *  (plan npc-010). Opening one overwrites the other; handlers below always
-   *  act on this session so the Vue screen stays inventory-agnostic. */
-  let openTransfer: { kind: 'container', id: string } | { kind: 'npcCorpse', npc: NpcAgent } | null = null
+  /** The transfer screen currently shown — a placed chest, an NPC corpse
+   *  (plan npc-010), or an equipped animal's pack (plan fauna-039 §11).
+   *  Opening one overwrites the others; handlers below always act on this
+   *  session so the Vue screen stays inventory-agnostic. `animalPack` keeps
+   *  only the stable `animalId`, never a live `AnimalAgent` reference — the
+   *  animal is re-resolved (`resolveAnimalPack`) before every mutation. */
+  let openTransfer: { kind: 'container', id: string } | { kind: 'npcCorpse', npc: NpcAgent } | { kind: 'animalPack', animalId: string } | null = null
 
   const containerContents = (id: string) => {
     if (bundle.placedContainers.find(id)) return bundle.placedContainers
     if (bundle.worldGeneratedContainers.find(id)) return bundle.worldGeneratedContainers
     return null
+  }
+
+  /** Re-resolves an equipped pack's live `Inventory` by stable `animalId`
+   *  (plan fauna-039 §11/§29) — `null` once the animal is gone or no
+   *  longer carries a pack (dead + handed off, unequipped elsewhere, ...). */
+  const resolveAnimalPack = (animalId: string): { animal: AnimalAgent, contents: Inventory } | null => {
+    const animal = bundle.settlementsManager.resolvePersistentAnimal(animalId)
+    const contents = animal?.getPackContents() ?? null
+    return animal && contents ? { animal, contents } : null
+  }
+
+  const refreshAnimalPackScreen = (contents: Inventory): void => {
+    if (!vueUi.isContainerScreenOpen()) return
+    vueUi.refreshContainerScreen(
+      contents.toJSON(),
+      buildInventoryGroups(contents, ctx.dayNight.elapsedDays),
+      contents.totalWeight(),
+      contents.maxSize,
+      inventoryCountsForUi(inventory),
+      buildInventoryGroups(inventory, ctx.dayNight.elapsedDays),
+      inventory.totalWeight(),
+      inventory.maxWeight,
+    )
   }
 
   /** Shared placement contract for a container (plan `world-008`) — one
@@ -387,6 +459,112 @@ export function createContainerActions(
     toast.show('Podniesiono skrzynię.')
   }
 
+  /** Otwórz juki (plan fauna-039 §10) — the equipped-pack counterpart of
+   *  `openContainer`; a *ground* saddlebags container is a normal
+   *  `PlacedContainerEntry` and already opens through `openContainer`
+   *  unchanged. */
+  const openAnimalPack = (animalId: string): void => {
+    if (isActionBlocked(ctx)) return
+    const resolved = resolveAnimalPack(animalId)
+    if (!resolved) return
+    exitGamePointerLock(rendererElement)
+    openTransfer = { kind: 'animalPack', animalId }
+    const name = resolved.animal.getName()
+    vueUi.openContainerScreen(
+      name ? `Juki — ${name}` : 'Juki',
+      'pack',
+      resolved.contents.toJSON(),
+      buildInventoryGroups(resolved.contents, ctx.dayNight.elapsedDays),
+      resolved.contents.totalWeight(),
+      resolved.contents.maxSize,
+      inventoryCountsForUi(inventory),
+      buildInventoryGroups(inventory, ctx.dayNight.elapsedDays),
+      inventory.totalWeight(),
+      inventory.maxWeight,
+    )
+  }
+
+  /** Załóż juki (plan fauna-039 §6/§7) — commit-last from the item side:
+   *  every fallible check runs before the `saddlebags` item ever leaves the
+   *  player's inventory, and installation itself (`AnimalAgent.equipPack`)
+   *  cannot fail once eligibility already held, but the item is still
+   *  rolled back defensively if it somehow does. */
+  const equipAnimalPack = (animalId: string): void => {
+    if (isActionBlocked(ctx)) return
+    const animal = bundle.settlementsManager.resolvePersistentAnimal(animalId)
+    if (!animal) return
+    if (!animal.canEquipPack()) {
+      toast.show('Nie można teraz założyć juk temu zwierzęciu.', 'error')
+      return
+    }
+    if (!inventory.has('saddlebags', 1)) {
+      toast.show('Potrzebujesz juk.', 'error')
+      return
+    }
+    if (!inventory.remove('saddlebags', 1)) return
+    if (!animal.equipPack()) {
+      inventory.add('saddlebags', 1)
+      return
+    }
+    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+    ctx.onInventoryChanged()
+    ctx.syncQuickActionAvailability()
+    toast.show('Założono juki.')
+  }
+
+  /** Zdejmij juki (plan fauna-039 §14) — only legal for an empty pack;
+   *  never auto-empties or drops contents. */
+  const unequipAnimalPack = (animalId: string): void => {
+    if (isActionBlocked(ctx)) return
+    const animal = bundle.settlementsManager.resolvePersistentAnimal(animalId)
+    if (!animal) return
+    if (!animal.canUnequipPack()) {
+      toast.show('Najpierw opróżnij juki.', 'error')
+      return
+    }
+    if (!inventory.canAdd('saddlebags', 1)) {
+      toast.show(inventoryFullToastText(inventory, 'saddlebags', 1), 'error')
+      return
+    }
+    if (!animal.unequipPack()) return
+    inventory.add('saddlebags', 1)
+    if (openTransfer?.kind === 'animalPack' && openTransfer.animalId === animalId) {
+      vueUi.closeContainerScreen()
+      openTransfer = null
+    }
+    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+    ctx.onInventoryChanged()
+    ctx.syncQuickActionAvailability()
+    toast.show('Zdjęto juki.')
+  }
+
+  /** Podnieś juki (plan fauna-039 §23/§26) — the `empty-to-item` pickup
+   *  policy transaction for a *ground* saddlebags container: legal only
+   *  when empty, never auto-triggered by emptying it out. */
+  const pickUpGroundSaddlebags = (id: string): void => {
+    if (isActionBlocked(ctx)) return
+    const entry = bundle.placedContainers.find(id)
+    if (!entry || entry.kind !== 'saddlebags') return
+    if (!entry.contents.isEmpty()) {
+      toast.show('Najpierw opróżnij juki.', 'error')
+      return
+    }
+    if (!inventory.canAdd('saddlebags', 1)) {
+      toast.show(inventoryFullToastText(inventory, 'saddlebags', 1), 'error')
+      return
+    }
+    if (!bundle.placedContainers.remove(id)) return
+    inventory.add('saddlebags', 1)
+    if (openTransfer?.kind === 'container' && openTransfer.id === id) {
+      vueUi.closeContainerScreen()
+      openTransfer = null
+    }
+    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+    ctx.onInventoryChanged()
+    ctx.syncQuickActionAvailability()
+    toast.show('Podniesiono juki.')
+  }
+
   vueUi.configureContainerScreen({
     onDeposit: (kind, amount) => {
       if (!openTransfer) return
@@ -397,6 +575,26 @@ export function createContainerActions(
       const nowDays = ctx.dayNight.elapsedDays
       const batches = inventory.removeWithFreshness(kind, amount, nowDays)
       if (!batches) return
+      if (openTransfer.kind === 'animalPack') {
+        const resolved = resolveAnimalPack(openTransfer.animalId)
+        if (!resolved) {
+          inventory.addWithFreshness(kind, amount, batches, nowDays)
+          return
+        }
+        const acceptedIntoPack = depositBatchesInto(resolved.contents, kind, amount, nowDays, batches)
+        if (acceptedIntoPack <= 0) {
+          inventory.addWithFreshness(kind, amount, batches, nowDays)
+          toast.show('Brak miejsca w jukach.', 'error')
+          return
+        }
+        if (acceptedIntoPack < amount) {
+          inventory.addWithFreshness(kind, amount - acceptedIntoPack, skipBatchCount(batches, acceptedIntoPack), nowDays)
+        }
+        hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+        ctx.onInventoryChanged()
+        refreshAnimalPackScreen(resolved.contents)
+        return
+      }
       const store = containerContents(openTransfer.id)
       if (!store) return
       const accepted = store.deposit(openTransfer.id, kind, amount, nowDays, batches)
@@ -426,6 +624,20 @@ export function createContainerActions(
         refreshNpcCorpseScreen(openTransfer.npc)
         return
       }
+      if (openTransfer.kind === 'animalPack') {
+        const resolved = resolveAnimalPack(openTransfer.animalId)
+        if (!resolved) return
+        const nowDays = ctx.dayNight.elapsedDays
+        const take = Math.min(resolved.contents.count(kind), amount)
+        if (take <= 0) return
+        const withdrawnBatches = resolved.contents.removeWithFreshness(kind, take, nowDays)
+        if (!withdrawnBatches) return
+        inventory.addWithFreshness(kind, take, withdrawnBatches, nowDays)
+        hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+        ctx.onInventoryChanged()
+        refreshAnimalPackScreen(resolved.contents)
+        return
+      }
       const nowDays = ctx.dayNight.elapsedDays
       const store = containerContents(openTransfer.id)
       if (!store) return
@@ -445,6 +657,18 @@ export function createContainerActions(
       }
       const instance = inventory.getInstance(instanceId)
       if (!instance) return
+      if (openTransfer.kind === 'animalPack') {
+        const resolved = resolveAnimalPack(openTransfer.animalId)
+        if (!resolved || !resolved.contents.addInstance(instance)) {
+          toast.show('Brak miejsca w jukach.', 'error')
+          return
+        }
+        if (!inventory.removeInstance(instanceId)) return
+        hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+        ctx.onInventoryChanged()
+        refreshAnimalPackScreen(resolved.contents)
+        return
+      }
       const store = containerContents(openTransfer.id)
       if (!store) return
       if (!store.depositInstance(openTransfer.id, instance)) {
@@ -473,6 +697,24 @@ export function createContainerActions(
         hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
         ctx.onInventoryChanged()
         refreshNpcCorpseScreen(openTransfer.npc)
+        return
+      }
+      if (openTransfer.kind === 'animalPack') {
+        const resolved = resolveAnimalPack(openTransfer.animalId)
+        const instance = resolved?.contents.getInstance(instanceId)
+        if (!resolved || !instance) return
+        if (!inventory.canAddInstance(instance)) {
+          toast.show(inventoryFullToastText(inventory, instance.kind, 1), 'error')
+          return
+        }
+        if (!resolved.contents.removeInstance(instanceId)) return
+        if (!inventory.addInstance(instance)) {
+          resolved.contents.addInstance(instance)
+          return
+        }
+        hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+        ctx.onInventoryChanged()
+        refreshAnimalPackScreen(resolved.contents)
         return
       }
       const store = containerContents(openTransfer.id)
@@ -520,6 +762,33 @@ export function createContainerActions(
         refreshNpcCorpseScreen(openTransfer.npc)
         return
       }
+      if (openTransfer.kind === 'animalPack') {
+        const resolved = resolveAnimalPack(openTransfer.animalId)
+        if (!resolved) return
+        const nowDays = ctx.dayNight.elapsedDays
+        for (const [kind, count] of Object.entries(resolved.contents.toJSON()) as [ItemKind, number][]) {
+          if (count <= 0) continue
+          const n = maxTransferable(inventory, kind, count)
+          if (n <= 0) continue
+          const withdrawnBatches = resolved.contents.removeWithFreshness(kind, n, nowDays)
+          if (!withdrawnBatches) continue
+          inventory.addWithFreshness(kind, n, withdrawnBatches, nowDays)
+          transferredAny = true
+        }
+        for (const kind of INSTANCE_BACKED_KINDS) {
+          for (const instance of resolved.contents.getInstances(kind)) {
+            if (!inventory.canAddInstance(instance)) continue
+            if (!resolved.contents.removeInstance(instance.id)) continue
+            if (!inventory.addInstance(instance)) { resolved.contents.addInstance(instance); continue }
+            transferredAny = true
+          }
+        }
+        if (!transferredAny) return
+        hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+        ctx.onInventoryChanged()
+        refreshAnimalPackScreen(resolved.contents)
+        return
+      }
       const nowDays = ctx.dayNight.elapsedDays
       const store = containerContents(openTransfer.id)
       const entry = store?.find(openTransfer.id)
@@ -559,5 +828,9 @@ export function createContainerActions(
     pickUpContainer,
     forceOpenContainer,
     describeWorldGeneratedContainer,
+    openAnimalPack,
+    equipAnimalPack,
+    unequipAnimalPack,
+    pickUpGroundSaddlebags,
   }
 }

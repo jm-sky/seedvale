@@ -426,10 +426,12 @@ type MerchantState = {
  *  `ContainerKind`) — `label` is the only per-container-instance text. */
 /** `container` = a placed chest/world container (deposit + withdraw both
  *  legal). `corpse` = NPC post-death loot (plan npc-010) — withdraw-only, the
- *  player was never able to deposit here; `ContainerScreen.vue` derives every
- *  mode-dependent label/control from this instead of a screen-specific
- *  corpse component (plan items-player-024). */
-export type ContainerScreenMode = 'container' | 'corpse'
+ *  player was never able to deposit here. `pack` = an equipped animal's
+ *  saddlebags (plan fauna-039) — deposit + withdraw both legal, same as
+ *  `container`, just a different source label. `ContainerScreen.vue` derives
+ *  every mode-dependent label/control from this instead of a screen-specific
+ *  component per source (plan items-player-024). */
+export type ContainerScreenMode = 'container' | 'corpse' | 'pack'
 
 type ContainerScreenState = {
   open: boolean

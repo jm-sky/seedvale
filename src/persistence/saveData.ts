@@ -1457,7 +1457,7 @@ function isHarvestedCropIdsField(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((id) => typeof id === 'string')
 }
 
-const CONTAINER_KINDS: ReadonlySet<string> = new Set<ContainerKind>(['chest'])
+const CONTAINER_KINDS: ReadonlySet<string> = new Set<ContainerKind>(['chest', 'saddlebags'])
 
 function isPlacedContainersField(value: unknown): value is SavePlacedContainer[] {
   if (!Array.isArray(value)) return false
@@ -2328,7 +2328,8 @@ function isLivestockSaveRecord(value: unknown): value is LivestockSaveRecord {
     (r.rabid === undefined || typeof r.rabid === 'boolean') &&
     (r.stray === undefined || isAnimalStraySave(r.stray)) &&
     isOptionalHorseTrainingField(r.training) &&
-    isOptionalHorsePaddockStayField(r.paddockStay)
+    isOptionalHorsePaddockStayField(r.paddockStay) &&
+    isAnimalPackField(r.pack)
   )
 }
 
@@ -2391,6 +2392,24 @@ function isOptionalHorsePaddockStayField(value: unknown): boolean {
   )
 }
 
+/** Validates an `AnimalPackSnapshot` (plan fauna-039) — same
+ *  counts/instances/foodBatches shape every other stored `Inventory`
+ *  contents validator (`isPlacedContainersField` etc.) checks; only
+ *  `equipment` is pack-specific. */
+function isAnimalPackField(value: unknown): boolean {
+  if (value === undefined) return true
+  if (!value || typeof value !== 'object') return false
+  const p = value as Record<string, unknown>
+  if (p.equipment !== 'saddlebags') return false
+  if (!p.contents || typeof p.contents !== 'object') return false
+  const c = p.contents as Record<string, unknown>
+  return (
+    !!c.counts && typeof c.counts === 'object' &&
+    isSaveItemInstancesField(c.instances) &&
+    isOptionalFoodBatchesField(c.foodBatches)
+  )
+}
+
 function isAnimalSaveState(value: unknown): boolean {
   if (!value || typeof value !== 'object') return false
   const s = value as Record<string, unknown>
@@ -2413,7 +2432,8 @@ function isAnimalSaveState(value: unknown): boolean {
     isOptionalHorseTrainingField(s.training) &&
     isOptionalHorsePaddockStayField(s.paddockStay) &&
     (s.physicalInjury === undefined || typeof s.physicalInjury === 'number') &&
-    (s.injuryRecoveryUpdatedAtDays === undefined || typeof s.injuryRecoveryUpdatedAtDays === 'number')
+    (s.injuryRecoveryUpdatedAtDays === undefined || typeof s.injuryRecoveryUpdatedAtDays === 'number') &&
+    isAnimalPackField(s.pack)
   )
 }
 

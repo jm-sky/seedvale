@@ -132,10 +132,12 @@ Generated from TypeScript imports.
 - `economy/productionExecutor.ts`
 - `economy/productionShortage.ts`
 - `economy/settlementEconomy.ts`
+- `fauna/AnimalAgent.ts`
 - `fauna/animalForaging.test.ts`
 - `fauna/animalForaging.ts`
 - `fauna/animalHarvest.test.ts`
 - `fauna/animalHarvest.ts`
+- `fauna/animalPack.ts`
 - `fauna/foodWaterTargeting.test.ts`
 - `fauna/huntingHooks.ts`
 - `interaction/targetedSkillAction.test.ts`
@@ -221,6 +223,7 @@ Generated from TypeScript imports.
 - `ui-vue/npcDialogueOpen.test.ts`
 - `ui-vue/npcDialogueTrade.test.ts`
 - `ui-vue/npcDialogueVoice.test.ts`
+- `world/createPlacedContainers.test.ts`
 - `world/createPlacedContainers.ts`
 - `world/expeditionProvisioning.test.ts`
 - `world/expeditionProvisioning.ts`
@@ -455,6 +458,7 @@ Generated from TypeScript imports.
 
 - `app/actions/containerActions.ts`
 - `app/createApp.ts`
+- `app/interactables.ts`
 - `items/container.test.ts`
 - `persistence/saveData.ts`
 - `world/createPlacedContainers.ts`
@@ -628,6 +632,7 @@ Generated from TypeScript imports.
 - `economy/settlementEconomy.ts`
 - `fauna/animalAttraction.ts`
 - `fauna/animalHarvest.ts`
+- `fauna/animalPack.ts`
 - `items/Inventory.test.ts`
 - `items/Inventory.ts`
 - `items/campfireCooking.ts`
@@ -1184,6 +1189,7 @@ Generated from TypeScript imports.
 - `fauna/animalForaging.ts`
 - `fauna/animalHarvest.ts`
 - `fauna/animalMeat.ts`
+- `fauna/animalPackPresentation.ts`
 - `fauna/animalTrophyLoot.ts`
 - `fauna/harvestedRemains.ts`
 - `fauna/livestockProduction.ts`

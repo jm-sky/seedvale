@@ -41,6 +41,8 @@ Generated from TypeScript imports.
 - `fauna/animalNames.ts`
 - `fauna/animalNeedArbitration.ts`
 - `fauna/animalOwnership.ts`
+- `fauna/animalPack.ts`
+- `fauna/animalPackPresentation.ts`
 - `fauna/animalRoaming.ts`
 - `fauna/animalScare.ts`
 - `fauna/animalStray.ts`
@@ -61,6 +63,7 @@ Generated from TypeScript imports.
 - `fauna/predatorIntentCommitment.ts`
 - `fauna/preyAlertPerception.ts`
 - `fauna/waterTraversal.ts`
+- `items/Inventory.ts`
 - `items/items.ts`
 - `navigation/navigation.ts`
 - `navigation/navigationStats.ts`
@@ -89,6 +92,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/actions/containerActions.ts`
 - `app/actions/gatheringActions.ts`
 - `app/actions/leadActions.ts`
 - `app/actions/mountActions.test.ts`
@@ -155,6 +159,8 @@ Generated from TypeScript imports.
 - `settlement/playerOwnedHorseDebug.ts`
 - `settlement/ratPersistence.ts`
 - `settlement/rats.ts`
+- `world/animalPackHandoff.test.ts`
+- `world/animalPackHandoff.ts`
 - `world/createPlacedTraps.ts`
 
 ## `fauna/AnimalLife.test.ts`
@@ -379,6 +385,9 @@ Generated from TypeScript imports.
 - `fauna/animalHarvest.test.ts`
 - `fauna/animalLead.test.ts`
 - `fauna/animalLead.ts`
+- `fauna/animalPack.test.ts`
+- `fauna/animalPack.ts`
+- `fauna/animalPackPresentation.ts`
 - `fauna/animalRoaming.ts`
 - `fauna/animalRoamingTrips.test.ts`
 - `fauna/animalStray.ts`
@@ -397,6 +406,7 @@ Generated from TypeScript imports.
 - `fauna/preyAlertPerception.ts`
 - `reputation/animalDeeds.ts`
 - `settlement/horseAcquisition.test.ts`
+- `world/animalPackHandoff.test.ts`
 - `world/animalTraps.ts`
 - `world/cart.test.ts`
 - `world/cart.ts`
@@ -593,6 +603,39 @@ Generated from TypeScript imports.
 - `settlement/SettlementsManager.ts`
 - `settlement/livestock.test.ts`
 - `settlement/livestock.ts`
+
+## `fauna/animalPack.test.ts`
+
+**Imports**
+
+- `fauna/animalDefs.ts`
+- `fauna/animalPack.ts`
+
+## `fauna/animalPack.ts`
+
+**Imports**
+
+- `fauna/animalDefs.ts`
+- `items/Inventory.ts`
+- `items/foodFreshness.ts`
+
+**Imported by**
+
+- `fauna/AnimalAgent.ts`
+- `fauna/animalPack.test.ts`
+- `world/animalPackHandoff.ts`
+
+## `fauna/animalPackPresentation.ts`
+
+**Imports**
+
+- `assets/loadGltf.ts`
+- `fauna/animalDefs.ts`
+- `items/items.ts`
+
+**Imported by**
+
+- `fauna/AnimalAgent.ts`
 
 ## `fauna/animalRoaming.test.ts`
 

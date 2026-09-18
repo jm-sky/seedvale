@@ -1379,8 +1379,8 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     holdable: false,
     melee: null,
     spawn: 'none',
-    modelUrl: null,
-    notes: 'Plan items-player-001 §4.2 — leather, buy from Kupiec (future leatherworker source). Inert carried item today: the animal-equip/transport-capacity mechanic (fitting these to a horse/donkey) is a future plan, not this one.',
+    modelUrl: '/models/items/saddlebags.glb',
+    notes: 'Plan items-player-001 §4.2 — leather, buy from Kupiec (future leatherworker source). Equipped on a player-owned horse/donkey as a persistent pack (plan fauna-039) — see `fauna/animalPack.ts`.',
   },
   tree_seed: {
     kind: 'tree_seed',

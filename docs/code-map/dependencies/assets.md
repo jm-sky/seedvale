@@ -222,6 +222,7 @@ Generated from TypeScript imports.
 - `assets/loadGltf.test.ts`
 - `debug/caves/caveHeightfieldPlayer.ts`
 - `debug/createModelTestScene.ts`
+- `fauna/animalPackPresentation.ts`
 - `fauna/bloodSplat.ts`
 - `fauna/createFauna.ts`
 - `fauna/harvestedRemains.ts`

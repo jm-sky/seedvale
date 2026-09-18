@@ -114,6 +114,10 @@ export const ITEM_GLB_SPECS: Partial<Record<ItemKind, GroundGlbSpec>> = {
   // Quaternius Fantasy/Farm/Nature packs — 2026-09-04 asset drop, see
   // docs/tmp/2026-09-04--new-3d-assets.md.
   backpack: { url: '/models/items/backpack.glb', maxSize: 0.5 },
+  // Plan fauna-039 — reused both as the ground pickup/drop representation
+  // and (via `createItemMesh`, no second loader) as the equipped-on-animal
+  // and dropped-pack-container visual.
+  saddlebags: { url: '/models/items/saddlebags.glb', maxSize: 0.6 },
   pan: { url: '/models/items/pan.glb', maxSize: 0.35 },
   rope: { url: '/models/items/rope.glb', maxSize: 0.4 },
   chest: { url: '/models/items/chest.glb', maxSize: 0.85 },

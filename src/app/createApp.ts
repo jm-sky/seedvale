@@ -241,6 +241,7 @@ import { createQuestLog } from '../ui/createQuestLog'
 import { createQuickActions } from '../ui/createQuickActions'
 import { createTimeSkipOverlay } from '../ui/createTimeSkipOverlay'
 import { createToast } from '../ui/createToast'
+import { reconcileAnimalPackHandoff } from '../world/animalPackHandoff'
 import { TRAP_DEFS } from '../world/animalTraps'
 import { type BeehiveRecord } from '../world/beehives'
 import { createClouds } from '../world/clouds'
@@ -2050,6 +2051,10 @@ export async function createApp(
   onAnimalDeathTarget = (animalId) => {
     const agent = bundle.fauna.getAgents().find((a) => a.animalId === animalId)
       ?? bundle.settlementsManager.resolvePersistentAnimal(animalId)
+    if (agent) {
+      const originSettlementId = bundle.settlementsManager.resolvePersistentAnimalOrigin(animalId) ?? 'detached'
+      reconcileAnimalPackHandoff(agent, originSettlementId, bundle.placedContainers)
+    }
     questManager.onInteractObjective({
       type: 'animal_died',
       animalId,
@@ -2058,6 +2063,17 @@ export async function createApp(
     questManager.onHorseRewardTargetDied(animalId)
     questManager.pollSettlementRatInfestationObjectives()
     questManager.pollLostLivestockSources()
+  }
+  // Restore-time reconciliation (plan fauna-039 §21) — a save taken between
+  // an animal's death and a successful handoff (or one written by a build
+  // predating this plan) could restore a dead player-owned animal that
+  // still thinks it's carrying a pack. `reconcileAnimalPackHandoff` is the
+  // exact same idempotent helper `onAnimalDeathTarget` calls at runtime, so
+  // running it once here for every already-restored detached animal is safe
+  // regardless of whether a handoff already happened.
+  for (const animal of bundle.settlementsManager.getDetachedLivestock()) {
+    const originSettlementId = bundle.settlementsManager.resolvePersistentAnimalOrigin(animal.animalId) ?? 'detached'
+    reconcileAnimalPackHandoff(animal, originSettlementId, bundle.placedContainers)
   }
   // Character Screen's known-settlement reputation view (plan ui-input-019) —
   // refreshed on screen open (`openCharacter` below), on selector change, and
@@ -3389,6 +3405,10 @@ export async function createApp(
     pickUpContainer: containers.pickUpContainer,
     forceOpenContainer: containers.forceOpenContainer,
     describeWorldGeneratedContainer: containers.describeWorldGeneratedContainer,
+    openAnimalPack: containers.openAnimalPack,
+    equipAnimalPack: containers.equipAnimalPack,
+    unequipAnimalPack: containers.unequipAnimalPack,
+    pickUpGroundSaddlebags: containers.pickUpGroundSaddlebags,
     workOnWell: placement.workOnWell,
     describeWellWork: placement.describeWellWork,
     describeWellRoofRepair: placement.describeWellRoofRepair,

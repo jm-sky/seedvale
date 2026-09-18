@@ -15,18 +15,32 @@
  */
 import type { GroundPlacementReason } from './tentPlacement'
 
-/** Only one concrete container exists yet (plan 164 §4/§12/§26 explicitly
- *  defer Small/Medium/Large/Barrel/Crate/Sack variants) — kept as a union
- *  (not a literal `'chest'` type) so `CONTAINER_DEFS` stays the single place
- *  a future variant gets added, not a scattered set of string checks. */
-export type ContainerKind = 'chest' | 'casket'
+/** `chest`/`casket` are player-placed (plan 164 §4/§12/§26 explicitly defer
+ *  Small/Medium/Large/Barrel/Crate/Sack variants). `saddlebags` is never
+ *  placed by the player directly — it only ever appears on the ground via
+ *  the animal-pack death handoff (plan fauna-039 §20/§23) — kept in the same
+ *  union (not a separate type) so `CONTAINER_DEFS`/`pickupPolicy` stay the
+ *  single place any container kind's behaviour differs, not scattered kind
+ *  checks. */
+export type ContainerKind = 'chest' | 'casket' | 'saddlebags'
+
+/** How a placed container converts back to a carried/inventory item (plan
+ *  fauna-039 §24) — `ContainerDef`-level policy instead of interaction code
+ *  branching on `kind`. `carry-container` is `chest`/`casket`'s existing
+ *  pick-up-whole-container behaviour (`PlacedContainers.pickUp`/carried
+ *  state). `empty-to-item` (`saddlebags` only) never enters carried state at
+ *  all — it converts back to exactly one `ItemKind` instance once empty,
+ *  via a dedicated app-layer transaction (`PlacedContainers.remove`). */
+export type ContainerPickupPolicy = 'carry-container' | 'empty-to-item'
 
 export type ContainerDef = {
   kind: ContainerKind
   /** The `ItemKind` this container is purchased/carried as before it's ever
-   *  placed — `ITEM_CATALOG[itemKind]` owns price/label/model, not this def. */
-  itemKind: 'chest'
+   *  placed (`chest`/`casket`), or recovered as once empty (`saddlebags`) —
+   *  `ITEM_CATALOG[itemKind]` owns price/label/model, not this def. */
+  itemKind: 'chest' | 'saddlebags'
   label: string
+  pickupPolicy: ContainerPickupPolicy
   /** Gabarite capacity (plan 164 §2), in the same abstract units as
    *  `ITEM_SIZE_UNITS` — an upper bound, not a packing simulation. */
   capacityUnits: number
@@ -43,6 +57,7 @@ export const CONTAINER_DEFS: Record<ContainerKind, ContainerDef> = {
     kind: 'chest',
     itemKind: 'chest',
     label: 'skrzynia',
+    pickupPolicy: 'carry-container',
     capacityUnits: 32,
     baseWeightKg: 4,
     footprintRadius: 0.6,
@@ -52,10 +67,27 @@ export const CONTAINER_DEFS: Record<ContainerKind, ContainerDef> = {
     kind: 'casket',
     itemKind: 'chest',
     label: 'trumna',
+    pickupPolicy: 'carry-container',
     capacityUnits: 16,
     baseWeightKg: 12,
     footprintRadius: 0.75,
     separation: 1.8,
+  },
+  // Dropped animal-pack cargo (plan fauna-039 §23/§27) — gabarite capacity is
+  // a fixed generic ceiling here (at least as large as the largest
+  // `AnimalDef.pack`, plan fauna-039 §27 explicitly avoids persisting the
+  // originating animal's own capacity once ownership has moved to the
+  // world). Never placed via `PlacedContainers.place()`, only via
+  // `materialize()` at a caller-supplied stable id/position.
+  saddlebags: {
+    kind: 'saddlebags',
+    itemKind: 'saddlebags',
+    label: 'juki',
+    pickupPolicy: 'empty-to-item',
+    capacityUnits: 32,
+    baseWeightKg: 0,
+    footprintRadius: 0.4,
+    separation: 1,
   },
 }
 
@@ -74,6 +106,19 @@ export const CONTAINER_PLACEMENT_MESSAGE: Record<Exclude<ContainerPlacementReaso
  *  read, never duplicated. */
 export function containerTotalWeight(def: ContainerDef, contentsWeightKg: number): number {
   return def.baseWeightKg + contentsWeightKg
+}
+
+/** Ground interaction prompt for a placed container (plan fauna-039 §24/
+ *  §26) — `chest`/`casket` keep their exact existing text unchanged;
+ *  `saddlebags` never offers `[R]` until its `empty-to-item` pickup is
+ *  actually legal (an already-gated `[R]` never blocks on click — the
+ *  prompt and the mutation agree). The single place this branches by kind,
+ *  so interaction/gameLoop code never has to. */
+export function containerGroundPrompt(kind: ContainerKind, empty: boolean): string {
+  if (kind === 'saddlebags') {
+    return empty ? '[E] Otwórz juki · [R] Podnieś juki' : '[E] Otwórz juki'
+  }
+  return '[E] Otwórz skrzynię · [R] Podnieś skrzynię'
 }
 
 /** How far ahead of the player a container is set down/picked back up —

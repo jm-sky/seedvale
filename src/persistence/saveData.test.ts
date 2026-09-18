@@ -374,6 +374,42 @@ describe('loadSaveData v1 contract', () => {
     })).toBeNull()
   })
 
+  it('accepts optional livestock pack and rejects malformed entries (plan fauna-039)', () => {
+    const withPack = {
+      ...validSave,
+      livestock: [{
+        settlementId: 'home',
+        animalId: 'horse-house0-0',
+        kind: 'horse',
+        ownerHouseId: 'home:home:0',
+        owner: { kind: 'player' },
+        x: 1,
+        z: 2,
+        yaw: 0.5,
+        health: { current: 10, max: 10, dead: false },
+        life: { hunger: 0.2, thirst: 0.1, stamina: 1 },
+        productionReadyAtDays: null,
+        eggPending: false,
+        corpse: null,
+        pack: { equipment: 'saddlebags', contents: { counts: { rope: 2 }, instances: [] } },
+      }],
+    }
+    expect(loadSaveData(withPack)).toEqual(withPack)
+    expect(loadSaveData({
+      ...withPack,
+      livestock: [{ ...withPack.livestock[0], pack: { equipment: 'saddlebags', contents: { counts: 'nope', instances: [] } } }],
+    })).toBeNull()
+    expect(loadSaveData({
+      ...withPack,
+      livestock: [{ ...withPack.livestock[0], pack: { equipment: 'not-saddlebags', contents: { counts: {}, instances: [] } } }],
+    })).toBeNull()
+    // Absent `pack` still means "no pack" — legacy saves stay valid.
+    expect(loadSaveData({
+      ...withPack,
+      livestock: [{ settlementId: 'home', animalId: 'horse-house0-1', kind: 'horse', x: 1, z: 2, yaw: 0, health: { current: 10, max: 10, dead: false }, life: { hunger: 0, thirst: 0, stamina: 1 }, productionReadyAtDays: null, eggPending: false, corpse: null }],
+    })).not.toBeNull()
+  })
+
   it('accepts optional livestock stray and rejects malformed entries (plan fauna-024)', () => {
     const withStray = {
       ...validSave,

@@ -1423,6 +1423,7 @@ Generated from TypeScript imports.
 - `settlement/rats.ts`
 - `terrain/chunkManager.ts`
 - `terrain/waterSample.test.ts`
+- `world/animalPackHandoff.test.ts`
 
 ## `terrain/worldKnowledgeScan.test.ts`
 

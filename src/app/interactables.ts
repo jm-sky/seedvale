@@ -27,6 +27,7 @@ import type { WorldGeneratedContainers } from '../world/worldGeneratedContainers
 import { ANIMAL_DEFS, ANIMAL_LABELS, type AnimalAgent, type AnimalKind } from '../fauna/AnimalAgent'
 import { SPAWNER_LABELS, spawnerDestroyPromptLabel } from '../fauna/createFauna'
 import { isMeleeTool } from '../fauna/faunaCombat'
+import { containerGroundPrompt } from '../items/container'
 import { type FoodBatch, type FreshnessStage, getFoodBatchFreshnessStage } from '../items/foodFreshness'
 import { consumeVerbLabel, hasItemCapability, isRangedTool, ITEM_CATALOG } from '../items/itemCatalog'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
@@ -705,7 +706,7 @@ export function buildInteractables(
     list.push({
       kind: 'container',
       position: { x: container.x, z: container.z },
-      promptLabel: '[E] Otwórz skrzynię · [R] Podnieś skrzynię',
+      promptLabel: containerGroundPrompt(container.kind, container.contents.isEmpty()),
       id: container.id,
     })
   }

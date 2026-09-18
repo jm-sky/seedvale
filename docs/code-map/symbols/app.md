@@ -36,9 +36,9 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/containerActions.ts`
 
-- `ContainerActionDeps` — type — line 78
-- `ContainerActions` — type — line 59
-- `createContainerActions` — function — line 93
+- `ContainerActionDeps` — type — line 124
+- `ContainerActions` — type — line 92
+- `createContainerActions` — function — line 139
 
 ## `app/actions/containerInstanceTransfer.ts`
 
@@ -281,13 +281,13 @@ Generated from exported TypeScript symbols.
 
 ## `app/createApp.ts`
 
-- `createApp` — function — line 417
+- `createApp` — function — line 418
   - system: app-composition
   - role: Composition root: builds every long-lived system, threads their dependencies and owns app-level lifecycle (boot, rebuild, dispose).
   - owns: WorldBundle, GameLoop, AppRenderLoop
   - lifecycle: boot
   - integration: Wires world, player, UI, persistence and audio systems together.
-- `NewAppOptions` — type — line 386
+- `NewAppOptions` — type — line 387
 
 ## `app/faunaEncounterComposition.ts`
 
@@ -297,8 +297,8 @@ Generated from exported TypeScript symbols.
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 695
-- `GameLoop` — type — line 654
+- `createGameLoop` — function — line 704
+- `GameLoop` — type — line 663
 - `GameLoopDeps` — type — line 320
 
 ## `app/graphicsSettings.ts`
@@ -343,25 +343,25 @@ Generated from exported TypeScript symbols.
 
 ## `app/interactables.ts`
 
-- `buildCombatTarget` — function — line 1307
-- `buildDigTarget` — function — line 1251
-- `buildInteractables` — function — line 521
-- `collectItem` — function — line 1363
-- `COMBAT_TARGET_CONE_DOT` — const — line 108
-- `COMBAT_TARGET_RANGE` — const — line 93
-- `CombatAimMode` — type — line 98
-- `DIG_REACH` — const — line 87
-- `DROPPED_ITEM_GROUP_RADIUS` — const — line 314
-- `filterInteractablesSameSpatialContext` — function — line 505
-- `GAZE_RANGE` — const — line 83
-- `grindstoneInteractPosition` — function — line 395
-- `groupDroppedItemCandidates` — function — line 324
+- `buildCombatTarget` — function — line 1308
+- `buildDigTarget` — function — line 1252
+- `buildInteractables` — function — line 522
+- `collectItem` — function — line 1364
+- `COMBAT_TARGET_CONE_DOT` — const — line 109
+- `COMBAT_TARGET_RANGE` — const — line 94
+- `CombatAimMode` — type — line 99
+- `DIG_REACH` — const — line 88
+- `DROPPED_ITEM_GROUP_RADIUS` — const — line 315
+- `filterInteractablesSameSpatialContext` — function — line 506
+- `GAZE_RANGE` — const — line 84
+- `grindstoneInteractPosition` — function — line 396
+- `groupDroppedItemCandidates` — function — line 325
   - domain: items-player
-- `INTERACT_MIN_DOT` — const — line 80
-- `INTERACT_RANGE` — const — line 77
-- `itemPromptLabel` — function — line 303
-- `resolveHaySpot` — function — line 409
-- `worldItemAllowsAltInteract` — function — line 288
+- `INTERACT_MIN_DOT` — const — line 81
+- `INTERACT_RANGE` — const — line 78
+- `itemPromptLabel` — function — line 304
+- `resolveHaySpot` — function — line 410
+- `worldItemAllowsAltInteract` — function — line 289
   - domain: ui-input
 
 ## `app/inventoryWiring.ts`

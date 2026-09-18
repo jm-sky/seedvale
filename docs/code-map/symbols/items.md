@@ -91,14 +91,16 @@ Generated from exported TypeScript symbols.
 
 ## `items/container.ts`
 
-- `CONTAINER_DEFS` — const — line 41
-- `CONTAINER_PLACE_REACH` — const — line 81
-- `CONTAINER_PLACEMENT_MESSAGE` — const — line 64
-- `CONTAINER_SETUP_DURATION_SEC` — const — line 84
-- `ContainerDef` — type — line 24
-- `ContainerKind` — type — line 22
-- `ContainerPlacementReason` — type — line 62
-- `containerTotalWeight` — function — line 75
+- `CONTAINER_DEFS` — const — line 55
+- `CONTAINER_PLACE_REACH` — const — line 126
+- `CONTAINER_PLACEMENT_MESSAGE` — const — line 96
+- `CONTAINER_SETUP_DURATION_SEC` — const — line 129
+- `ContainerDef` — type — line 36
+- `containerGroundPrompt` — function — line 117
+- `ContainerKind` — type — line 25
+- `ContainerPickupPolicy` — type — line 34
+- `ContainerPlacementReason` — type — line 94
+- `containerTotalWeight` — function — line 107
 
 ## `items/cookingFireResolver.ts`
 
@@ -424,9 +426,9 @@ Generated from exported TypeScript symbols.
 
 ## `items/itemModels.ts`
 
-- `cloneItemGlb` — function — line 189
+- `cloneItemGlb` — function — line 193
 - `ITEM_GLB_SPECS` — const — line 15
-- `preloadItemGlbModels` — function — line 164
+- `preloadItemGlbModels` — function — line 168
 
 ## `items/items.ts`
 

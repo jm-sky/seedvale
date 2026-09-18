@@ -1994,3 +1994,122 @@ describe('AnimalAgent interruptible carcass feeding (plan fauna-036)', () => {
     throw new Error('predator never reclaimed carcass after interrupt')
   })
 })
+
+describe('animal pack (plan fauna-039)', () => {
+  it('is a capability of horse/donkey only, not every livestock kind', () => {
+    expect(ANIMAL_DEFS.horse.pack).toBeTruthy()
+    expect(ANIMAL_DEFS.donkey.pack).toBeTruthy()
+    expect(ANIMAL_DEFS.cow.pack).toBeUndefined()
+    const horse = new AnimalAgent(makeDeps({ animalId: 'pack-capability-horse' }))
+    const cow = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.cow, animalId: 'pack-capability-cow' }))
+    expect(horse.hasPackCapability()).toBe(true)
+    expect(cow.hasPackCapability()).toBe(false)
+  })
+
+  it('rejects equip on a non-player-owned animal, allows it once transferred', () => {
+    const animal = new AnimalAgent(makeDeps({ animalId: 'pack-equip-owner' }))
+    expect(animal.canEquipPack()).toBe(false)
+    expect(animal.equipPack()).toBe(false)
+    animal.transferOwnershipToPlayer()
+    expect(animal.canEquipPack()).toBe(true)
+    expect(animal.equipPack()).toBe(true)
+    expect(animal.hasPack()).toBe(true)
+  })
+
+  it('rejects a second equip once a pack is already attached', () => {
+    const animal = new AnimalAgent(makeDeps({ animalId: 'pack-equip-twice' }))
+    animal.transferOwnershipToPlayer()
+    expect(animal.equipPack()).toBe(true)
+    expect(animal.canEquipPack()).toBe(false)
+    expect(animal.equipPack()).toBe(false)
+  })
+
+  it('rejects equip on a dead animal', () => {
+    const animal = new AnimalAgent(makeDeps({ animalId: 'pack-equip-dead' }))
+    animal.transferOwnershipToPlayer()
+    animal.hydrate({ ...animal.snapshot(), health: { current: 0, max: 100, dead: true } })
+    expect(animal.canEquipPack()).toBe(false)
+    expect(animal.equipPack()).toBe(false)
+  })
+
+  it('blocks unequip while the pack holds cargo, allows it once emptied', () => {
+    const animal = new AnimalAgent(makeDeps({ animalId: 'pack-unequip' }))
+    animal.transferOwnershipToPlayer()
+    animal.equipPack()
+    const contents = animal.getPackContents()
+    expect(contents).toBeTruthy()
+    contents?.add('rope', 1)
+    expect(animal.canUnequipPack()).toBe(false)
+    expect(animal.unequipPack()).toBeNull()
+    expect(animal.hasPack()).toBe(true)
+    contents?.remove('rope', 1)
+    expect(animal.canUnequipPack()).toBe(true)
+    const snapshot = animal.unequipPack()
+    expect(snapshot).toBeTruthy()
+    expect(animal.hasPack()).toBe(false)
+    expect(animal.getPackContents()).toBeNull()
+  })
+
+  it('round-trips equipped pack cargo through snapshot and hydrate', () => {
+    const animal = new AnimalAgent(makeDeps({ animalId: 'pack-persist' }))
+    animal.transferOwnershipToPlayer()
+    animal.equipPack()
+    animal.getPackContents()?.add('rope', 3)
+    const saved = animal.snapshot()
+    expect(saved.pack?.equipment).toBe('saddlebags')
+    expect(saved.pack?.contents.counts.rope).toBe(3)
+
+    const loaded = new AnimalAgent(makeDeps({ animalId: 'pack-persist' }))
+    loaded.hydrate(saved)
+    expect(loaded.hasPack()).toBe(true)
+    expect(loaded.getPackContents()?.count('rope')).toBe(3)
+  })
+
+  it('omits pack from the snapshot when none is equipped, and hydrate leaves it absent', () => {
+    const animal = new AnimalAgent(makeDeps({ animalId: 'pack-legacy' }))
+    const saved = animal.snapshot()
+    expect(saved.pack).toBeUndefined()
+    const loaded = new AnimalAgent(makeDeps({ animalId: 'pack-legacy' }))
+    loaded.hydrate(saved)
+    expect(loaded.hasPack()).toBe(false)
+  })
+
+  it('death handoff unconditionally clears the pack, empty or not, and returns its contents', () => {
+    const animal = new AnimalAgent(makeDeps({ animalId: 'pack-handoff' }))
+    animal.transferOwnershipToPlayer()
+    animal.equipPack()
+    animal.getPackContents()?.add('rope', 2)
+    const snapshot = animal.takePackForHandoff()
+    expect(snapshot?.contents.counts.rope).toBe(2)
+    expect(animal.hasPack()).toBe(false)
+    expect(animal.getPackContents()).toBeNull()
+    // Idempotent: a second call (e.g. restore reconciliation re-running
+    // after a successful handoff) has nothing left to hand off.
+    expect(animal.takePackForHandoff()).toBeNull()
+  })
+
+  it('attaches exactly one visual child on equip and removes it on unequip, never duplicating on hydrate', () => {
+    const animal = new AnimalAgent(makeDeps({ animalId: 'pack-visual' }))
+    animal.transferOwnershipToPlayer()
+    const before = animal.mesh.children.length
+    animal.equipPack()
+    expect(animal.mesh.children.length).toBe(before + 1)
+    // Re-hydrating with the same equipped state must stay idempotent.
+    animal.hydrate(animal.snapshot())
+    expect(animal.mesh.children.length).toBe(before + 1)
+    const emptied = animal.unequipPack()
+    expect(emptied).toBeTruthy()
+    expect(animal.mesh.children.length).toBe(before)
+  })
+
+  it('dispose() removes the attached pack visual', () => {
+    const animal = new AnimalAgent(makeDeps({ animalId: 'pack-dispose' }))
+    animal.transferOwnershipToPlayer()
+    const childrenBefore = new Set(animal.mesh.children)
+    animal.equipPack()
+    const packVisual = animal.mesh.children.find((child) => !childrenBefore.has(child))
+    expect(packVisual).toBeTruthy()
+    animal.dispose()
+    expect(packVisual?.parent).toBeNull()
+  })
+})

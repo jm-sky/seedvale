@@ -16,31 +16,31 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/AnimalAgent.ts`
 
-- `AnimalAgent` — class — line 1145
+- `AnimalAgent` — class — line 1161
   - domain: fauna
   - system: animal-agent
   - role: Central per-animal behaviour integration point: predator/prey AI, needs, health, production (livestock) and riding (mounts).
   - uses: HealthState, StaminaState
   - simulation: tick
-- `AnimalAgentDebugInfo` — type — line 583
-- `AnimalAgentDeps` — type — line 938
-- `AnimalSaveState` — type — line 716
-- `AnimalUpdateContext` — type — line 1002
-- `BURY_DURATION_SEC` — const — line 396
-- `canPredatorPursueIntoVillage` — function — line 796
-- `FAUNA_SHADOW_DISTANCE` — const — line 365
-- `FaunaAiBranch` — type — line 520
-- `FaunaNavRescueDebugInfo` — type — line 567
-- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 455
-- `FrenzyWolfCandidate` — type — line 873
-- `HARVEST_MEAT_DURATION_SEC` — const — line 399
-- `isWithinVillageRadius` — function — line 777
-- `NearbyNpcCandidate` — type — line 868
-- `pickNearestEligibleWolf` — function — line 882
-- `pickRabidTarget` — function — line 907
-- `RABIES_BITE_INFECTION_CHANCE` — const — line 383
-- `villageFleeBiasFalloff` — function — line 804
-- `VillageInfo` — type — line 771
+- `AnimalAgentDebugInfo` — type — line 595
+- `AnimalAgentDeps` — type — line 954
+- `AnimalSaveState` — type — line 728
+- `AnimalUpdateContext` — type — line 1018
+- `BURY_DURATION_SEC` — const — line 408
+- `canPredatorPursueIntoVillage` — function — line 812
+- `FAUNA_SHADOW_DISTANCE` — const — line 377
+- `FaunaAiBranch` — type — line 532
+- `FaunaNavRescueDebugInfo` — type — line 579
+- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 467
+- `FrenzyWolfCandidate` — type — line 889
+- `HARVEST_MEAT_DURATION_SEC` — const — line 411
+- `isWithinVillageRadius` — function — line 793
+- `NearbyNpcCandidate` — type — line 884
+- `pickNearestEligibleWolf` — function — line 898
+- `pickRabidTarget` — function — line 923
+- `RABIES_BITE_INFECTION_CHANCE` — const — line 395
+- `villageFleeBiasFalloff` — function — line 820
+- `VillageInfo` — type — line 787
 
 ## `fauna/animalAreaBound.ts`
 
@@ -144,26 +144,27 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/animalDefs.ts`
 
-- `ANIMAL_DEFS` — const — line 382
+- `ANIMAL_DEFS` — const — line 399
 - `ANIMAL_LABELS` — const — line 51
-- `AnimalActivityConfig` — type — line 192
-- `AnimalAffinityConfig` — type — line 205
+- `AnimalActivityConfig` — type — line 209
+- `AnimalAffinityConfig` — type — line 222
 - `AnimalDef` — type — line 70
-- `AnimalDietConfig` — type — line 235
+- `AnimalDietConfig` — type — line 252
 - `AnimalKind` — type — line 29
 - `AnimalLifeStage` — type — line 24
 - `AnimalRole` — type — line 16
   - domain: fauna
   - role: Species taxonomy and per-kind tuning data for `AnimalAgent` — no runtime/agent state, no Three.js. Moved out of `AnimalAgent.ts` (plan fauna-017 step 1): 31% of that file was this module's data sitting above the class. Re-exported wholesale from `AnimalAgent.ts` via `export *`, so every existing importer of species types/`ANIMAL_DEFS` is unaffected.
 - `AnimalSociability` — type — line 20
-- `dietAcceptsItem` — function — line 360
-- `DraftConfig` — type — line 266
-- `LeadConfig` — type — line 260
-- `LivestockProductionConfig` — type — line 295
-- `LivestockProductKind` — type — line 282
-- `MountPointConfig` — type — line 273
-- `ScavengingConfig` — type — line 246
-- `WaterTripConfig` — type — line 214
+- `dietAcceptsItem` — function — line 377
+- `DraftConfig` — type — line 283
+- `LeadConfig` — type — line 277
+- `LivestockProductionConfig` — type — line 312
+- `LivestockProductKind` — type — line 299
+- `MountPointConfig` — type — line 290
+- `PackConfig` — type — line 199
+- `ScavengingConfig` — type — line 263
+- `WaterTripConfig` — type — line 231
 
 ## `fauna/animalDialogue.ts`
 
@@ -287,6 +288,30 @@ Generated from exported TypeScript symbols.
 - `ownerFromHouseId` — function — line 8
 - `ownersEqual` — function — line 24
 - `parseAnimalOwnerFromRecord` — function — line 33
+
+## `fauna/animalPack.ts`
+
+- `animalPackGroundContainerId` — function — line 98
+- `AnimalPackSnapshot` — type — line 29
+- `AnimalPackState` — type — line 20
+  - domain: fauna
+  - role: Runtime/persistence mechanics for the equipped-saddlebags pack capability (plan fauna-039) — pure domain data plus a small set of transaction helpers, no Three.js and no app/UI wiring. `AnimalAgent` stays the lifecycle owner (holds one `AnimalPackState | null` field, attaches/detaches the presentation) and delegates the actual state transitions here.
+- `canEquipAnimalPack` — function — line 81
+- `canUnequipAnimalPack` — function — line 88
+- `createAnimalPack` — function — line 47
+- `detachAnimalPack` — function — line 73
+- `hydrateAnimalPack` — function — line 56
+- `resolveDroppedPackPosition` — function — line 109
+- `snapshotAnimalPack` — function — line 64
+
+## `fauna/animalPackPresentation.ts`
+
+- `createSaddlebagsAttachment` — function — line 40
+- `disposeSaddlebagsAttachment` — function — line 51
+- `SADDLEBAGS_PLACEMENT` — const — line 23
+- `SaddlebagsPlacement` — type — line 15
+  - domain: fauna
+  - role: Manual, per-species visual transform for the attached saddlebags model (plan fauna-039 §8/§9) — deliberately separate from `AnimalDef.pack` (gameplay capacity). Presentation never gates or influences gameplay: a missing/zeroed entry still attaches the model at the animal's own origin, and a GLB load failure only ever falls back to `createItemMesh`'s procedural stand-in (never affects pack truth).
 
 ## `fauna/animalRoaming.ts`
 

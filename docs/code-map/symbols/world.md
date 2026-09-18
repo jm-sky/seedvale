@@ -9,6 +9,12 @@ Generated from exported TypeScript symbols.
   - domain: world
   - role: Neutral plain-data attraction source DTO (plan fauna-023 §1) — built once per fauna pass from world-owned trap / dropped-item / blood state. Free of `AnimalDef`, `AnimalAgent`, Three.js objects and mutable callbacks; species compatibility/scoring lives in `fauna/animalAttraction.ts`.
 
+## `world/animalPackHandoff.ts`
+
+- `reconcileAnimalPackHandoff` — function — line 24
+  - domain: world
+  - role: Composition-layer seam for the animal-pack death handoff (plan fauna-039 §19-§21) — `AnimalAgent`/`animalPack.ts` own the pack's *state*, but only this layer may materialize a `PlacedContainer`, so the handoff itself lives here, not in `fauna/`. A single idempotent function covers both call sites: immediately on death (`onAnimalDeath`) and during detached player-owned livestock restore reconciliation — re-running it on an animal that already handed its pack off is always a safe no-op.
+
 ## `world/animalTraps.ts`
 
 - `accumulateTrapWeatherWear` — function — line 243
@@ -901,11 +907,11 @@ Generated from exported TypeScript symbols.
 
 ## `world/createPlacedContainers.ts`
 
-- `createPlacedContainers` — function — line 122
-- `PlacedContainerEntry` — type — line 36
-- `PlacedContainerRecord` — type — line 14
-- `PlacedContainers` — type — line 50
-- `SaveCarriedContainer` — type — line 28
+- `createPlacedContainers` — function — line 148
+- `PlacedContainerEntry` — type — line 37
+- `PlacedContainerRecord` — type — line 15
+- `PlacedContainers` — type — line 51
+- `SaveCarriedContainer` — type — line 29
 
 ## `world/createPlacedTraps.ts`
 
