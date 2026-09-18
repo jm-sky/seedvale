@@ -90,21 +90,22 @@ Generated from exported TypeScript symbols.
 
 ## `debug/debugMode.ts`
 
-- `DebugSystemName` — type — line 129
-- `isAdminMode` — function — line 43
-- `isBootMarkMode` — function — line 33
-- `isCameraDebugMode` — function — line 63
-- `isCameraMeshDebugMode` — function — line 76
-- `isCaveHeightfieldTestMode` — function — line 57
-- `isColliderDebugMode` — function — line 92
-- `isDebugMode` — function — line 38
-- `isModelTestMode` — function — line 50
-- `isNoShadowsDebugMode` — function — line 70
-- `isNpcCombatDebugMode` — function — line 106
-- `isRenderStateDebugMode` — function — line 84
-- `isSystemEnabled` — function — line 150
-- `isWildBoarGlbEnabled` — function — line 115
-- `urlParamValue` — function — line 19
+- `DEBUG_HOUSE_LAMP_POSITION` — const — line 3
+- `DebugSystemName` — type — line 131
+- `isAdminMode` — function — line 45
+- `isBootMarkMode` — function — line 35
+- `isCameraDebugMode` — function — line 65
+- `isCameraMeshDebugMode` — function — line 78
+- `isCaveHeightfieldTestMode` — function — line 59
+- `isColliderDebugMode` — function — line 94
+- `isDebugMode` — function — line 40
+- `isModelTestMode` — function — line 52
+- `isNoShadowsDebugMode` — function — line 72
+- `isNpcCombatDebugMode` — function — line 108
+- `isRenderStateDebugMode` — function — line 86
+- `isSystemEnabled` — function — line 152
+- `isWildBoarGlbEnabled` — function — line 117
+- `urlParamValue` — function — line 21
 
 ## `debug/domainHistory.ts`
 
