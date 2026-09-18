@@ -99,6 +99,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `npc-050-npc-initiated-player-follow-ups-and-proactive-dialogue.md`         | 🔴 | M      | ~~quests-progression-047~~, ~~world-030~~                                                                                                                                                                                                                                                  | -                                         |
 | 💡 `quests-progression-060-builder-finish-local-well.md`                       | 🔴 | M      | settlements-npcs-043                                                                                                                                                                                                                                                                       | quests-professions-and-world-consequences |
 | 💡 `quests-progression-061-builder-repair-or-complete-palisade.md`             | 🟡 | M      | -                                                                                                                                                                                                                                                                                          | quests-professions-and-world-consequences |
+| ◼️ `items-player-047-additional-compact-weapons-and-master-hunting-bow.md`     | 🟡 | M      | -                                                                                                                                                                                                                                                                                          | quests-travelling-merchant-journeys       |
 
 ---
 
@@ -213,7 +214,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 
 - ai: `005`
 - fauna: `039`
-- items-player: `047`
+- items-player: `048`
 - npc: `053`
 - persistence: `006`
 - quests-progression: `067`
