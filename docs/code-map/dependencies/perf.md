@@ -328,6 +328,7 @@ Generated from TypeScript imports.
 - `perf/longFrameFormat.ts`
 - `perf/monitor.ts`
 - `perf/report.ts`
+- `perf/sceneCensus.ts`
 - `perf/types.ts`
 
 ## `perf/report.ts`
@@ -360,6 +361,7 @@ Generated from TypeScript imports.
 - `perf/index.ts`
 - `perf/isolationProbe.ts`
 - `perf/programCensus.ts`
+- `perf/report.test.ts`
 - `perf/report.ts`
 - `perf/sceneCensus.test.ts`
 - `perf/types.ts`

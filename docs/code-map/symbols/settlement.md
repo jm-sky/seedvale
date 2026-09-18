@@ -686,7 +686,7 @@ Generated from exported TypeScript symbols.
 
 - `BlacksmithWorkplace` — type — line 342
 - `buildSettlementProps` — function — line 753
-- `disposeSettlementGroup` — function — line 2161
+- `disposeSettlementGroup` — function — line 2164
 - `SettlementHouseBed` — type — line 162
 - `SettlementHouseLandmark` — type — line 128
 - `SettlementLandmarks` — type — line 178
@@ -758,15 +758,17 @@ Generated from exported TypeScript symbols.
 ## `settlement/propUtils.ts`
 
 - `applyTerrainTilt` — function — line 69
-- `cloneProp` — function — line 172
-- `clonePropWithYaw` — function — line 186
-- `loadPropOrFallback` — function — line 137
-- `loadPropTemplates` — function — line 161
+- `cloneProp` — function — line 176
+- `clonePropWithYaw` — function — line 190
+- `disableCastShadow` — function — line 119
+  - domain: world-terrain
+- `loadPropOrFallback` — function — line 141
+- `loadPropTemplates` — function — line 165
 - `LocalTerrainSample` — type — line 42
 - `placeOnGround` — function — line 91
 - `rotateOffsetY` — function — line 85
 - `sampleLocalTerrain` — function — line 49
-- `tagSettlementShadowKind` — function — line 129
+- `tagSettlementShadowKind` — function — line 133
   - domain: world-terrain
 - `TerrainSampler` — type — line 33
 - `tintPropMaterials` — function — line 14
