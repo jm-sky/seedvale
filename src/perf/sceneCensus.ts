@@ -34,10 +34,18 @@ export const SETTLEMENT_CONTENT_KINDS = [
   'houseInteractive',
   'fence',
   'storage',
+  'storageWood',
+  'storageContainer',
+  'storageBarrel',
+  'storageHay',
+  'storageTrough',
   'storageGoods',
   'workplace',
   'landmark',
   'fireLight',
+  'fireHouseLamp',
+  'fireVillageTorch',
+  'fireCampfire',
   'decor',
   'other',
 ] as const
@@ -104,20 +112,32 @@ function kindFromName(name: string): SettlementContentKind | null {
     || name.startsWith('settlement-barrels-')
     || name === 'settlement-household-barrels'
     || name.startsWith('settlement-household-barrels-')
-    || name === 'settlement-household-storage'
+  ) {
+    return 'storageBarrel'
+  }
+  if (
+    name === 'settlement-household-storage'
     || name.startsWith('settlement-household-storage-')
-    || name === 'settlement-hay'
+  ) {
+    return 'storageContainer'
+  }
+  if (
+    name === 'settlement-hay'
     || name.startsWith('settlement-hay-')
     || name === 'settlement-paddock-hay'
     || name.startsWith('settlement-paddock-hay-')
-    || name === 'settlement-household-troughs'
+  ) {
+    return 'storageHay'
+  }
+  if (
+    name === 'settlement-household-troughs'
     || name.startsWith('settlement-household-troughs-')
     || name === 'settlement-pasture-troughs'
     || name.startsWith('settlement-pasture-troughs-')
     || name === 'settlement-paddock-troughs'
     || name.startsWith('settlement-paddock-troughs-')
   ) {
-    return 'storage'
+    return 'storageTrough'
   }
   if (name.startsWith('garden:')) return 'landmark'
   if (
