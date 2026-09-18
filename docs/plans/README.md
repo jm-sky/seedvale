@@ -96,6 +96,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `settlements-npcs-049-merchant-wealth-tiers-and-travel-party-profile.md`    | 🔴 | L      | settlements-npcs-048, ~~npc-053~~, ~~items-player-047~~, ~~npc-030~~                                                                                                                                                                                                                       | quests-travelling-merchant-journeys       |
 | 💡 `npc-054-npc-desired-gifts-gift-acceptance-and-relationship-rewards.md`     | 🔴 | L      | ~~npc-053~~                                                                                                                                                                                                                                                                                | quests-travelling-merchant-journeys       |
 | 💡 `npc-055-semantic-profession-and-activity-animation-coverage.md`            | 🔴 | L      | ~~items-player-035~~, ~~npc-039~~                                                                                                                                                                                                                                                          | -                                         |
+| ◼️ `npc-057-npc-destination-threat-assessment.md`                              | 🟡 | M      | -                                                                                                                                                                                                                                                                                          | -                                         |
 
 ---
 
@@ -220,7 +221,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - ai: `005`
 - fauna: `040`
 - items-player: `048`
-- npc: `057`
+- npc: `058`
 - persistence: `006`
 - quests-progression: `069`
 - settlements: `020`
