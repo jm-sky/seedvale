@@ -1,7 +1,7 @@
 # Plan: Contextual Elder Social Titles
 
 **Created:** 2026-09-18
-**Status:** `draft` 📝
+**Status:** `planned` 📋
 **Type:** polish
 **Priority:** low · **Effort:** S
 **Depends on:** settlements-npcs-045
@@ -38,12 +38,15 @@ Tytuł jest wyłącznie derived presentation.
 Preferowany shape:
 
 ```text
-NpcId / canonical name
+canonical first/full name
 + age/life stage
-+ personality
-+ relation/social context
-→ display label
++ gender
++ personality/traits
++ player↔NPC relation level
+→ contextual dialogue heading
 ```
+
+V1 **nie zmienia** `NpcAgent.displayName`. Tytuł jest osobnym, derived presentation value liczonym przy otwarciu dialogu.
 
 ### 2. Only elders are candidates
 
@@ -55,27 +58,50 @@ Nie tworzyć kolejnego elder boolean/progu.
 
 Nie każdy senior dostaje ten sam prefiks.
 
-V1 może dobierać formę z małego deterministycznego zestawu na podstawie:
+V1 używa istniejącego `QuestManager.getRelationLevel(npc.id)` oraz istniejących danych `gender`, `personality` i `traits`.
 
-- personality traits,
-- familiarity/relation context,
-- ewentualnie płci/języka, jeżeli obecny localization/name layer tego wymaga.
+Reguła ma być mała i deterministyczna:
 
-Przykładowa semantyka:
+1. non-elder → canonical `displayName`,
+2. `stranger | acquainted` → formalne `Pan/Pani`,
+3. `friendly | trusted`:
+   - wysoka ugodowość i/lub `sociable` → `Dziadek/Babcia`,
+   - niska ugodowość / wyraźnie szorstki profil → `Stary/Stara`,
+   - fallback → `Pan/Pani`.
 
-- bardziej formalny/szanowany kontekst → `Pan/Pani`,
-- swojski/znany lokalnie → `Dziadek/Babcia`,
-- szorstki/nieformalny charakter → `Stary/Stara`.
+Format V1:
 
-Dokładnych mapowań nie hardkodować w wielu UI.
+- `Pan/Pani` + canonical full `displayName`,
+- `Dziadek/Babcia` + first `name`,
+- `Stary/Stara` + first `name`.
 
-### 4. One resolver, many consumers
+Nie używać weighted random ani nowego personality taxonomy.
 
-Dodać jeden mały resolver presentation label i używać go tylko tam, gdzie kontekst społeczny tego wymaga.
+### 4. One resolver, narrow V1 consumer
 
-Nie zmieniać raw canonical name w danych.
+Dodać jeden mały pure resolver, preferencyjnie `src/ai/npcSocialTitle.ts`.
 
-UI wymagające stabilnej krótkiej identity może nadal używać zwykłego imienia, jeśli tytuł powodowałby regresję layoutu lub semantyki.
+Resolver przyjmuje jawnie co najmniej:
+
+- first `name`,
+- canonical `displayName`,
+- `age`,
+- `gender`,
+- `personality`,
+- `traits`,
+- player↔NPC `RelationLevel`.
+
+V1 consumerem jest **wyłącznie nagłówek `NpcDialogueMenu.vue`**.
+
+Nie zmieniać:
+
+- CSS2D/status label NPC,
+- Villagers screen,
+- inspector/debug labels,
+- `aboutSelfLine(...)`,
+- authored quest strings.
+
+Dzięki temu relation-aware presentation nie wymaga reaktywnego przepinania globalnych labeli.
 
 ### 5. Deterministic and state-derived
 
@@ -93,12 +119,13 @@ Lost Treasure Chronicles Kazimierz zachowuje canonical authored identity. Tytuł
 
 ### In scope
 
-- derived elder title resolver,
-- small Polish title vocabulary,
-- personality/relation-aware selection,
-- selected NPC labels/dialogue presentation,
-- deterministic tests,
-- layout regression checks.
+- pure derived elder-title resolver,
+- mały polski zestaw `Pan/Pani`, `Dziadek/Babcia`, `Stary/Stara`,
+- gender/personality/trait/relation-aware selection,
+- presentation-only `npcHeading` (lub równoważne pole) w stanie dialogu,
+- integracja wyłącznie z nagłówkiem `NpcDialogueMenu.vue`,
+- recompute przy każdym `openNpcDialogueMenu()`,
+- deterministic tests i quest-identity regression checks.
 
 ### Out of scope
 
@@ -109,17 +136,23 @@ Lost Treasure Chronicles Kazimierz zachowuje canonical authored identity. Tytuł
 - persistence,
 - genealogy-driven `grandfather of X`,
 - changes to quest identity/bindings,
-- localization framework rewrite.
+- localization framework rewrite,
+- zmiana `NpcAgent.displayName`,
+- CSS2D/world name labels,
+- Villagers screen,
+- authored quest/dialogue text.
 
-## Likely integration points
+## Integration points
 
-- existing name/display helpers in AI/UI discovered during implementation,
-- `src/settlement/npcPhysicalProfile.ts::lifeStageForAge()`,
-- personality source in `CharacterDef`,
-- existing player↔NPC relation lookup where already available,
-- dialogue/nameplate/interaction presentation.
+- `src/ai/npcSocialTitle.ts` — nowy pure resolver (nazwa pliku może być równoważna),
+- `src/settlement/npcPhysicalProfile.ts::lifeStageForAge()` — jedyne źródło elder classification,
+- `src/ai/dialogue.ts::BigFivePersonality` — personality source,
+- `src/ai/NpcAgent.ts` — tylko odczyt istniejących `name/displayName/age/gender/personality/traits/id`; **bez zmiany displayName**,
+- `src/quests/QuestManager.ts::getRelationLevel()` — player↔NPC familiarity,
+- `src/ui-vue/store.ts::openNpcDialogueMenu()` — composition point i wyliczenie heading,
+- `src/ui-vue/NpcDialogueMenu.vue` — jedyny V1 consumer.
 
-Important public resolver should receive JSDoc and `@domain npc`.
+Important public resolver powinien mieć JSDoc i `@domain npc`.
 
 ## Tests
 
@@ -131,7 +164,9 @@ At least:
 - resolver never mutates canonical name,
 - quest matching remains by `NpcId`,
 - authored Lost Treasure quest still resolves Kazimierz correctly,
-- UI labels do not duplicate title on repeated render/update.
+- ponowne otwarcie dialogu po zmianie relation recomputuje heading,
+- repeated open/render nie duplikuje prefiksu,
+- `NpcAgent.displayName` i CSS2D label pozostają canonical.
 
 ## Verification
 
@@ -146,10 +181,28 @@ pnpm build
 
 Manual/browser verification by User:
 
-- inspect several elders with different personalities,
-- confirm titles feel varied but stable,
-- confirm normal adults are unchanged,
-- confirm quest markers/dialogue still point to correct NPCs,
+- otwórz dialog z kilkoma elderami o różnych personality/relation,
+- potwierdź `Pan/Pani` dla obcych/znajomych i kontekstowe familiar/rough warianty dla bliższych relacji,
+- potwierdź, że non-elders są bez zmian,
+- potwierdź, że world/CSS2D labels i Villagers nadal pokazują canonical full name,
+- potwierdź, że ponowne otwieranie dialogu nie stackuje prefiksu,
 - verify Lost Treasure Chronicles naming/story remains intact.
+
+## Success criteria
+
+```text
+non-elder dialogue
+→ canonical displayName
+
+elder dialogue
+→ contextual title derived from existing state
+
+quest/materialization/world labels
+→ canonical identity/presentation unchanged
+
+Kazimierz
+→ ordinary generic resolver input
+→ no production special-case
+```
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
