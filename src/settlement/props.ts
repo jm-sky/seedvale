@@ -971,7 +971,7 @@ export async function buildSettlementProps(
   )
   const stockpile = await loadPrimaryWoodStockpile()
   placeOnGround(stockpile, stockX, stockZ, sampleHeight)
-  tagSettlementShadowKind(stockpile, 'storage')
+  tagSettlementShadowKind(stockpile, 'storageWood')
   group.add(stockpile)
   landmarks.stockpile.set(stockX, sampleHeight(stockX, stockZ), stockZ)
 
@@ -986,7 +986,7 @@ export async function buildSettlementProps(
     const extra = woodPileExtras[i]!
     const offset = WOOD_PILE_EXTRA_OFFSETS[i]!
     placeOnGround(extra, stockX + offset.dx, stockZ + offset.dz, sampleHeight)
-    tagSettlementShadowKind(extra, 'storage')
+    tagSettlementShadowKind(extra, 'storageWood')
     group.add(extra)
   }
   const settlementWoodVisual = createWoodPileVisual(stockpile, woodPileExtras)
@@ -1002,7 +1002,7 @@ export async function buildSettlementProps(
     '/models/settlement/crate.glb', 1.0, () => createCrate(1.8),
   )
   placeOnGround(settlementStorageProp, settlementStorageX, settlementStorageZ, sampleHeight)
-  tagSettlementShadowKind(settlementStorageProp, 'storage')
+  tagSettlementShadowKind(settlementStorageProp, 'storageContainer')
   group.add(settlementStorageProp)
   landmarks.settlementStorage.set(
     settlementStorageX,
@@ -1329,7 +1329,7 @@ export async function buildSettlementProps(
         chest.position.set(chestFurniture.position.x, chestFurniture.position.y, chestFurniture.position.z)
         chest.rotation.y = chestFurniture.rotationY
         chest.scale.multiplyScalar(invHouseScaleFurniture)
-        tagSettlementShadowKind(chest, 'storage')
+        tagSettlementShadowKind(chest, 'storageContainer')
         hut.add(chest)
       }
       // Static mesh only — no independent PointLight. The house's existing
@@ -1344,7 +1344,7 @@ export async function buildSettlementProps(
         lampMesh.position.set(lampFurniture.position.x, lampFurniture.position.y, lampFurniture.position.z)
         lampMesh.rotation.y = lampFurniture.rotationY
         lampMesh.scale.multiplyScalar(invHouseScaleFurniture)
-        tagSettlementShadowKind(lampMesh, 'fireLight')
+        tagSettlementShadowKind(lampMesh, 'fireHouseInteriorLamp')
         hut.add(lampMesh)
       }
     }
@@ -1378,7 +1378,7 @@ export async function buildSettlementProps(
     for (const child of houseLight.object.children) {
       child.scale.multiplyScalar(invHouseScale)
     }
-    tagSettlementShadowKind(houseLight.object, 'fireLight')
+    tagSettlementShadowKind(houseLight.object, 'fireHouseExteriorLamp')
     hut.add(houseLight.object)
     houseLights.push(houseLight)
 
@@ -1543,7 +1543,7 @@ export async function buildSettlementProps(
   for (const p of householdWoodPlacements) {
     const pile = householdWoodTemplate.clone(true)
     placeOnGround(pile, p.x, p.z, sampleHeight)
-    tagSettlementShadowKind(pile, 'storage')
+    tagSettlementShadowKind(pile, 'storageWood')
     group.add(pile)
     householdWoodVisuals.push(createWoodPileVisual(pile, []))
   }
@@ -1665,7 +1665,7 @@ export async function buildSettlementProps(
     const bodyKind = plannedCampfireBodyKind(size)
     const { group: campfire, flame } = createLitCampfireVisual(bodyKind)
     placeOnGround(campfire, fireX, fireZ, sampleHeight)
-    tagSettlementShadowKind(campfire, 'fireLight')
+    tagSettlementShadowKind(campfire, 'fireCampfire')
     group.add(campfire)
     landmarks.campfire = {
       position: new THREE.Vector3(fireX, sampleHeight(fireX, fireZ), fireZ),
@@ -1685,7 +1685,7 @@ export async function buildSettlementProps(
       createStockpile,
     )
     placeOnGround(stockpile2, stock2X, stock2Z, sampleHeight)
-    tagSettlementShadowKind(stockpile2, 'storage')
+    tagSettlementShadowKind(stockpile2, 'storageWood')
     group.add(stockpile2)
     landmarks.stockpileSecondary = new THREE.Vector3(
       stock2X,
@@ -1776,7 +1776,7 @@ export async function buildSettlementProps(
       post.rotation.y = yaw
       const torch = createVillageTorchLight(post)
       placeOnGround(torch.object, x, z, sampleHeight)
-      tagSettlementShadowKind(torch.object, 'fireLight')
+      tagSettlementShadowKind(torch.object, 'fireVillageTorch')
       group.add(torch.object)
       const y = sampleHeight(x, z)
       villageTorches.push({
@@ -1809,7 +1809,7 @@ export async function buildSettlementProps(
         post.rotation.y = ang + Math.PI - Math.PI / 2
         const torch = createVillageTorchLight(post)
         placeOnGround(torch.object, tx, tz, sampleHeight)
-        tagSettlementShadowKind(torch.object, 'fireLight')
+        tagSettlementShadowKind(torch.object, 'fireVillageTorch')
         group.add(torch.object)
         const y = sampleHeight(tx, tz)
         villageTorches.push({
