@@ -1238,6 +1238,7 @@ Generated from TypeScript imports.
 - `ai/npcLogistics.ts`
 - `economy/foodTransportDemand.ts`
 - `economy/interSettlementFoodTransport.ts`
+- `economy/kinds.ts`
 - `economy/localExchange.ts`
 - `economy/npcWork.ts`
 - `economy/oreTransportDemand.ts`

@@ -1,5 +1,6 @@
 import { Group, type Object3D, type Scene } from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
+import type { EconomicSourceId } from '../economy/kinds'
 import { disposeObject3D } from '../assets/loadGltf'
 import {
   clonePropWithYaw,
@@ -100,6 +101,8 @@ export type DepositTarget = {
   z: number
   spatialContext: MineableDepositDefinition['spatialContext']
   remaining: number
+  /** See `MineableDepositDefinition.economicSourceId` (plan settlements-004). */
+  economicSourceId?: EconomicSourceId
 }
 
 export type MineResult =
@@ -140,6 +143,10 @@ export type ResourceDeposits = {
     options?: DepositQueryOptions,
   ) => DepositTarget | null
   mine: (id: string) => MineResult
+  /** Canonical deposit-id → `economicSourceId` lookup (plan settlements-004),
+   *  covering both streamed and landmark-owned `extraDefinitions` deposits.
+   *  `null` for an unknown id or an ordinary unattributed deposit. */
+  resolveEconomicSourceId: (id: string) => EconomicSourceId | null
   dispose: () => void
 }
 
@@ -149,6 +156,7 @@ export type ResourceDeposits = {
 export type SettlementMiningHooks = {
   queryNearest: ResourceDeposits['queryNearest']
   mine: ResourceDeposits['mine']
+  resolveEconomicSourceId: ResourceDeposits['resolveEconomicSourceId']
 }
 
 function targetFromDefinition(
@@ -163,6 +171,7 @@ function targetFromDefinition(
     z: definition.z,
     spatialContext: definition.spatialContext,
     remaining,
+    ...(definition.economicSourceId ? { economicSourceId: definition.economicSourceId } : {}),
   }
 }
 
@@ -389,6 +398,9 @@ export function createResourceDeposits(
         else setLabel(instance)
       }
       return { ok: true, yield: yieldForOre(definition.type), remaining: next }
+    },
+    resolveEconomicSourceId(id) {
+      return lookupDefinition(id)?.economicSourceId ?? null
     },
     dispose() {
       disposed = true

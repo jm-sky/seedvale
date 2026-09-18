@@ -9,6 +9,7 @@
  * @domain world
  */
 
+import type { EconomicSourceId } from '../economy/kinds'
 import type { NaturalResource } from './naturalResources'
 import {
   spatialContextsEqual,
@@ -42,6 +43,11 @@ export type MineableDepositDefinition = {
   /** Explicit initial extractable quantity. Omit to keep `hitsForRichness`. */
   initialReserve?: number
   radius: number
+  /** Stable economic-source identity for attribution (plan settlements-004).
+   *  Absent for ordinary procedural deposits — only landmark-owned sources
+   *  (e.g. the abandoned mine) assign one, shared by every deposit slot
+   *  belonging to that same source. Never derived by parsing `id`. */
+  economicSourceId?: EconomicSourceId
 }
 
 export type DepositQueryOptions = {

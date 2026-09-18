@@ -5,14 +5,15 @@ Generated from exported TypeScript symbols.
 ## `terrain/abandonedMineDeposits.ts`
 
 - `AbandonedMineDepositInput` — type — line 76
-- `allocateIntegerReserves` — function — line 131
+- `allocateIntegerReserves` — function — line 138
   - domain: world
-- `generateAbandonedMineGoldDeposits` — function — line 332
+- `generateAbandonedMineGoldDeposits` — function — line 339
   - domain: world
 - `MINE_GOLD_SLOTS` — const — line 20
+- `mineEconomicSourceId` — function — line 117
 - `mineGoldDepositId` — function — line 110
 - `MineGoldSlot` — type — line 28
-- `pickMineGoldTotalReserve` — function — line 119
+- `pickMineGoldTotalReserve` — function — line 126
   - domain: world
 
 ## `terrain/biomeColors.ts`
@@ -438,13 +439,13 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/mineableDeposit.ts`
 
-- `depositMatchesQueryContext` — function — line 92
-- `DepositQueryOptions` — type — line 47
-- `MineableDepositDefinition` — type — line 34
+- `depositMatchesQueryContext` — function — line 98
+- `DepositQueryOptions` — type — line 53
+- `MineableDepositDefinition` — type — line 35
   - domain: world
-- `mineableDepositFromNaturalResource` — function — line 55
-- `querySpatialContext` — function — line 85
-- `resolveDepositRemaining` — function — line 78
+- `mineableDepositFromNaturalResource` — function — line 61
+- `querySpatialContext` — function — line 91
+- `resolveDepositRemaining` — function — line 84
   - domain: world
 
 ## `terrain/naturalResources.ts`
@@ -480,15 +481,15 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/resourceDeposits.ts`
 
-- `createResourceDeposits` — function — line 177
+- `createResourceDeposits` — function — line 186
   - domain: world
-- `DepositTarget` — type — line 95
-- `InterestPoint` — type — line 115
-- `MineResult` — type — line 105
-- `ResourceDeposits` — type — line 129
-- `ResourceDepositSources` — type — line 124
+- `DepositTarget` — type — line 96
+- `InterestPoint` — type — line 118
+- `MineResult` — type — line 108
+- `ResourceDeposits` — type — line 132
+- `ResourceDepositSources` — type — line 127
   - domain: world
-- `SettlementMiningHooks` — type — line 149
+- `SettlementMiningHooks` — type — line 156
 
 ## `terrain/riverFord.ts`
 

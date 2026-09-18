@@ -968,6 +968,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `economy/kinds.ts`
 - `terrain/depositMining.ts`
 - `terrain/naturalResources.ts`
 - `world/spatialContext.ts`
@@ -1046,6 +1047,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `assets/loadGltf.ts`
+- `economy/kinds.ts`
 - `settlement/props.ts`
 - `terrain/depositMining.ts`
 - `terrain/mineableDeposit.ts`

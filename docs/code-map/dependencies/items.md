@@ -1545,6 +1545,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/inventoryWiring.ts`
+- `economy/oreTransportDemand.ts`
 - `items/books.test.ts`
 - `items/highQualityWeapons.test.ts`
 - `items/inventoryView.ts`

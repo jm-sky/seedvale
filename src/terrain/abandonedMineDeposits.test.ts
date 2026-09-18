@@ -7,6 +7,7 @@ import {
   type AbandonedMineDepositInput,
   allocateIntegerReserves,
   generateAbandonedMineGoldDeposits,
+  mineEconomicSourceId,
   mineGoldDepositId,
   pickMineGoldTotalReserve,
 } from './abandonedMineDeposits'
@@ -97,6 +98,13 @@ describe('generateAbandonedMineGoldDeposits (plan world-018)', () => {
     expect(a.map((deposit) => deposit.id).sort()).toEqual(shuffled.map((deposit) => deposit.id).sort())
     expect(a.map((deposit) => deposit.id)).toContain(mineGoldDepositId(LANDMARK.mineId, 'interior-shallow'))
     expect(a.map((deposit) => deposit.id)).toContain(mineGoldDepositId(LANDMARK.mineId, 'interior-deep'))
+  })
+
+  it('assigns one shared economicSourceId to every slot while deposit ids stay distinct (plan settlements-004)', () => {
+    const deposits = generateAbandonedMineGoldDeposits(input())
+    const expectedSourceId = mineEconomicSourceId(LANDMARK.mineId)
+    expect(deposits.every((deposit) => deposit.economicSourceId === expectedSourceId)).toBe(true)
+    expect(new Set(deposits.map((deposit) => deposit.id)).size).toBe(deposits.length)
   })
 
   it('targets five deposits with at least one exterior and two interior', () => {

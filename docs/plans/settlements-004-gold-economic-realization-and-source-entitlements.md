@@ -1,7 +1,7 @@
 # Plan: Gold Economic Realization & Source Entitlements
 
 **Created:** 2026-09-08
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** high · **Effort:** M
 **Model:** Sonnet, Grok

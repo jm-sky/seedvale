@@ -625,6 +625,77 @@ describe('loadSaveData v1 contract', () => {
     })).toBeNull()
   })
 
+  it('restores a legacy settlement economy snapshot with no sourceAccounting field as empty (plan settlements-004)', () => {
+    expect(loadSaveData(validSave)?.settlementEconomies.home.sourceAccounting).toBeUndefined()
+  })
+
+  it('round-trips a settlement economy source ledger, entitlement and realization', () => {
+    const withSourceAccounting: SaveData = {
+      ...validSave,
+      settlementEconomies: {
+        ...validSave.settlementEconomies,
+        home: {
+          ...validSave.settlementEconomies.home,
+          sourceAccounting: {
+            unrealized: { 'mine:abandonedMine:1': { gold: 6 } },
+            entitlements: [{
+              id: 'entitlement:mine:abandonedMine:1:player',
+              sourceId: 'mine:abandonedMine:1',
+              beneficiary: { kind: 'player' },
+              shareBps: 2000,
+              accruedWholeCoins: 16,
+              remainderNumerator: 0,
+            }],
+            realizations: [{
+              eventId: 'transportOrder:9',
+              sourceId: 'mine:abandonedMine:1',
+              kind: 'gold',
+              amount: 4,
+              unitValue: 20,
+              grossValue: 80,
+              simTime: 3,
+            }],
+          },
+        },
+      },
+    }
+    expect(loadSaveData(withSourceAccounting)).toEqual(withSourceAccounting)
+  })
+
+  it('rejects a malformed sourceAccounting record', () => {
+    const base = validSave.settlementEconomies.home
+    expect(loadSaveData({
+      ...validSave,
+      settlementEconomies: { home: { ...base, sourceAccounting: 'nope' } },
+    })).toBeNull()
+    expect(loadSaveData({
+      ...validSave,
+      settlementEconomies: {
+        home: { ...base, sourceAccounting: { unrealized: { a: { gold: 'nope' } }, entitlements: [], realizations: [] } },
+      },
+    })).toBeNull()
+    expect(loadSaveData({
+      ...validSave,
+      settlementEconomies: {
+        home: {
+          ...base,
+          sourceAccounting: {
+            unrealized: {},
+            entitlements: [{
+              id: 'entitlement:a:player',
+              sourceId: 'a',
+              beneficiary: { kind: 'merchant' },
+              shareBps: 2000,
+              accruedWholeCoins: 0,
+              remainderNumerator: 0,
+            }],
+            realizations: [],
+          },
+        },
+      },
+    })).toBeNull()
+  })
+
   it('migrates a v40 save (plan settlements-npcs-017) into v41 without fabricating shortages', () => {
     const result = loadStoredSave({ ...validSave, version: 40 })
     expect(result.status).toBe('ok')

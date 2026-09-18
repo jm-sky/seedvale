@@ -1,3 +1,4 @@
+import type { EconomicSourceId } from '../economy/kinds'
 import type { ItemKind } from '../items/items'
 import type { HouseholdId } from '../settlement/household'
 
@@ -47,6 +48,11 @@ export type TransportEndpointRef =
   | {
       type: 'resource-site'
       resourceId: string
+      /** Set only when `resourceId` is a known attributed source (plan
+       *  settlements-004) — resolved once at order-creation time and
+       *  carried verbatim through pickup/unload so delivery attribution
+       *  never has to re-resolve a deposit definition off-screen. */
+      economicSourceId?: EconomicSourceId
     }
 
 /** Off-screen execution metadata (plan settlements-npcs-019) — set only once

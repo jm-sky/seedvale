@@ -2,6 +2,11 @@ import type { BadgeId, SettlementBadgeId } from '../badges/badges'
 import type { WorldConfig } from '../config/worldConfig'
 import type { ProductionShortageRecord } from '../economy/productionShortage'
 import type { SettlementEconomySnapshot } from '../economy/settlementEconomy'
+import type {
+  SourceAccountingSnapshot,
+  SourceEntitlementSnapshot,
+  SourceRealizationSnapshot,
+} from '../economy/sourceLedger'
 import type { AnimalKind } from '../fauna/AnimalAgent'
 import type { SpawnPointState } from '../fauna/AnimalSpawner'
 import type { PersistentOccupantSaveRecord } from '../fauna/persistentOccupants'
@@ -1229,6 +1234,47 @@ function isProductionShortageRecord(value: unknown): value is ProductionShortage
     && typeof v.lastBlockedSimTime === 'number' && Number.isFinite(v.lastBlockedSimTime)
 }
 
+function isSourceEntitlementSnapshot(value: unknown): value is SourceEntitlementSnapshot {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const v = value as Record<string, unknown>
+  if (typeof v.id !== 'string' || typeof v.sourceId !== 'string') return false
+  if (!v.beneficiary || typeof v.beneficiary !== 'object') return false
+  if ((v.beneficiary as Record<string, unknown>).kind !== 'player') return false
+  return typeof v.shareBps === 'number'
+    && typeof v.accruedWholeCoins === 'number'
+    && typeof v.remainderNumerator === 'number'
+}
+
+function isSourceRealizationSnapshot(value: unknown): value is SourceRealizationSnapshot {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const v = value as Record<string, unknown>
+  return typeof v.eventId === 'string'
+    && typeof v.sourceId === 'string'
+    && typeof v.kind === 'string' && isEconomicKind(v.kind)
+    && typeof v.amount === 'number'
+    && typeof v.unitValue === 'number'
+    && typeof v.grossValue === 'number'
+    && typeof v.simTime === 'number'
+}
+
+/** Validates the optional source-attribution ledger (plan settlements-004) —
+ *  absent restores as no source-attributed activity yet, never reconstructed
+ *  from stock/inventory. */
+function isSourceAccountingField(value: unknown): value is SourceAccountingSnapshot | undefined {
+  if (value === undefined) return true
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const v = value as Record<string, unknown>
+  if (!v.unrealized || typeof v.unrealized !== 'object' || Array.isArray(v.unrealized)) return false
+  for (const row of Object.values(v.unrealized as Record<string, unknown>)) {
+    if (!row || typeof row !== 'object' || Array.isArray(row)) return false
+    for (const [kind, amount] of Object.entries(row as Record<string, unknown>)) {
+      if (!isEconomicKind(kind) || typeof amount !== 'number') return false
+    }
+  }
+  return Array.isArray(v.entitlements) && v.entitlements.every(isSourceEntitlementSnapshot)
+    && Array.isArray(v.realizations) && v.realizations.every(isSourceRealizationSnapshot)
+}
+
 function isSettlementEconomySnapshot(value: unknown): value is SettlementEconomySnapshot {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false
   const v = value as Record<string, unknown>
@@ -1247,6 +1293,7 @@ function isSettlementEconomySnapshot(value: unknown): value is SettlementEconomy
       return false
     }
   }
+  if (!isSourceAccountingField(v.sourceAccounting)) return false
   return isSaveItemInstancesField(food.instances) && isOptionalFoodBatchesField(food.foodBatches)
 }
 
@@ -2164,7 +2211,10 @@ function isTransportEndpointRef(value: unknown): value is TransportEndpointRef {
   const r = value as Record<string, unknown>
   if (r.type === 'household') return typeof r.householdId === 'string'
   if (r.type === 'settlement-storage') return typeof r.settlementId === 'string'
-  if (r.type === 'resource-site') return typeof r.resourceId === 'string'
+  if (r.type === 'resource-site') {
+    return typeof r.resourceId === 'string'
+      && (r.economicSourceId === undefined || typeof r.economicSourceId === 'string')
+  }
   return false
 }
 

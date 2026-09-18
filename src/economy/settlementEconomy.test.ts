@@ -243,3 +243,93 @@ describe('raw ore stock (plan 131)', () => {
     expect(s.hasShortage('iron')).toBe(false)
   })
 })
+
+describe('source-attributed stock, realization and entitlements (plan settlements-004)', () => {
+  it('addAttributed increases both aggregate stock and the source ledger', () => {
+    const s = economy()
+    s.addAttributed('gold', 5, 'mine:a', 2)
+    expect(s.query('gold')).toBe(5)
+    expect(s.sourceUnrealized('mine:a', 'gold')).toBe(5)
+    expect(s.history()[0]).toMatchObject({ type: 'stock.added', kind: 'gold', amount: 5, simTime: 2 })
+  })
+
+  it('unattributed add() remains unchanged and never touches the source ledger', () => {
+    const s = economy()
+    s.add('gold', 5)
+    expect(s.query('gold')).toBe(5)
+    expect(s.sourceUnrealized('mine:a', 'gold')).toBe(0)
+  })
+
+  it('realizeAttributed removes the realized amount from stock and the source ledger, and accrues the entitlement', () => {
+    const s = economy()
+    s.addAttributed('gold', 10, 'mine:a')
+    s.establishEntitlement({ sourceId: 'mine:a', beneficiary: { kind: 'player' }, shareBps: 2000 })
+    const result = s.realizeAttributed({
+      kind: 'gold', sourceId: 'mine:a', amount: 10, unitValue: 20, eventId: 'ev:1', simTime: 5,
+    })
+    expect(result).toMatchObject({ ok: true, grossValue: 200 })
+    expect(s.query('gold')).toBe(0)
+    expect(s.sourceUnrealized('mine:a', 'gold')).toBe(0)
+    const entitlementId = s.entitlement('entitlement:mine:a:player')?.id
+    expect(entitlementId).toBeDefined()
+    expect(s.claimableEntitlement(entitlementId!)).toBe(40)
+    expect(s.history().at(-1)).toMatchObject({ type: 'stock.removed', kind: 'gold', amount: 10, simTime: 5 })
+  })
+
+  it('a repeated realization eventId cannot remove stock or accrue twice', () => {
+    const s = economy()
+    s.addAttributed('gold', 10, 'mine:a')
+    const entitlement = s.establishEntitlement({ sourceId: 'mine:a', beneficiary: { kind: 'player' }, shareBps: 2000 })
+    s.realizeAttributed({ kind: 'gold', sourceId: 'mine:a', amount: 10, unitValue: 20, eventId: 'ev:1' })
+    const replay = s.realizeAttributed({ kind: 'gold', sourceId: 'mine:a', amount: 10, unitValue: 20, eventId: 'ev:1' })
+    expect(replay).toMatchObject({ ok: true, replay: true })
+    expect(s.query('gold')).toBe(0)
+    expect(s.claimableEntitlement(entitlement.id)).toBe(40)
+  })
+
+  it('commitEntitlementClaim is idempotent and cannot lose or duplicate accrued coins', () => {
+    const s = economy()
+    s.addAttributed('gold', 10, 'mine:a')
+    const entitlement = s.establishEntitlement({ sourceId: 'mine:a', beneficiary: { kind: 'player' }, shareBps: 2000 })
+    s.realizeAttributed({ kind: 'gold', sourceId: 'mine:a', amount: 10, unitValue: 20, eventId: 'ev:1' })
+    const first = s.commitEntitlementClaim(entitlement.id, 'op:1', 40)
+    const second = s.commitEntitlementClaim(entitlement.id, 'op:1', 40)
+    expect(first).toEqual({ ok: true, amount: 40, replay: false })
+    expect(second).toEqual({ ok: true, amount: 40, replay: true })
+    expect(s.claimableEntitlement(entitlement.id)).toBe(0)
+  })
+
+  it('snapshot omits sourceAccounting when nothing attributed happened', () => {
+    const s = economy()
+    s.add('gold', 3)
+    expect(s.snapshot().sourceAccounting).toBeUndefined()
+  })
+
+  it('save/load round trip through the snapshot constructor param preserves ledger, entitlements and remainder', () => {
+    const s = economy()
+    s.addAttributed('gold', 10, 'mine:a')
+    const entitlement = s.establishEntitlement({ sourceId: 'mine:a', beneficiary: { kind: 'player' }, shareBps: 1234 })
+    s.realizeAttributed({ kind: 'gold', sourceId: 'mine:a', amount: 3, unitValue: 20, eventId: 'ev:1' })
+    const snapshot = s.snapshot()
+
+    const restored = createSettlementEconomy(
+      's1', snapshot.stock, DEMANDS, snapshot.food, snapshot.productionShortages, snapshot.sourceAccounting,
+    )
+    expect(restored.query('gold')).toBe(s.query('gold'))
+    expect(restored.sourceUnrealized('mine:a', 'gold')).toBe(s.sourceUnrealized('mine:a', 'gold'))
+    expect(restored.claimableEntitlement(entitlement.id)).toBe(s.claimableEntitlement(entitlement.id))
+    // Same eventId after restore still replays rather than double-realizing.
+    const replay = restored.realizeAttributed({
+      kind: 'gold', sourceId: 'mine:a', amount: 3, unitValue: 20, eventId: 'ev:1',
+    })
+    expect(replay).toMatchObject({ ok: true, replay: true })
+    expect(restored.query('gold')).toBe(s.query('gold'))
+  })
+
+  it('restores empty source accounting from a legacy snapshot with no sourceAccounting field', () => {
+    const restored = createSettlementEconomy('s1', { gold: 3 }, DEMANDS, { counts: {}, instances: [] })
+    expect(restored.query('gold')).toBe(3)
+    expect(restored.sourceUnrealized('mine:a', 'gold')).toBe(0)
+    expect(restored.snapshot().sourceAccounting).toBeUndefined()
+  })
+})

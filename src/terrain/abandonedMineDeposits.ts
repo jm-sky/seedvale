@@ -111,6 +111,13 @@ export function mineGoldDepositId(mineId: string, slot: MineGoldSlot): string {
   return `${mineId}:gold:${slot}`
 }
 
+/** Stable economic-source identity shared by every gold slot of one mine
+ *  (plan settlements-004) — entitlement/attribution identity, distinct from
+ *  and never parsed back out of a per-slot deposit id. */
+export function mineEconomicSourceId(mineId: string): string {
+  return `mine:${mineId}`
+}
+
 /**
  * Deterministic total mine reserve in 500–1000, triangular-like around 750.
  *
@@ -344,6 +351,7 @@ export function generateAbandonedMineGoldDeposits(
   const slots = bindings.map((binding) => binding.slot)
   const reserves = allocateIntegerReserves(totalReserve, slotWeights(weightRng, slots))
 
+  const economicSourceId = mineEconomicSourceId(input.landmark.mineId)
   return bindings.map((binding, index) => ({
     id: mineGoldDepositId(input.landmark.mineId, binding.slot),
     type: 'gold' as const,
@@ -354,5 +362,6 @@ export function generateAbandonedMineGoldDeposits(
     richness: SLOT_RICHNESS[binding.slot],
     initialReserve: reserves[index]!,
     radius: MINE_DEPOSIT_RADIUS,
+    economicSourceId,
   }))
 }

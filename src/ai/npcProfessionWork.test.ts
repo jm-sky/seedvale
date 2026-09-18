@@ -116,6 +116,7 @@ describe('planProfessionWork', () => {
         remaining: 5,
       }),
       mine: () => ({ ok: true as const, yield: { kind: 'iron' as const, count: 1 }, remaining: 4 }),
+      resolveEconomicSourceId: () => null,
     }
 
     it('returns null without mining hooks, economy, or resource-site inventories', () => {
@@ -1071,6 +1072,94 @@ describe('planProfessionWork', () => {
       expect(transportOrders.findByCarrier('npc:trader')?.source).toEqual({
         type: 'resource-site',
         resourceId: 'resource_a',
+      })
+    })
+
+    describe('sourced gold collection (plan settlements-004)', () => {
+      function miningWithSource(sourceId: string | null) {
+        return {
+          queryNearest: () => null,
+          mine: () => ({ ok: false as const, reason: 'missing' as const }),
+          resolveEconomicSourceId: () => sourceId,
+        }
+      }
+
+      it('creates a resource-site gold order carrying the resolved economicSourceId', () => {
+        const household = createHousehold('h', 's', 'home:h')
+        const economy = createSettlementEconomy('s', {}, [])
+        const sites = createResourceSiteInventories()
+        sites.getOrCreate('mine:gold:exterior-primary').add('gold', 5)
+        const transportOrders = createTransportOrders()
+        const work = planProfessionWork(baseCtx({
+          role: 'trader',
+          npcId: 'npc:trader',
+          household,
+          economy,
+          workplace: { position: { x: 4, y: 0, z: 4 } } as unknown as NpcWorkContext['workplace'],
+          transportOrders,
+          resourceSiteInventories: sites,
+          resolveResourceSitePosition: (id) => (id === 'mine:gold:exterior-primary' ? { x: 20, z: 0 } : null),
+          mining: miningWithSource('mine:abandonedMine:1'),
+        }))
+        expect(work?.kind).toBe('work')
+        const order = transportOrders.findByCarrier('npc:trader')
+        expect(order?.source).toEqual({
+          type: 'resource-site',
+          resourceId: 'mine:gold:exterior-primary',
+          economicSourceId: 'mine:abandonedMine:1',
+        })
+        expect(order?.itemKind).toBe('gold')
+        expect(order?.destination).toEqual({ type: 'settlement-storage', settlementId: 's' })
+      })
+
+      it('does not create a gold order when the site has no resolvable economicSourceId', () => {
+        const household = createHousehold('h', 's', 'home:h')
+        const economy = createSettlementEconomy('s', {}, [])
+        const sites = createResourceSiteInventories()
+        sites.getOrCreate('resource_gold').add('gold', 5)
+        const transportOrders = createTransportOrders()
+        planProfessionWork(baseCtx({
+          role: 'trader',
+          npcId: 'npc:trader',
+          household,
+          economy,
+          workplace: { position: { x: 4, y: 0, z: 4 } } as unknown as NpcWorkContext['workplace'],
+          transportOrders,
+          resourceSiteInventories: sites,
+          resolveResourceSitePosition: () => ({ x: 20, z: 0 }),
+          mining: miningWithSource(null),
+        }))
+        expect(transportOrders.list()).toEqual([])
+      })
+
+      it('delivers sourced gold and realizes it immediately into accounting proceeds', () => {
+        const household = createHousehold('h', 's', 'home:h')
+        const economy = createSettlementEconomy('s', {}, [])
+        const sites = createResourceSiteInventories()
+        sites.getOrCreate('mine:gold:exterior-primary').add('gold', 5)
+        const transportOrders = createTransportOrders()
+        const transportCargo = new Inventory()
+        const work = planProfessionWork(baseCtx({
+          role: 'trader',
+          npcId: 'npc:trader',
+          household,
+          economy,
+          transportCargo,
+          workplace: { position: { x: 4, y: 0, z: 4 } } as unknown as NpcWorkContext['workplace'],
+          transportOrders,
+          resourceSiteInventories: sites,
+          resolveResourceSitePosition: () => ({ x: 20, z: 0 }),
+          mining: miningWithSource('mine:abandonedMine:1'),
+        }))!
+        work.onComplete?.()
+        expect(sites.get('mine:gold:exterior-primary')?.count('gold')).toBe(2)
+        work.next?.onComplete?.()
+        expect(economy.query('gold')).toBe(0)
+        expect(economy.items.count('gold')).toBe(0)
+        expect(economy.sourceUnrealized('mine:abandonedMine:1', 'gold')).toBe(0)
+        const realizations = economy.snapshot().sourceAccounting?.realizations ?? []
+        expect(realizations).toHaveLength(1)
+        expect(realizations[0]).toMatchObject({ sourceId: 'mine:abandonedMine:1', kind: 'gold', amount: 3, grossValue: 60 })
       })
     })
 

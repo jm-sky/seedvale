@@ -5,6 +5,7 @@ import {
   committedIncomingOre,
   committedOutgoingOre,
   creditDeliveredOreToStock,
+  sourcedDeliveryProvenance,
   uncommittedResourceSiteOre,
   uncoveredOreProductionNeed,
 } from './oreTransportDemand'
@@ -122,5 +123,58 @@ describe('ore transport demand (settlements-npcs-021)', () => {
     creditDeliveredOreToStock(economy, 'carrot', 2, 0)
     expect(economy.items.count('carrot')).toBe(2)
     expect(economy.query('iron')).toBe(0)
+  })
+
+  describe('sourcedDeliveryProvenance (plan settlements-004)', () => {
+    it('resolves provenance only for a resource-site source carrying an economicSourceId', () => {
+      expect(sourcedDeliveryProvenance({
+        id: 'transportOrder:1',
+        source: { type: 'resource-site', resourceId: 'r1', economicSourceId: 'mine:a' },
+      })).toEqual({ economicSourceId: 'mine:a', eventId: 'transportOrder:1' })
+      expect(sourcedDeliveryProvenance({
+        id: 'transportOrder:2',
+        source: { type: 'resource-site', resourceId: 'r1' },
+      })).toBeUndefined()
+      expect(sourcedDeliveryProvenance({
+        id: 'transportOrder:3',
+        source: { type: 'household', householdId: 'h' },
+      })).toBeUndefined()
+    })
+  })
+
+  describe('attributed gold delivery (plan settlements-004)', () => {
+    it('credits attributed stock and immediately realizes it into an entitlement-ready gross value', () => {
+      const economy = createSettlementEconomy('s', { gold: 0 }, [])
+      economy.items.add('gold', 3)
+      const entitlement = economy.establishEntitlement({
+        sourceId: 'mine:a', beneficiary: { kind: 'player' }, shareBps: 2000,
+      })
+      creditDeliveredOreToStock(economy, 'gold', 3, 6, { economicSourceId: 'mine:a', eventId: 'transportOrder:9' })
+      expect(economy.items.count('gold')).toBe(0)
+      // Realized immediately — gold has no other stock use (plan settlements-004).
+      expect(economy.query('gold')).toBe(0)
+      expect(economy.sourceUnrealized('mine:a', 'gold')).toBe(0)
+      // tradeValue('gold') = 20, so 3 * 20 = 60 gross, 20% = 12.
+      expect(economy.claimableEntitlement(entitlement.id)).toBe(12)
+    })
+
+    it('the same order id cannot realize the same delivery twice', () => {
+      const economy = createSettlementEconomy('s', { gold: 0 }, [])
+      economy.items.add('gold', 6)
+      const provenance = { economicSourceId: 'mine:a', eventId: 'transportOrder:9' }
+      creditDeliveredOreToStock(economy, 'gold', 3, 0, provenance)
+      economy.items.add('gold', 3)
+      creditDeliveredOreToStock(economy, 'gold', 3, 0, provenance)
+      const realizations = economy.snapshot().sourceAccounting?.realizations ?? []
+      expect(realizations).toHaveLength(1)
+    })
+
+    it('mined-but-not-delivered gold (no provenance) still uses plain add(), not attribution', () => {
+      const economy = createSettlementEconomy('s', { gold: 0 }, [])
+      economy.items.add('gold', 3)
+      creditDeliveredOreToStock(economy, 'gold', 3, 0)
+      expect(economy.query('gold')).toBe(3)
+      expect(economy.sourceUnrealized('mine:a', 'gold')).toBe(0)
+    })
   })
 })

@@ -141,6 +141,55 @@ Do not scan `ResourceSiteInventories` or `ResourceDeposits` to infer revenue. Re
 5. Add the two-phase claim boundary.
 6. Add the smallest deterministic realization trigger after accounting tests pass.
 
+## Implementation summary (post-implementation)
+
+Implemented as planned, with these concrete choices where the plan left room:
+
+- `EconomicSourceId` lives in `economy/kinds.ts` alongside `EconomicKind` (a
+  plain string type, no runtime code), so `terrain/mineableDeposit.ts` and
+  `world/transportOrder.ts` take it as a type-only import — the same
+  direction `terrain/depositMining.ts` already used for `EconomicKind`.
+- New `economy/sourceLedger.ts` owns the whole source-attribution
+  subsystem (`createSourceAccounting`): unrealized ledger, exact-once
+  realization records and entitlement accrual/claim, parameterized over the
+  caller's own `EconomicStock` so `realize()` mutates stock and ledger in
+  one step. `SettlementEconomy` embeds one instance and exposes
+  `addAttributed` / `sourceUnrealized` / `realizeAttributed` /
+  `establishEntitlement` / `entitlement` / `claimableEntitlement` /
+  `commitEntitlementClaim`; `SettlementEconomySnapshot.sourceAccounting` is
+  optional and omitted when empty.
+- Provenance is carried on the order, not re-resolved at delivery: the
+  `resource-site` `TransportEndpointRef` case gained an optional
+  `economicSourceId`, resolved once at order-creation time (a new
+  `SettlementMiningHooks.resolveEconomicSourceId`, backed by
+  `ResourceDeposits`' existing private deposit lookup) and copied verbatim
+  through pickup/unload. Off-screen delivery (`transportOffscreen.ts`,
+  `transportTravelArrival.ts`) never needs to resolve a deposit definition —
+  it just reads `order.source.economicSourceId` via the new
+  `oreTransportDemand.ts::sourcedDeliveryProvenance()` helper.
+- Realization trigger: gold has no production recipe consuming it, so a
+  settlement has no other use for delivered gold stock. `creditDeliveredOreToStock`
+  now realizes attributed gold immediately at delivery, using the delivering
+  `TransportOrder.id` as the realization `eventId` (a delivery happens
+  exactly once per order, so this is a safe idempotency key with no new
+  tick/policy loop). This satisfies "explicit integration seam, same path
+  detailed/off-screen" without inventing a periodic economy tick.
+- Demand side: `ai/npcProfessionWork.ts` gained
+  `planTraderSourcedGoldCollection`/`selectSourcedGoldSite`, mirroring
+  `planTraderOreCollection` but keyed off `resolveEconomicSourceId` instead
+  of `uncoveredOreProductionNeed`/`ORE_TRANSPORT_KINDS`; wired into
+  `planTraderWork` right after the existing ore-shortage collection and
+  before inter-settlement export.
+- Entitlement establishment is deliberately **not** wired to anything in
+  this plan — `establishEntitlement`/claim API exist for
+  `quests-progression-010` to call later. Gold delivered/realized before any
+  entitlement exists still produces a realization record (accounting
+  proceeds), just with nothing accruing yet.
+- No `SaveData` version bump — `sourceAccounting` is a purely additive
+  optional field on the existing `SettlementEconomySnapshot`/`TransportOrder`
+  persisted shapes; `isSettlementEconomySnapshot`/`isTransportEndpointRef`
+  validators were extended in place.
+
 ## Main pitfalls
 
 - implementing against the old miner→economy direct-deposit flow;

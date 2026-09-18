@@ -17,3 +17,14 @@ export const ECONOMIC_KINDS: readonly EconomicKind[] = ['food', 'water', 'wood',
 export function isEconomicKind(value: string): value is EconomicKind {
   return (ECONOMIC_KINDS as readonly string[]).includes(value)
 }
+
+/**
+ * Stable identity for a real-world economic production source (a mine,
+ * later other extraction sites) that attributed `SettlementEconomy` stock
+ * can be traced back to (plan settlements-004). Never a quest id and never
+ * a `ResourceDeposit`/deposit-slot id — one source id is shared by every
+ * deposit slot belonging to the same source. Deliberately a plain string so
+ * world-generation code (`terrain/`) can assign one without importing any
+ * economy runtime.
+ */
+export type EconomicSourceId = string

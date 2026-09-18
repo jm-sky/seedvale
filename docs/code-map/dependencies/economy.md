@@ -60,6 +60,7 @@ Generated from TypeScript imports.
 - `economy/productionShortage.ts`
 - `economy/registry.ts`
 - `economy/settlementEconomy.ts`
+- `economy/sourceLedger.ts`
 - `economy/stock.ts`
 
 ## `economy/initial.test.ts`
@@ -119,17 +120,23 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `ai/npcProfessionWork.ts`
 - `debug/settlementHistory.ts`
 - `economy/index.ts`
 - `economy/initial.ts`
 - `economy/localExchange.ts`
+- `economy/oreTransportDemand.ts`
 - `economy/productionExecutor.ts`
 - `economy/productionShortage.ts`
 - `economy/settlementEconomy.ts`
+- `economy/sourceLedger.ts`
 - `economy/stock.ts`
 - `persistence/saveData.ts`
 - `terrain/depositMining.test.ts`
 - `terrain/depositMining.ts`
+- `terrain/mineableDeposit.ts`
+- `terrain/resourceDeposits.ts`
+- `world/transportOrder.ts`
 
 ## `economy/localExchange.test.ts`
 
@@ -202,9 +209,11 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `economy/kinds.ts`
 - `economy/settlementEconomy.ts`
 - `items/Inventory.ts`
 - `items/items.ts`
+- `items/tradeCatalog.ts`
 - `terrain/depositMining.ts`
 - `world/transportOrder.ts`
 
@@ -352,6 +361,7 @@ Generated from TypeScript imports.
 - `economy/production.ts`
 - `economy/productionExecutor.ts`
 - `economy/productionShortage.ts`
+- `economy/sourceLedger.ts`
 - `economy/stock.ts`
 - `items/Inventory.ts`
 - `items/foodFreshness.ts`
@@ -403,6 +413,27 @@ Generated from TypeScript imports.
 - `world/transportOffscreen.ts`
 - `world/transportTravelArrival.test.ts`
 
+## `economy/sourceLedger.test.ts`
+
+**Imports**
+
+- `economy/sourceLedger.ts`
+- `economy/stock.ts`
+
+## `economy/sourceLedger.ts`
+
+**Imports**
+
+- `economy/kinds.ts`
+- `economy/stock.ts`
+
+**Imported by**
+
+- `economy/index.ts`
+- `economy/settlementEconomy.ts`
+- `economy/sourceLedger.test.ts`
+- `persistence/saveData.ts`
+
 ## `economy/stock.ts`
 
 **Imports**
@@ -417,3 +448,5 @@ Generated from TypeScript imports.
 - `economy/productionExecutor.ts`
 - `economy/settlementEconomy.test.ts`
 - `economy/settlementEconomy.ts`
+- `economy/sourceLedger.test.ts`
+- `economy/sourceLedger.ts`

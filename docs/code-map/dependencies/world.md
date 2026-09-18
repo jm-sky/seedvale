@@ -4281,6 +4281,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `economy/kinds.ts`
 - `items/items.ts`
 - `settlement/household.ts`
 

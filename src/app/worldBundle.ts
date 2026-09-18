@@ -1385,7 +1385,11 @@ async function buildWorldSystems(
     caveFloorY: (caveId, x, y, z) => cavesRef?.queryGroundIn(caveId, x, y, z)?.floorY ?? null,
   })
   bootMarkEnd('buildResourceDeposits')
-  const mining: SettlementMiningHooks = { queryNearest: resourceDeposits.queryNearest, mine: resourceDeposits.mine }
+  const mining: SettlementMiningHooks = {
+    queryNearest: resourceDeposits.queryNearest,
+    mine: resourceDeposits.mine,
+    resolveEconomicSourceId: resourceDeposits.resolveEconomicSourceId,
+  }
 
   // Built ahead of `foodSources`/`settlementsManager` (plan 176) — the food
   // source hooks need a live `PlayerGardens` to resolve which crops belong

@@ -42,6 +42,7 @@ Generated from exported TypeScript symbols.
 
 - `ECONOMIC_KINDS` — const — line 15
 - `EconomicKind` — type — line 13
+- `EconomicSourceId` — type — line 30
 - `isEconomicKind` — function — line 17
 
 ## `economy/localExchange.ts`
@@ -68,17 +69,19 @@ Generated from exported TypeScript symbols.
 
 ## `economy/oreTransportDemand.ts`
 
-- `committedIncomingOre` — function — line 40
-- `committedOutgoingOre` — function — line 60
-- `creditDeliveredOreToStock` — function — line 126
+- `committedIncomingOre` — function — line 42
+- `committedOutgoingOre` — function — line 62
+- `creditDeliveredOreToStock` — function — line 154
   - domain: settlements-npcs
-- `isOreTransportKind` — function — line 25
-- `ORE_TRANSPORT_KINDS` — const — line 19
+- `isOreTransportKind` — function — line 27
+- `ORE_TRANSPORT_KINDS` — const — line 21
   - domain: settlements-npcs
-- `ORE_TRANSPORT_MAX_TRANSFER` — const — line 23
-- `OreTransportKind` — type — line 20
-- `uncommittedResourceSiteOre` — function — line 96
-- `uncoveredOreProductionNeed` — function — line 80
+- `ORE_TRANSPORT_MAX_TRANSFER` — const — line 25
+- `OreTransportKind` — type — line 22
+- `sourcedDeliveryProvenance` — function — line 134
+- `SourcedOreDeliveryProvenance` — type — line 124
+- `uncommittedResourceSiteOre` — function — line 98
+- `uncoveredOreProductionNeed` — function — line 82
 
 ## `economy/production.ts`
 
@@ -147,14 +150,35 @@ Generated from exported TypeScript symbols.
 
 ## `economy/settlementEconomy.ts`
 
-- `createSettlementEconomy` — function — line 104
-- `SettlementDemand` — type — line 21
-- `SettlementEconomy` — type — line 56
+- `createSettlementEconomy` — function — line 141
+- `SettlementDemand` — type — line 30
+- `SettlementEconomy` — type — line 71
   - domain: settlements
   - system: settlement-economy
-  - role: Owns a settlement's bulk stock, demand-driven shortage/surplus and reservations. Not player `Inventory`.
+  - role: Owns a settlement's bulk stock, demand-driven shortage/surplus, reservations and (plan settlements-004) source-attributed stock, realization and entitlement accrual. Not player `Inventory`.
   - owns: SettlementEconomy
-- `SettlementEconomySnapshot` — type — line 39
+- `SettlementEconomySnapshot` — type — line 48
+
+## `economy/sourceLedger.ts`
+
+- `ClaimResult` — type — line 95
+- `createSourceAccounting` — function — line 136
+- `EstablishEntitlementInput` — type — line 89
+- `RealizationResult` — type — line 73
+- `RealizeAttributedInput` — type — line 62
+- `SourceAccounting` — type — line 119
+  - domain: settlements
+  - system: source-accounting
+  - role: Owns one settlement economy's source-unrealized ledger, exact-once realization records and persistent entitlement accrual/claim state.
+  - owns: SourceAccounting
+- `SourceAccountingSnapshot` — type — line 56
+- `SourceEntitlement` — type — line 33
+  - domain: settlements
+- `SourceEntitlementBeneficiary` — type — line 23
+  - domain: settlements
+- `sourceEntitlementId` — function — line 108
+- `SourceEntitlementSnapshot` — type — line 42
+- `SourceRealizationSnapshot` — type — line 44
 
 ## `economy/stock.ts`
 

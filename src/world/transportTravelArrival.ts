@@ -2,7 +2,7 @@ import type { NpcAuthoritativeState } from '../settlement/npcState'
 import type { TransportOrders } from './createTransportOrders'
 import { observeNpcTravelArrival } from '../ai/npcTravel'
 import { tryAdvanceDevelopment } from '../economy/npcWork'
-import { creditDeliveredOreToStock } from '../economy/oreTransportDemand'
+import { creditDeliveredOreToStock, sourcedDeliveryProvenance } from '../economy/oreTransportDemand'
 import { advanceMerchantJourneyToVisiting } from '../settlement/merchantJourney'
 import {
   type OffscreenTransportLookup,
@@ -57,7 +57,7 @@ export function resolveTransportTravelArrivals(
     if (order.destination.type === 'settlement-storage') {
       const economy = lookup.getEconomy(order.destination.settlementId)
       if (economy) {
-        creditDeliveredOreToStock(economy, order.itemKind, result.delivered, nowDays)
+        creditDeliveredOreToStock(economy, order.itemKind, result.delivered, nowDays, sourcedDeliveryProvenance(order))
         tryAdvanceDevelopment(economy)
       }
     }

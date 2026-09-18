@@ -16,7 +16,7 @@ export {
   matchInterSettlementFoodOpportunity,
   selectConcreteFoodGoods,
 } from './interSettlementFoodTransport'
-export { ECONOMIC_KINDS, type EconomicKind, isEconomicKind } from './kinds'
+export { ECONOMIC_KINDS, type EconomicKind, type EconomicSourceId, isEconomicKind } from './kinds'
 export { claimEconomySurplus, claimHouseholdSurplus } from './localExchange'
 export {
   commitBlacksmithProduction,
@@ -82,4 +82,18 @@ export {
   type SettlementEconomy,
   type SettlementEconomySnapshot,
 } from './settlementEconomy'
+export {
+  type ClaimResult,
+  createSourceAccounting,
+  type EstablishEntitlementInput,
+  type RealizationResult,
+  type RealizeAttributedInput,
+  type SourceAccounting,
+  type SourceAccountingSnapshot,
+  type SourceEntitlement,
+  type SourceEntitlementBeneficiary,
+  sourceEntitlementId,
+  type SourceEntitlementSnapshot,
+  type SourceRealizationSnapshot,
+} from './sourceLedger'
 export { EconomicStock, type StockAmount } from './stock'

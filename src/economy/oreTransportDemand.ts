@@ -1,6 +1,8 @@
 import type { Inventory } from '../items/Inventory'
 import type { ItemKind } from '../items/items'
+import type { EconomicSourceId } from './kinds'
 import type { SettlementEconomy } from './settlementEconomy'
+import { tradeValue } from '../items/tradeCatalog'
 import { isMineableOre, oreEconomicKind } from '../terrain/depositMining'
 import { isTransportOrderActive, type TransportOrder } from '../world/transportOrder'
 
@@ -116,10 +118,36 @@ export function uncommittedResourceSiteOre(
   return available
 }
 
+/** Delivery-time source provenance (plan settlements-004) — resolved once at
+ *  order-creation time and carried on the order itself; see
+ *  `sourcedDeliveryProvenance`. */
+export type SourcedOreDeliveryProvenance = {
+  economicSourceId: EconomicSourceId
+  /** Exact-once realization key — one delivery, one `TransportOrder`, so the
+   *  order's own id is a safe idempotency key. */
+  eventId: string
+}
+
+/** `undefined` for household/settlement-storage sources and for a
+ *  resource-site order whose deposit carries no `economicSourceId` — those
+ *  keep crediting through plain `add()`. */
+export function sourcedDeliveryProvenance(
+  order: Pick<TransportOrder, 'id' | 'source'>,
+): SourcedOreDeliveryProvenance | undefined {
+  if (order.source.type !== 'resource-site' || !order.source.economicSourceId) return undefined
+  return { economicSourceId: order.source.economicSourceId, eventId: order.id }
+}
+
 /**
  * After `executeTransportUnload` into `SettlementEconomy.items`, move delivered
  * mineable ore into bulk stock so existing production queries (`query` /
  * `remove` / blacksmith recipes) observe it. No-op for non-ore kinds.
+ *
+ * When `provenance` is set (sourced gold, see `sourcedDeliveryProvenance`),
+ * credits through `addAttributed` instead of `add` and immediately realizes
+ * the same delivered quantity — gold has no other stock use, so a settlement
+ * economically realizes attributed gold exactly once, at delivery, the same
+ * way for detailed and off-screen carriers (plan settlements-004).
  *
  * @domain settlements-npcs
  */
@@ -128,8 +156,22 @@ export function creditDeliveredOreToStock(
   itemKind: ItemKind,
   amount: number,
   simTime = 0,
+  provenance?: SourcedOreDeliveryProvenance,
 ): void {
   if (!isMineableOre(itemKind) || amount <= 0) return
   if (!economy.items.remove(itemKind, amount)) return
-  economy.add(oreEconomicKind(itemKind), amount, simTime)
+  const kind = oreEconomicKind(itemKind)
+  if (!provenance) {
+    economy.add(kind, amount, simTime)
+    return
+  }
+  economy.addAttributed(kind, amount, provenance.economicSourceId, simTime)
+  economy.realizeAttributed({
+    kind,
+    sourceId: provenance.economicSourceId,
+    amount,
+    unitValue: tradeValue(itemKind),
+    eventId: provenance.eventId,
+    simTime,
+  })
 }

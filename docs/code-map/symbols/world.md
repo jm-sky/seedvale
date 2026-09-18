@@ -2045,20 +2045,20 @@ Generated from exported TypeScript symbols.
 
 ## `world/transportOrder.ts`
 
-- `assignTransportOrder` — function — line 125
-- `beginOffscreenTransportExecution` — function — line 188
-- `cancelTransportOrder` — function — line 177
-- `clearTransportExecution` — function — line 202
-- `completeTransportDelivery` — function — line 154
-- `completeTransportPickup` — function — line 137
-- `createTransportOrderRecord` — function — line 104
-- `failTransportOrder` — function — line 170
-- `isTransportOrderActive` — function — line 100
-- `isTransportOrderTerminal` — function — line 96
-- `TransportEndpointRef` — type — line 38
-- `TransportExecution` — type — line 59
-- `TransportOrder` — type — line 67
-- `TransportOrderState` — type — line 28
+- `assignTransportOrder` — function — line 131
+- `beginOffscreenTransportExecution` — function — line 194
+- `cancelTransportOrder` — function — line 183
+- `clearTransportExecution` — function — line 208
+- `completeTransportDelivery` — function — line 160
+- `completeTransportPickup` — function — line 143
+- `createTransportOrderRecord` — function — line 110
+- `failTransportOrder` — function — line 176
+- `isTransportOrderActive` — function — line 106
+- `isTransportOrderTerminal` — function — line 102
+- `TransportEndpointRef` — type — line 39
+- `TransportExecution` — type — line 65
+- `TransportOrder` — type — line 73
+- `TransportOrderState` — type — line 29
   - domain: settlements-npcs
 
 ## `world/transportTransactions.ts`

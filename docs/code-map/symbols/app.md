@@ -440,11 +440,11 @@ Generated from exported TypeScript symbols.
 - `caveCrateContainerSpecs` — function — line 331
   - domain: world-terrain
 - `caveTreasureContainerSpecs` — function — line 298
-- `createWorldBundle` — function — line 2167
-- `disposeWorldBundle` — function — line 2656
+- `createWorldBundle` — function — line 2171
+- `disposeWorldBundle` — function — line 2660
 - `HOME_RADIUS` — const — line 251
 - `homeChunks` — function — line 355
-- `rebuildWorldBundle` — function — line 2411
+- `rebuildWorldBundle` — function — line 2415
 - `WorldBundle` — type — line 378
   - system: world-bundle
   - role: Owns the lifetime/rebuild boundary for all world systems (terrain, settlements, fauna, items, player-placed structures).

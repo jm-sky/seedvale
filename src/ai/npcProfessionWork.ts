@@ -1,3 +1,4 @@
+import type { EconomicSourceId } from '../economy/kinds'
 import type { ItemKind } from '../items/items'
 import type { HeightSampler } from '../player/PlayerController'
 import type { Household } from '../settlement/household'
@@ -37,6 +38,7 @@ import {
 import {
   creditDeliveredOreToStock,
   ORE_TRANSPORT_MAX_TRANSFER,
+  sourcedDeliveryProvenance,
   uncommittedResourceSiteOre,
   uncoveredOreProductionNeed,
 } from '../economy/oreTransportDemand'
@@ -531,7 +533,13 @@ function planTransportOrderExecution(
             nowDays: ctx.simTime(),
           })
           if (result.ok) {
-            creditDeliveredOreToStock(destEconomy, current.itemKind, result.delivered, ctx.simTime())
+            creditDeliveredOreToStock(
+              destEconomy,
+              current.itemKind,
+              result.delivered,
+              ctx.simTime(),
+              sourcedDeliveryProvenance(current),
+            )
             tryAdvanceDevelopment(destEconomy)
             ctx.clearTransportTravel?.(current.id)
           }
@@ -799,6 +807,62 @@ function planTraderOreCollection(ctx: NpcWorkContext, economy: SettlementEconomy
   return planTransportOrderExecution(ctx, economy, order)
 }
 
+function selectSourcedGoldSite(
+  ctx: NpcWorkContext,
+  active: readonly TransportOrder[],
+): { resourceId: string, economicSourceId: EconomicSourceId, available: number } | null {
+  const sites = ctx.resourceSiteInventories
+  const resolvePosition = ctx.resolveResourceSitePosition
+  const mining = ctx.mining
+  if (!sites || !resolvePosition || !mining) return null
+  let best: { resourceId: string, economicSourceId: EconomicSourceId, available: number, dist: number } | null = null
+  for (const [resourceId, inventory] of sites.entries()) {
+    const economicSourceId = mining.resolveEconomicSourceId(resourceId)
+    if (!economicSourceId) continue
+    const available = uncommittedResourceSiteOre(inventory, active, resourceId, undefined, 'gold')
+    if (available <= 0) continue
+    const position = resolvePosition(resourceId)
+    if (!position) continue
+    const dist = Math.hypot(position.x - ctx.x, position.z - ctx.z)
+    if (!best || dist < best.dist || (dist === best.dist && resourceId < best.resourceId)) {
+      best = { resourceId, economicSourceId, available, dist }
+    }
+  }
+  return best ? { resourceId: best.resourceId, economicSourceId: best.economicSourceId, available: best.available } : null
+}
+
+/**
+ * Sourced-gold resource-site → settlement bridge (plan settlements-004) —
+ * moves already-mined gold attributed to a known `EconomicSourceId` (the
+ * abandoned mine) from `ResourceSiteInventories` into settlement stock,
+ * reusing the same `TransportOrder` pipeline as `planTraderOreCollection`.
+ * A distinct economy-realization demand, not a production shortage: it
+ * never touches `ORE_TRANSPORT_KINDS`/`uncoveredOreProductionNeed`, and
+ * unattributed gold (no resolvable `economicSourceId`) is left alone.
+ */
+function planTraderSourcedGoldCollection(ctx: NpcWorkContext, economy: SettlementEconomy): NpcPlannedAction | null {
+  const orders = ctx.transportOrders
+  const sites = ctx.resourceSiteInventories
+  if (!orders || !sites || !ctx.npcId) return null
+  const existing = orders.findByCarrier(ctx.npcId)
+  if (existing) return planTransportOrderExecution(ctx, economy, existing)
+  const active = orders.list()
+  const source = selectSourcedGoldSite(ctx, active)
+  if (!source) return null
+  let quantity = Math.min(source.available, ORE_TRANSPORT_MAX_TRANSFER)
+  while (quantity > 0 && !ctx.transportCargo.canAdd('gold', quantity)) quantity -= 1
+  if (quantity <= 0) return null
+  const order = orders.create({
+    source: { type: 'resource-site', resourceId: source.resourceId, economicSourceId: source.economicSourceId },
+    destination: { type: 'settlement-storage', settlementId: economy.settlementId },
+    itemKind: 'gold',
+    requestedQuantity: quantity,
+    carrierNpcId: ctx.npcId,
+  })
+  if (!order) return null
+  return planTransportOrderExecution(ctx, economy, order)
+}
+
 /**
  * Inter-settlement food export (plan settlements-npcs-037) — source
  * settlement storage → destination settlement storage. Local uncovered
@@ -859,6 +923,8 @@ function planTraderWork(ctx: NpcWorkContext): NpcPlannedAction | null {
   if (food) return food
   const ore = planTraderOreCollection(ctx, economy)
   if (ore) return ore
+  const gold = planTraderSourcedGoldCollection(ctx, economy)
+  if (gold) return gold
   const exported = planTraderInterSettlementExport(ctx, economy)
   if (exported) return exported
   if (!(household.surplus('wood') > 0 && economy.hasShortage('wood'))) return null

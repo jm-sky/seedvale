@@ -43,6 +43,8 @@
 
 1. `quests-progression-046` — **Lost Treasure Chronicles — integration, legacy catch-up and superseded quest cleanup**  
    🔴 `L` · 🔒 blocked · unlocks 0/0
+2. `quests-progression-069` — **Quest offer pacing and conservative settlement gating**  
+   🔴 `M` · ✅ ready · unlocks 0/0
 
 ---
 
@@ -127,88 +129,100 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `L` · **Score:**  66  
    → **unlocks:** 0/0
 
-14. `settlements-npcs-022` — **Household help and age-based work participation**  
-  🔴 `M` · **Score:**  57  
-   → **unlocks:** 1/1
+14. `items-player-032` — **NPC player-storage resource and context rules**  
+  🟡 `L` · **Score:**  64  
+   → **unlocks:** 1/4
 
-15. `quests-progression-053` — **Hunters Brotherhood — competing hunting strategies**  
-  🟡 `L` · **Score:**  56  
-   → **unlocks:** 1/1
+15. `npc-032` — **Expedition needs and survival**  
+  🔴 `L` · **Score:**  98  
+   → **unlocks:** 3/3
 
-16. `settlements-npcs-043` — **Settlement Cultivation Hydration, Rain & Farmer Watering**  
-  🔴 `L` · **Score:**  56  
-   → **unlocks:** 1/1
-
-17. `quests-progression-063` — **Healer — Injured Resident**  
-  🟡 `M` · **Score:**  49  
-   → **unlocks:** 1/1
-
-18. `settlements-004` — **Gold Economic Realization & Source Entitlements**  
-  🔴 `M` · **Score:**  49  
-   → **unlocks:** 1/1
-
-19. `quests-progression-010` — **Abandoned gold mine → mining colony integration**  
+16. `quests-progression-010` — **Abandoned gold mine → mining colony integration**  
   🔴 `M` · **Score:**  61  
    → **unlocks:** 0/0
 
-20. `quests-progression-060` — **Builder — Finish the Local Well**  
+17. `settlements-npcs-022` — **Household help and age-based work participation**  
+  🔴 `M` · **Score:**  57  
+   → **unlocks:** 1/1
+
+18. `quests-progression-053` — **Hunters Brotherhood — competing hunting strategies**  
+  🟡 `L` · **Score:**  56  
+   → **unlocks:** 1/1
+
+19. `settlements-npcs-043` — **Settlement Cultivation Hydration, Rain & Farmer Watering**  
+  🔴 `L` · **Score:**  56  
+   → **unlocks:** 1/1
+
+20. `quests-progression-069` — **Quest offer pacing and conservative settlement gating**  
+  🔴 `M` · **Score:**  51  
+   → **unlocks:** 0/0
+
+21. `quests-progression-063` — **Healer — Injured Resident**  
+  🟡 `M` · **Score:**  49  
+   → **unlocks:** 1/1
+
+22. `quests-progression-060` — **Builder — Finish the Local Well**  
   🔴 `M` · **Score:**  47  
    → **unlocks:** 0/0
 
-21. `quests-progression-054` — **Hunters Brotherhood — exceptional animal finale**  
+23. `quests-progression-054` — **Hunters Brotherhood — exceptional animal finale**  
   🟡 `L` · **Score:**  44  
    → **unlocks:** 0/0
 
-22. `settlements-npcs-044` — **Authored Outpost Occupants & Construction Lifecycle**  
+24. `settlements-npcs-044` — **Authored Outpost Occupants & Construction Lifecycle**  
   🔴 `L` · **Score:**  40  
    → **unlocks:** 1/1
 
-23. `quests-progression-058` — **Injured dog discovery thread**  
+25. `quests-progression-058` — **Injured dog discovery thread**  
   🟡 `M` · **Score:**  37  
    → **unlocks:** 0/0
 
-24. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
+26. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
   🔴 `M` · **Score:**  35  
    → **unlocks:** 0/0
 
-25. `npc-055` — **Semantic profession and activity animation coverage**  
+27. `npc-055` — **Semantic profession and activity animation coverage**  
   🔴 `L` · **Score:**  32  
    → **unlocks:** 0/0
 
-26. `npc-054` — **NPC desired gifts, gift acceptance and relationship rewards**  
+28. `npc-057` — **NPC destination threat assessment**  
+  🟡 `M` · **Score:**  31  
+   → **unlocks:** 1/1
+
+29. `world-terrain-042` — **Medicinal herb meadow patches**  
+  🟡 `M` · **Score:**  31  
+   → **unlocks:** 1/1
+
+30. `npc-054` — **NPC desired gifts, gift acceptance and relationship rewards**  
   🔴 `L` · **Score:**  30  
    → **unlocks:** 0/0
 
-27. `items-player-014` — **Rope-pullable resource transport**  
+31. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-28. `tools-005` — **Seedvale Character Preparation Panel**  
+32. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-29. `world-terrain-039` — **N8AO / post-process cost budget**  
+33. `world-terrain-039` — **N8AO / post-process cost budget**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-30. `items-player-044` — **Shoulder and forearm equipment slots**  
+34. `items-player-044` — **Shoulder and forearm equipment slots**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-31. `world-terrain-041` — **Agent presentation render LOD**  
+35. `world-terrain-041` — **Agent presentation render LOD**  
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-32. `items-player-032` — **NPC player-storage resource and context rules**  
-  🟡 `L` · **Score:**  20  
-   → **unlocks:** 0/0
-
-33. `npc-057` — **NPC destination threat assessment**  
+36. `quests-progression-061` — **Builder — Complete an Unfinished Palisade Segment**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-34. `quests-progression-061` — **Builder — Complete an Unfinished Palisade Segment**  
-  🟡 `M` · **Score:**  17  
+37. `quests-progression-070` — **Boar at the medicinal meadow — systemic settlement problem**  
+  🟡 `L` · **Score:**  16  
    → **unlocks:** 0/0
 
 ---
@@ -218,10 +232,13 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
 - [`items-player-032-npc-player-storage-resource-and-context-rules.md`](items-player-032-npc-player-storage-resource-and-context-rules.md)  
   is blocked by:
   - [`items-player-028-npc-player-storage-access-policies.md`](items-player-028-npc-player-storage-access-policies.md)
+- [`npc-032-expedition-needs-and-survival.md`](npc-032-expedition-needs-and-survival.md)  
+  is blocked by:
+  - [`items-player-028-npc-player-storage-access-policies.md`](items-player-028-npc-player-storage-access-policies.md)
+  - [`items-player-032-npc-player-storage-resource-and-context-rules.md`](items-player-032-npc-player-storage-resource-and-context-rules.md)
 - [`quests-progression-010-abandoned-gold-mine-colony.md`](quests-progression-010-abandoned-gold-mine-colony.md)  
   is blocked by:
   - [`settlements-003-colony-bootstrap.md`](settlements-003-colony-bootstrap.md)
-  - [`settlements-004-gold-economic-realization-and-source-entitlements.md`](settlements-004-gold-economic-realization-and-source-entitlements.md)
 - [`quests-progression-041-lost-treasure-chronicles-dungeon-binding-and-persistent-collapsed-access.md`](quests-progression-041-lost-treasure-chronicles-dungeon-binding-and-persistent-collapsed-access.md)  
   is blocked by:
   - [`quests-progression-040-lost-treasure-chronicles-dark-forest-estate-alpha-bear-and-treasure-map.md`](quests-progression-040-lost-treasure-chronicles-dark-forest-estate-alpha-bear-and-treasure-map.md)
@@ -259,6 +276,10 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
 - [`quests-progression-065-blacksmith-missing-tools.md`](quests-progression-065-blacksmith-missing-tools.md)  
   is blocked by:
   - [`settlements-npcs-024-household-owned-profession-workplaces.md`](settlements-npcs-024-household-owned-profession-workplaces.md)
+- [`quests-progression-070-boar-at-the-medicinal-meadow-systemic-settlement-problem.md`](quests-progression-070-boar-at-the-medicinal-meadow-systemic-settlement-problem.md)  
+  is blocked by:
+  - [`npc-057-npc-destination-threat-assessment.md`](npc-057-npc-destination-threat-assessment.md)
+  - [`world-terrain-042-medicinal-herb-meadow-patches.md`](world-terrain-042-medicinal-herb-meadow-patches.md)
 - [`settlements-npcs-044-authored-outpost-occupants-and-construction-lifecycle.md`](settlements-npcs-044-authored-outpost-occupants-and-construction-lifecycle.md)  
   is blocked by:
   - [`world-031-authored-persistent-world-consequences.md`](world-031-authored-persistent-world-consequences.md)
@@ -512,6 +533,8 @@ graph TD
   quests_progression_066["quests-progression-066 — Elder Knowledge and Teaching"]
   quests_progression_067["quests-progression-067 — Missing Merchant systemic investigation"]
   quests_progression_068["quests-progression-068 — Dangerous Merchant route and persistent world consequence"]
+  quests_progression_069["quests-progression-069 — Quest offer pacing and conservative settlement gating"]
+  quests_progression_070["quests-progression-070 — Boar at the medicinal meadow — systemic settlement problem"]
   settlements_001["settlements-001 — House Collision Geometry"]
   settlements_002["settlements-002 — House Browser"]
   settlements_003["settlements-003 — Colony settlement bootstrap"]
@@ -692,6 +715,7 @@ graph TD
   world_terrain_039["world-terrain-039 — N8AO / post-process cost budget"]
   world_terrain_040["world-terrain-040 — Vegetation render budget v2"]
   world_terrain_041["world-terrain-041 — Agent presentation render LOD"]
+  world_terrain_042["world-terrain-042 — Medicinal herb meadow patches"]
   008 --> items_player_010
   069 --> settlements_npcs_008
   097 --> world_terrain_007
@@ -842,6 +866,7 @@ graph TD
   items_player_030 --> items_player_039
   items_player_030 --> items_player_040
   items_player_031 --> quests_progression_035
+  items_player_032 --> npc_032
   items_player_033 --> items_player_034
   items_player_033 --> items_player_035
   items_player_033 --> items_player_036
@@ -931,6 +956,7 @@ graph TD
   npc_053 --> npc_054
   npc_053 --> settlements_npcs_049
   npc_053 --> settlements_npcs_050
+  npc_057 --> quests_progression_070
   persistence_002 --> persistence_003
   persistence_002 --> persistence_004
   persistence_003 --> persistence_004
@@ -950,6 +976,7 @@ graph TD
   quests_progression_002 --> quests_progression_019
   quests_progression_003 --> quests_progression_005
   quests_progression_004 --> quests_progression_005
+  quests_progression_004 --> quests_progression_069
   quests_progression_005 --> quests_progression_014
   quests_progression_005 --> quests_progression_018
   quests_progression_006 --> quests_progression_013
@@ -999,10 +1026,12 @@ graph TD
   quests_progression_033 --> quests_progression_034
   quests_progression_033 --> quests_progression_037
   quests_progression_033 --> quests_progression_048
+  quests_progression_033 --> quests_progression_069
   quests_progression_033 --> ui_input_021
   quests_progression_034 --> quests_progression_037
   quests_progression_034 --> quests_progression_048
   quests_progression_034 --> quests_progression_055
+  quests_progression_034 --> quests_progression_069
   quests_progression_035 --> quests_progression_051
   quests_progression_035 --> quests_progression_056
   quests_progression_036 --> quests_progression_040
@@ -1113,6 +1142,7 @@ graph TD
   settlements_npcs_026 --> settlements_npcs_028
   settlements_npcs_027 --> quests_progression_010
   settlements_npcs_027 --> settlements_npcs_028
+  settlements_npcs_028 --> npc_032
   settlements_npcs_028 --> quests_progression_010
   settlements_npcs_028 --> settlements_003
   settlements_npcs_028 --> settlements_npcs_037
@@ -1246,4 +1276,5 @@ graph TD
   world_terrain_028 --> quests_progression_027
   world_terrain_028 --> world_terrain_037
   world_terrain_033 --> world_terrain_029
+  world_terrain_042 --> quests_progression_070
 ```

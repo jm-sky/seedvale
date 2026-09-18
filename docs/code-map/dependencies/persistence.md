@@ -36,6 +36,7 @@ Generated from TypeScript imports.
 - `economy/kinds.ts`
 - `economy/productionShortage.ts`
 - `economy/settlementEconomy.ts`
+- `economy/sourceLedger.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/AnimalSpawner.ts`
 - `fauna/animalStray.ts`
