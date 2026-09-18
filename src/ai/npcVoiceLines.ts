@@ -145,7 +145,7 @@ export const NPC_FRIENDLY_TALK_SOUND_URLS: Record<NpcGender, readonly string[]> 
 }
 
 /** Quieter than a reaction sound — background chatter, not a foregrounded cue. */
-export const FRIENDLY_TALK_SOUND_VOLUME = 0.25
+export const FRIENDLY_TALK_SOUND_VOLUME = 0.65
 
 export function pickNpcFriendlyTalkSound(gender: NpcGender): string | undefined {
   const pool = NPC_FRIENDLY_TALK_SOUND_URLS[gender]
