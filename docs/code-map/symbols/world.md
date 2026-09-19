@@ -1179,11 +1179,11 @@ Generated from exported TypeScript symbols.
 
 ## `world/herbalGathering.ts`
 
-- `createHerbalGatherHooks` — function — line 40
+- `createHerbalGatherHooks` — function — line 45
   - domain: settlements-npcs
 - `HerbalGatherTarget` — type — line 15
 - `HERBALIST_GATHER_KINDS` — const — line 5
-- `nearestHerbalGatherTarget` — function — line 58
+- `nearestHerbalGatherTarget` — function — line 72
 - `SettlementHerbalGatherHooks` — type — line 26
 
 ## `world/hiddenFinds.ts`

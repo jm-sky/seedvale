@@ -110,6 +110,7 @@ Generated from TypeScript imports.
 - `economy/interSettlementFoodTransport.ts`
 - `economy/npcWork.ts`
 - `economy/settlementEconomy.ts`
+- `fauna/destinationThreatHooks.ts`
 - `fauna/huntingHooks.ts`
 - `fauna/shepherdFlock.ts`
 - `items/Inventory.ts`
@@ -324,6 +325,7 @@ Generated from TypeScript imports.
 - `ai/npcAppearance.ts`
 - `ai/npcCombat.test.ts`
 - `ai/npcCombat.ts`
+- `ai/npcDestinationThreat.ts`
 - `ai/npcLoadout.ts`
 - `ai/npcProfessionWork.ts`
 - `ai/npcSocialTitle.test.ts`
@@ -857,6 +859,25 @@ Generated from TypeScript imports.
 - `ai/graveVisitPressure.test.ts`
 - `ai/npcDecision.test.ts`
 
+## `ai/npcDestinationThreat.test.ts`
+
+**Imports**
+
+- `ai/npcDestinationThreat.ts`
+- `fauna/destinationThreatHooks.ts`
+
+## `ai/npcDestinationThreat.ts`
+
+**Imports**
+
+- `ai/characters.ts`
+- `fauna/destinationThreatHooks.ts`
+
+**Imported by**
+
+- `ai/npcDestinationThreat.test.ts`
+- `ai/npcProfessionWork.ts`
+
 ## `ai/npcExpeditionTravel.test.ts`
 
 **Imports**
@@ -1235,6 +1256,7 @@ Generated from TypeScript imports.
 
 - `ai/characters.ts`
 - `ai/npcAction.ts`
+- `ai/npcDestinationThreat.ts`
 - `ai/npcLogistics.ts`
 - `economy/foodTransportDemand.ts`
 - `economy/interSettlementFoodTransport.ts`
@@ -1245,6 +1267,7 @@ Generated from TypeScript imports.
 - `economy/production.ts`
 - `economy/productionExecutor.ts`
 - `economy/settlementEconomy.ts`
+- `fauna/destinationThreatHooks.ts`
 - `fauna/livestockProduction.ts`
 - `fauna/shepherdFlock.ts`
 - `items/Inventory.ts`

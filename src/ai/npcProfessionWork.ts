@@ -1,4 +1,5 @@
 import type { EconomicSourceId } from '../economy/kinds'
+import type { SettlementDestinationThreatHooks } from '../fauna/destinationThreatHooks'
 import type { ItemKind } from '../items/items'
 import type { HeightSampler } from '../player/PlayerController'
 import type { Household } from '../settlement/household'
@@ -77,6 +78,7 @@ import { FISHING_CAST_DURATION_SEC, fishingSpotId, rollFishingCatch } from '../w
 import { HERBALIST_GATHER_KINDS } from '../world/herbalGathering'
 import { CROP_SEED_ITEM, FARM_SEED_PRIORITY } from '../world/plantedCrops'
 import { executeTransportPickup, executeTransportUnload } from '../world/transportTransactions'
+import { assessDestinationThreat, DESTINATION_THREAT_INFLUENCE_RADIUS, HERBALIST_GATHER_RISK_PROFILE } from './npcDestinationThreat'
 import { depositCarriedItems, HOUSEHOLD_EXCHANGE_MAX_TRANSFER } from './npcLogistics'
 import type { Vector3 } from 'three'
 
@@ -184,6 +186,19 @@ export type NpcWorkContext = {
   hasShearingTool?: () => boolean
   /** Wild herb/flax gather hooks (plan settlements-npcs-007). */
   herbalGather?: SettlementHerbalGatherHooks | null
+  /** Bounded destination-threat snapshot hook over the live `Fauna` (plan
+   *  npc-057) — one bounded scan per destination-selection decision, reused
+   *  across every candidate destination in that same decision, never
+   *  queried per candidate or on a per-frame cadence. */
+  destinationThreat?: SettlementDestinationThreatHooks | null
+  /** 0–1 current HP ratio (plan npc-057) — same value `NpcAgent.reactToAnimalThreat`
+   *  already derives, passed once per `professionContext()` build. */
+  healthRatio?: number
+  hasMeleeCapability?: boolean
+  hasRangedCapability?: boolean
+  /** 0–1 Big Five neuroticism (plan npc-057, plan ai-002) — same value
+   *  `reactToAnimalThreat` reads. */
+  neuroticism?: number
   /**
    * Settlement-owned pasture work area (plan settlements-009). Read-only
    * satellite anchor from `VillagePlan.pasture`; absent on SM/OUTPOST.
@@ -1121,6 +1136,14 @@ function planTextileWork(ctx: NpcWorkContext): NpcPlannedAction | null {
 }
 
 const HERBAL_GATHER_RADIUS = 60
+/** Deterministic candidate cap for a single Herbalist work-selection decision
+ *  (plan npc-057 §8) — small enough to keep per-candidate scoring cheap,
+ *  large enough that a safer 2nd–5th candidate is usually available. */
+export const HERBAL_CANDIDATE_LIMIT = 4
+/** Single bounded fauna scan radius (plan npc-057 §3/§8) — covers every
+ *  candidate within `HERBAL_GATHER_RADIUS` plus that candidate's own
+ *  threat-influence neighborhood, in one query reused across all candidates. */
+const HERBAL_THREAT_SCAN_RADIUS = HERBAL_GATHER_RADIUS + DESTINATION_THREAT_INFLUENCE_RADIUS
 const HERBAL_YIELD_KINDS: readonly ItemKind[] = HERBALIST_GATHER_KINDS
 
 function planHerbalDeposit(ctx: NpcWorkContext): NpcPlannedAction | null {
@@ -1157,8 +1180,29 @@ function planHerbalistWork(ctx: NpcWorkContext): NpcPlannedAction | null {
   }
 
   if (!herbalGather) return null
-  const target = herbalGather.queryNearest(ctx.x, ctx.z, HERBAL_GATHER_RADIUS)
-  if (!target || !ctx.carried.canAdd(target.kind, 1)) return null
+  const candidates = herbalGather.queryCandidates(ctx.x, ctx.z, HERBAL_GATHER_RADIUS, HERBAL_CANDIDATE_LIMIT)
+  if (candidates.length === 0) return null
+
+  // One bounded fauna scan reused across every candidate below (plan
+  // npc-057 §3/§8) — never queried per candidate.
+  const threats = ctx.destinationThreat
+    ? ctx.destinationThreat.queryThreats(ctx.x, ctx.z, HERBAL_THREAT_SCAN_RADIUS)
+    : []
+
+  const target = candidates.find((candidate) => {
+    if (!ctx.carried.canAdd(candidate.kind, 1)) return false
+    return assessDestinationThreat({
+      destination: { x: candidate.x, z: candidate.z },
+      threats,
+      healthRatio: ctx.healthRatio ?? 1,
+      hasMeleeCapability: ctx.hasMeleeCapability ?? false,
+      hasRangedCapability: ctx.hasRangedCapability ?? false,
+      role: ctx.role,
+      neuroticism: ctx.neuroticism ?? 0.5,
+      activityRiskProfile: HERBALIST_GATHER_RISK_PROFILE,
+    }).acceptable
+  })
+  if (!target) return null
 
   return {
     kind: 'work',

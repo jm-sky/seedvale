@@ -143,6 +143,7 @@ What fauna exposes for NPC/settlement consumption — the NPC side of consuming 
 - **Habitat pressure snapshot** (plan fauna-031) — `Fauna.getHabitatPressure(spawnerId, nowDays)` returns a derived, immutable condition for one managed `PreySpawner` (live/capacity, deaths-this-cycle, nearby predators, grass forage). It is a lazy runtime cache, not authoritative state and not part of `SaveData`. Quests/NPC/settlements may read it; they do not write it.
 - **Per-individual danger significance** — `AnimalAgent.dangerSignificance` (and `variant`) for player-kill context. Reputation/quests consume the number; they do not own variant assignment.
 - **The hunting hooks contract** — a nearest-huntable-animal query (with the seeded population-protection roll) and a re-validated harvest operation, bound to the live fauna system through a late-bound accessor (since fauna is constructed after NPCs at boot).
+- **Projected human-danger + a bounded destination-threat scan** (plan npc-057) — `AnimalDef.humanDanger` (absent for harmless prey/livestock) is the species baseline; `animalHumanDanger.ts::resolveHumanDangerProjection` combines it with current aggressive state (frenzied/rabid/actively threatening a human) and `dangerSignificance` into one final number. `destinationThreatHooks.ts::createDestinationThreatHooks` exposes this as one bounded, primitive-only scan (`queryThreats(centerX, centerZ, radius)`) over live fauna, bound the same late-bound way as the hunting hooks above. This answers "is it safe to voluntarily start an activity near here", never "defend or flee" (that stays the immediate-threat pipeline in [npc.md](./npc.md)).
 - **The combat-target adapter** that lets the shared combat resolvers treat an animal as an attackable target without those resolvers knowing anything about `AnimalAgent` internals.
 
 **One confirmed exception to the "hooks, not imports" convention runs the other way:** `fauna/AnimalAgent.ts` imports the NPC-owned movement watchdog module directly (for its own chase/flee stuck detection), rather than going through a hook. This is deliberate reuse, not an oversight worth "fixing" into a fauna-local duplicate.
@@ -182,6 +183,8 @@ src/fauna/faunaDecision.ts
 src/fauna/faunaCombat.ts
 src/fauna/waterTraversal.ts
 src/fauna/huntingHooks.ts
+src/fauna/animalHumanDanger.ts
+src/fauna/destinationThreatHooks.ts
 src/fauna/animalHarvest.ts
 src/fauna/animalMeat.ts
 src/fauna/herdCohesion.ts

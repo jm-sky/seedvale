@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { type NpcWorkContext, planProfessionWork } from './ai/npcProfessionWork'
+import { HERBAL_CANDIDATE_LIMIT, type NpcWorkContext, planProfessionWork } from './ai/npcProfessionWork'
 import { commitDressingProduction, commitTextileWorkProduction } from './economy/npcWork'
 import {
   DRESSING_PRODUCTION,
@@ -11,7 +11,7 @@ import { executeProduction } from './economy/productionExecutor'
 import { Inventory } from './items/Inventory'
 import { CONSUMABLE_KINDS_BY_NEED, ITEM_CATALOG } from './items/itemCatalog'
 import { createHousehold } from './settlement/household'
-import { nearestHerbalGatherTarget } from './world/herbalGathering'
+import { type HerbalGatherTarget, nearestHerbalGatherTarget } from './world/herbalGathering'
 
 const HOME = { x: 0, y: 0, z: 0 }
 const LANDMARKS = {
@@ -128,6 +128,7 @@ describe('settlements-npcs-007 herbalist work', () => {
     const carried = new Inventory()
     const herbalGather = {
       queryNearest: () => ({ id: '0:0:f0', kind: 'herb' as const, x: 3, z: 0 }),
+      queryCandidates: () => [{ id: '0:0:f0', kind: 'herb' as const, x: 3, z: 0 }],
       harvest: () => ({ count: 1, kind: 'herb' as const }),
     }
     const work = planProfessionWork(baseCtx({
@@ -145,5 +146,148 @@ describe('settlements-npcs-007 herbalist work', () => {
     work?.next?.onComplete()
     expect(household.items.count('herb')).toBe(1)
     expect(carried.count('herb')).toBe(0)
+  })
+})
+
+/** Plan npc-057 — Herbalist destination-threat integration. */
+describe('settlements-npcs-007 herbalist destination threat', () => {
+  const workplace = { position: { x: 1, y: 0, z: 1 } } as NpcWorkContext['workplace']
+  const NEAR = { id: 'near', kind: 'herb' as const, x: 5, z: 0 }
+  const FAR = { id: 'far', kind: 'mint' as const, x: 30, z: 0 }
+  // An aggressive wolf's projected human danger (matches `ANIMAL_DEFS.wolf.humanDanger.aggressiveFloor`)
+  // — high enough at zero distance to exceed an unarmed, healthy herbalist's
+  // conservative-gathering tolerance (~0.7) on its own.
+  const AGGRESSIVE_WOLF_HUMAN_DANGER = 0.75
+
+  function herbalGatherWith(candidates: readonly { id: string, kind: 'herb' | 'mint', x: number, z: number }[]) {
+    return {
+      queryNearest: () => candidates[0] ?? null,
+      queryCandidates: (_x: number, _z: number, _range: number, limit: number) => candidates.slice(0, limit),
+      harvest: (target: HerbalGatherTarget) => ({ count: 1, kind: target.kind }),
+    }
+  }
+
+  it('keeps the nearest candidate unchanged when no threats are nearby', () => {
+    const household = createHousehold('h', 's', 'home')
+    const work = planProfessionWork(baseCtx({
+      role: 'herbalist',
+      household,
+      workplace,
+      herbalGather: herbalGatherWith([NEAR, FAR]),
+      destinationThreat: { queryThreats: () => [] },
+      x: 0,
+      z: 0,
+    }))
+    expect(work?.destination.x).toBe(NEAR.x)
+  })
+
+  it('chooses a farther safe candidate when the nearest one is unsafe', () => {
+    const household = createHousehold('h', 's', 'home')
+    const work = planProfessionWork(baseCtx({
+      role: 'herbalist',
+      household,
+      workplace,
+      herbalGather: herbalGatherWith([NEAR, FAR]),
+      // Wolf sits right at the near candidate — far outside FAR's threat
+      // influence radius.
+      destinationThreat: { queryThreats: () => [{ animalId: 'wolf-1', x: NEAR.x, z: NEAR.z, humanDanger: AGGRESSIVE_WOLF_HUMAN_DANGER }] },
+      healthRatio: 1,
+      hasMeleeCapability: false,
+      hasRangedCapability: false,
+      neuroticism: 0.5,
+      x: 0,
+      z: 0,
+    }))
+    expect(work?.destination.x).toBe(FAR.x)
+  })
+
+  it('returns no gather trip when every bounded candidate is unsafe', () => {
+    const household = createHousehold('h', 's', 'home')
+    const work = planProfessionWork(baseCtx({
+      role: 'herbalist',
+      household,
+      workplace,
+      herbalGather: herbalGatherWith([NEAR, FAR]),
+      destinationThreat: {
+        queryThreats: () => [
+          { animalId: 'wolf-1', x: NEAR.x, z: NEAR.z, humanDanger: AGGRESSIVE_WOLF_HUMAN_DANGER },
+          { animalId: 'wolf-2', x: FAR.x, z: FAR.z, humanDanger: AGGRESSIVE_WOLF_HUMAN_DANGER },
+        ],
+      },
+      healthRatio: 1,
+      hasMeleeCapability: false,
+      hasRangedCapability: false,
+      neuroticism: 0.5,
+      x: 0,
+      z: 0,
+    }))
+    expect(work).toBeNull()
+  })
+
+  it('makes a removed threat eligible again on the next work-selection cycle', () => {
+    const household = createHousehold('h', 's', 'home')
+    let wolfPresent = true
+    const ctx = baseCtx({
+      role: 'herbalist',
+      household,
+      workplace,
+      herbalGather: herbalGatherWith([NEAR]),
+      destinationThreat: {
+        queryThreats: () => (wolfPresent ? [{ animalId: 'wolf-1', x: NEAR.x, z: NEAR.z, humanDanger: AGGRESSIVE_WOLF_HUMAN_DANGER }] : []),
+      },
+      healthRatio: 1,
+      hasMeleeCapability: false,
+      hasRangedCapability: false,
+      neuroticism: 0.5,
+      x: 0,
+      z: 0,
+    })
+    expect(planProfessionWork(ctx)).toBeNull()
+    wolfPresent = false
+    expect(planProfessionWork(ctx)?.destination.x).toBe(NEAR.x)
+  })
+
+  it('caps the number of candidates requested at the named Herbalist limit', () => {
+    const household = createHousehold('h', 's', 'home')
+    const requestedLimits: number[] = []
+    const herbalGather = {
+      queryNearest: () => NEAR,
+      queryCandidates: (_x: number, _z: number, _range: number, limit: number) => {
+        requestedLimits.push(limit)
+        return [NEAR]
+      },
+      harvest: () => ({ count: 1, kind: 'herb' as const }),
+    }
+    planProfessionWork(baseCtx({
+      role: 'herbalist',
+      household,
+      workplace,
+      herbalGather,
+      destinationThreat: { queryThreats: () => [] },
+      x: 0,
+      z: 0,
+    }))
+    expect(requestedLimits).toEqual([HERBAL_CANDIDATE_LIMIT])
+  })
+
+  it('reuses one fauna threat snapshot across every candidate instead of re-querying per candidate', () => {
+    const household = createHousehold('h', 's', 'home')
+    let queryThreatsCalls = 0
+    const work = planProfessionWork(baseCtx({
+      role: 'herbalist',
+      household,
+      workplace,
+      herbalGather: herbalGatherWith([NEAR, FAR]),
+      destinationThreat: {
+        queryThreats: () => {
+          queryThreatsCalls++
+          return []
+        },
+      },
+      x: 0,
+      z: 0,
+    }))
+    expect(work?.destination.x).toBe(NEAR.x)
+    expect(queryThreatsCalls).toBe(1)
   })
 })

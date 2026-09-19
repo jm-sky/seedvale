@@ -1727,6 +1727,7 @@ Generated from TypeScript imports.
 - `fauna/animalCaveHabitat.ts`
 - `fauna/animalNaturalWater.ts`
 - `fauna/createFauna.ts`
+- `fauna/destinationThreatHooks.ts`
 - `fauna/dungeonResidents.ts`
 - `fauna/huntingHooks.ts`
 - `fauna/persistentOccupants.ts`

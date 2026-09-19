@@ -703,6 +703,13 @@ Generated from TypeScript imports.
 - `world/locations/worldKnowledgeResearch.test.ts`
 - `world/locations/worldKnowledgeResearch.ts`
 
+## `terrain/chunkWorldItems.test.ts`
+
+**Imports**
+
+- `items/items.ts`
+- `terrain/chunkWorldItems.ts`
+
 ## `terrain/chunkWorldItems.ts`
 
 **Imports**
@@ -717,6 +724,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `terrain/chunkManager.ts`
+- `terrain/chunkWorldItems.test.ts`
 
 ## `terrain/coastPlacement.test.ts`
 

@@ -180,7 +180,8 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [NPC travel continuity](../src/ai/npcTravel.ts) — generic detailed↔off-screen spatial + survival/arrival checkpoint (019 duration math, 028 expedition dispatch, 037 transport `orderId` purpose).
 - [NPC expedition travel](../src/ai/npcExpeditionTravel.ts) — idempotent `ready` assignment → per-member `NpcAuthoritativeState.travel` (plan settlements-npcs-028); destination resolve stays in [expedition.ts](../src/world/expedition.ts).
 - [NPC logistics](../src/ai/npcLogistics.ts) — the claim→carry→deposit two-leg transfer builder and the economy-withdraw/household-exchange/player-storage-delivery flows built on it.
-- [NPC profession work](../src/ai/npcProfessionWork.ts) — profession `work`-block planners (miner/hunter/farmer/fisher/guard/trader/blacksmith/shepherd/textile_worker) as pure functions.
+- [NPC profession work](../src/ai/npcProfessionWork.ts) — profession `work`-block planners (miner/hunter/farmer/fisher/guard/trader/blacksmith/shepherd/textile_worker/herbalist) as pure functions.
+- [NPC destination threat](../src/ai/npcDestinationThreat.ts) — pure destination-risk/tolerance scorer for voluntary outdoor activities (plan npc-057), the Herbalist consumer's decision-time-only gate.
 - [NPC strategies](../src/ai/npcStrategies.ts) — per-need candidate strategy lists + `selectStrategy()`, the authoritative source `beginNeed()` switches on.
 - [NPC decision](../src/ai/npcDecision.ts) — the top-level `choose()`/`tickCriticalInterrupt()` priority tables, fauna-style.
 - [Burial pressure](../src/ai/burialPressure.ts) — household/social burial of a deceased NPC (`npc-011`).
@@ -221,6 +222,8 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [Livestock production](../src/fauna/livestockProduction.ts) — absolute-day egg/milk/wool readiness math.
 - [Shepherd flock](../src/fauna/shepherdFlock.ts) — owned-sheep lookup, flock size, and flock-threat query.
 - [Domestic safe flee](../src/fauna/domesticFlee.ts) — pure shepherd/home/settlement flee-anchor preference and directional safety gate for household livestock fleeing a live predator threat (plan fauna-037).
+- [Human-danger projection](../src/fauna/animalHumanDanger.ts) — pure resolver combining `AnimalDef.humanDanger`, current aggressive state and `dangerSignificance` into one final projected danger to a human (plan npc-057).
+- [Destination-threat hooks](../src/fauna/destinationThreatHooks.ts) — bounded read-only fauna scan for NPC destination-risk assessment, same late-bound shape as `huntingHooks.ts` (plan npc-057).
 
 <!-- AI_NAVIGATION_INDEX_START -->
 

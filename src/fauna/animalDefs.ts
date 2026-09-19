@@ -188,6 +188,31 @@ export type AnimalDef = {
    *  equip a pack (`canEquipAnimalPack`), but the capability itself is pure
    *  species data. */
   pack?: PackConfig
+  /** Presence of this field IS the "this species projects meaningful danger
+   *  to a nearby human just by existing" capability (plan npc-057) — same
+   *  "no separate boolean, no per-species branch" shape as `mount`/`diet`
+   *  above. Absent means harmless (every prey/livestock kind): a destination-
+   *  threat scan never blocks a work destination merely because one is
+   *  nearby. See `animalHumanDanger.ts::resolveHumanDangerProjection` for how
+   *  this combines with current behavioural state and `dangerSignificance`. */
+  humanDanger?: HumanDangerConfig
+}
+
+/** Fauna-owned per-species projected danger to a human bystander (plan
+ *  npc-057 §1) — deliberately two levels, not one plain scalar: a purely
+ *  multiplicative `baseline × aggressiveMultiplier` can't tell a human-
+ *  avoiding normal fox (≈0) from a frenzied one (meaningful) once the calm
+ *  baseline is exactly zero, so an aggressive state instead floors the
+ *  modifier at `aggressiveFloor` rather than scaling `baseline`. See
+ *  `resolveHumanDangerProjection`. */
+export type HumanDangerConfig = {
+  /** Projected danger while behaving normally (calm/evasive) — near-zero for
+   *  a species that avoids humans on its own (fox), already meaningful for
+   *  one that's a real risk just by being close (wolf, more so bear). */
+  baseline: number
+  /** Floor once genuinely aggressive (frenzied, rabid, or actively
+   *  threatening a human right now) — always >= `baseline`. */
+  aggressiveFloor: number
 }
 
 /** Cargo capacity for an equipped `saddlebags` pack (plan fauna-039) — the
@@ -427,6 +452,10 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     // Plan fauna-034 §4: the initial required territorial species —
     // defends its own `wolfDen` (never a generic `rockDen`/`thicket`).
     territorial: { defendedSpawnerTypes: ['wolfDen'], radius: 16 },
+    // Plan npc-057 §1: a wolf is meaningful destination risk before it ever
+    // commits to attacking a human — greater once actually aggressive, and
+    // below `bear`'s baseline.
+    humanDanger: { baseline: 0.45, aggressiveFloor: 0.75 },
   },
   fox: {
     kind: 'fox',
@@ -447,6 +476,10 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     diet: MEAT_DIET,
     // Plan fauna-034 §1: active at dawn/dusk, rests more at midday/midnight.
     activity: { profile: 'crepuscular', restBias: 0.45 },
+    // Plan npc-057 §1: negligible while behaving normally (a fox avoids
+    // humans on its own) but meaningful once frenzied/rabid/actually
+    // threatening — see `resolveHumanDangerProjection`'s aggressive floor.
+    humanDanger: { baseline: 0.03, aggressiveFloor: 0.5 },
   },
   deer: {
     kind: 'deer',
@@ -566,6 +599,9 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     // live consumers are dropped-food attraction + `dietAcceptsItem()`.
     diet: BEAR_DIET,
     trips: { water: BEAR_WATER_TRIP },
+    // Plan npc-057 §1: the largest baseline destination risk — greater than
+    // a normal wolf even before either animal is aggressive.
+    humanDanger: { baseline: 0.65, aggressiveFloor: 0.85 },
   },
   horse: {
     kind: 'horse',

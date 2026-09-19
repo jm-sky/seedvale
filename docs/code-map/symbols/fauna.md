@@ -144,27 +144,28 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/animalDefs.ts`
 
-- `ANIMAL_DEFS` — const — line 399
+- `ANIMAL_DEFS` — const — line 424
 - `ANIMAL_LABELS` — const — line 51
-- `AnimalActivityConfig` — type — line 209
-- `AnimalAffinityConfig` — type — line 222
+- `AnimalActivityConfig` — type — line 234
+- `AnimalAffinityConfig` — type — line 247
 - `AnimalDef` — type — line 70
-- `AnimalDietConfig` — type — line 252
+- `AnimalDietConfig` — type — line 277
 - `AnimalKind` — type — line 29
 - `AnimalLifeStage` — type — line 24
 - `AnimalRole` — type — line 16
   - domain: fauna
   - role: Species taxonomy and per-kind tuning data for `AnimalAgent` — no runtime/agent state, no Three.js. Moved out of `AnimalAgent.ts` (plan fauna-017 step 1): 31% of that file was this module's data sitting above the class. Re-exported wholesale from `AnimalAgent.ts` via `export *`, so every existing importer of species types/`ANIMAL_DEFS` is unaffected.
 - `AnimalSociability` — type — line 20
-- `dietAcceptsItem` — function — line 377
-- `DraftConfig` — type — line 283
-- `LeadConfig` — type — line 277
-- `LivestockProductionConfig` — type — line 312
-- `LivestockProductKind` — type — line 299
-- `MountPointConfig` — type — line 290
-- `PackConfig` — type — line 199
-- `ScavengingConfig` — type — line 263
-- `WaterTripConfig` — type — line 231
+- `dietAcceptsItem` — function — line 402
+- `DraftConfig` — type — line 308
+- `HumanDangerConfig` — type — line 208
+- `LeadConfig` — type — line 302
+- `LivestockProductionConfig` — type — line 337
+- `LivestockProductKind` — type — line 324
+- `MountPointConfig` — type — line 315
+- `PackConfig` — type — line 224
+- `ScavengingConfig` — type — line 288
+- `WaterTripConfig` — type — line 256
 
 ## `fauna/animalDialogue.ts`
 
@@ -224,6 +225,13 @@ Generated from exported TypeScript symbols.
 - `isAffinityTrusted` — function — line 37
 - `serializeHumanAffinity` — function — line 41
 - `SparseHumanAffinity` — type — line 18
+
+## `fauna/animalHumanDanger.ts`
+
+- `AnimalHumanDangerState` — type — line 11
+  - domain: fauna
+  - role: Fauna-owned pure resolver for one live animal's projected danger to a human bystander (plan npc-057 §1) — the single authority the destination-threat hook (`destinationThreatHooks.ts`) reads instead of duplicating species/behaviour knowledge in `ai/`.
+- `resolveHumanDangerProjection` — function — line 34
 
 ## `fauna/animalLead.ts`
 
@@ -536,6 +544,13 @@ Generated from exported TypeScript symbols.
 - `spawnerDestroyBusyLabel` — function — line 501
 - `spawnerDestroyPromptLabel` — function — line 497
 - `spawnerId` — function — line 458
+
+## `fauna/destinationThreatHooks.ts`
+
+- `collectDestinationThreats` — function — line 35
+- `createDestinationThreatHooks` — function — line 70
+- `DestinationAnimalThreat` — type — line 14
+- `SettlementDestinationThreatHooks` — type — line 21
 
 ## `fauna/dogGuard.ts`
 

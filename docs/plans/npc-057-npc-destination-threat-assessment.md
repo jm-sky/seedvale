@@ -1,7 +1,7 @@
 # Plan: NPC destination threat assessment
 
 **Created:** 2026-09-18
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Model:** Opus, Sonnet

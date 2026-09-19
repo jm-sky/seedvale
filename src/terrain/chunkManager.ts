@@ -129,6 +129,7 @@ import {
 import {
   chunkCoordFromWorldItemId,
   nearestWorldChunkItem,
+  nearestWorldChunkItems,
   proceduralChunkItems,
 } from './chunkWorldItems'
 import { densityLodFraction, grassFillerLodFraction, grassGeometryLodTier } from './distanceLod'
@@ -623,6 +624,18 @@ export type ChunkManager = {
     kinds: readonly ItemKind[],
     maxChunkRadius: number,
   ) => { id: string, kind: ItemKind, x: number, z: number } | null
+  /** Bounded top-`limit` nearest world-generated items of one of `kinds`
+   *  within `radius` — same candidate universe/off-screen resolution as
+   *  `findNearestWorldItem`, generalized to a small ordered result set
+   *  (plan npc-057 §8) so a caller can pick a *different* nearby candidate
+   *  when the nearest one is unsafe, without re-querying per candidate. */
+  findNearestWorldItems: (
+    pos: { x: number, z: number },
+    radius: number,
+    kinds: readonly ItemKind[],
+    maxChunkRadius: number,
+    limit: number,
+  ) => readonly { id: string, kind: ItemKind, x: number, z: number }[]
   /** Naturally-generated crops (`terrain/chunkCrops.ts`) within `radius` of
    *  `pos` among currently loaded chunks (plan 172) — same "loaded chunks
    *  only" contract as `getNearbyItems`, with lifecycle stage already
@@ -2972,6 +2985,41 @@ export function createChunkManager(
             .map((p) => ({ id: p.id, kind: p.kind, x: p.x, z: p.z }))
         },
         maxChunkRadius,
+      )
+    },
+    findNearestWorldItems(pos, radius, kinds, maxChunkRadius, limit) {
+      const kindSet = new Set(kinds)
+      const nowDays = config.getWorldDays()
+      const loaded = this.getNearbyItems(pos, radius).filter((item) => kindSet.has(item.kind))
+      return nearestWorldChunkItems(
+        pos.x,
+        pos.z,
+        radius,
+        kindSet,
+        config.chunkSize,
+        loaded,
+        (coord) => {
+          const rec = chunks.get(chunkKey(coord))
+          const placements = rec?.tile?.items
+            ?? proceduralChunkItems(
+              coord,
+              paramsFor(coord, []),
+              config.collectedItemIds,
+              config.renewableWorldItems,
+              nowDays,
+            )
+          return placements
+            .filter((p) => kindSet.has(p.kind)
+              && isWorldItemPlacementAvailable(
+                p,
+                config.collectedItemIds,
+                config.renewableWorldItems,
+                nowDays,
+              ))
+            .map((p) => ({ id: p.id, kind: p.kind, x: p.x, z: p.z }))
+        },
+        maxChunkRadius,
+        limit,
       )
     },
     harvestCrop(id) {

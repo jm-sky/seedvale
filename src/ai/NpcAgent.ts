@@ -5,6 +5,7 @@ import type { ResolvedDefense } from '../combat/defenseResolver'
 import type { Projectile } from '../combat/projectile'
 import type { RangedAttackLifecycle } from '../combat/rangedLifecycle'
 import type { InterSettlementTransportHooks } from '../economy/interSettlementFoodTransport'
+import type { SettlementDestinationThreatHooks } from '../fauna/destinationThreatHooks'
 import type { HuntTarget, SettlementHuntingHooks } from '../fauna/huntingHooks'
 import type { DroppedItems } from '../items/createDroppedItems'
 import type { ItemKind } from '../items/items'
@@ -1076,6 +1077,13 @@ export type NpcAgentDeps = {
   foodSources?: SettlementFoodSourceHooks
   herbalGather?: SettlementHerbalGatherHooks
   hunting?: SettlementHuntingHooks
+  /** Bounded destination-threat snapshot hooks over the live `Fauna` (plan
+   *  npc-057) — forwarded into every `professionContext()` call the same
+   *  way `hunting` is above. Null in isolated fallbacks and for any
+   *  settlement built before fauna exists — destination assessment then
+   *  sees no threats, same "no fauna yet" no-op every other fauna-backed
+   *  hook already falls back to. */
+  destinationThreat?: SettlementDestinationThreatHooks | null
   /** Settlement-local owned-sheep lookup (plan fauna-004). */
   shepherdFlock?: ShepherdFlockHooks | null
   helperDelivery?: HelperDeliveryHooks
@@ -1595,6 +1603,10 @@ export class NpcAgent {
    *  exists, same as `mining`/`foodSources`. Only ever read by a `hunter`
    *  role NPC (`beginHuntExpedition`); every other role ignores it. */
   private readonly hunting: SettlementHuntingHooks | null
+  /** Bounded destination-threat snapshot hooks over the live `Fauna` (plan
+   *  npc-057) — null in isolated fallbacks, same as `hunting`. Only ever
+   *  read by `professionContext()`, once per profession-planning decision. */
+  private readonly destinationThreat: SettlementDestinationThreatHooks | null
   private readonly shepherdFlock: ShepherdFlockHooks | null
   /** Helper resource-delivery target lookup/transfer hooks over the player's
    *  own placed `Container`s (plan 167) — null in isolated fallbacks, same as
@@ -1638,6 +1650,7 @@ export class NpcAgent {
       foodSources,
       herbalGather,
       hunting,
+      destinationThreat,
       shepherdFlock,
       helperDelivery,
       householdExchange,
@@ -1715,6 +1728,7 @@ export class NpcAgent {
     this.foodSources = foodSources ?? null
     this.herbalGather = herbalGather ?? null
     this.hunting = hunting ?? null
+    this.destinationThreat = destinationThreat ?? null
     this.shepherdFlock = shepherdFlock ?? null
     this.helperDelivery = helperDelivery ?? null
     this.householdExchange = householdExchange ?? null
@@ -4968,6 +4982,11 @@ export class NpcAgent {
    *  NPC's real counters back rather than returning a tuple. Called fresh
    *  right before each `planProfessionWork` call, never cached. */
   private professionContext(): NpcWorkContext {
+    // Same real combat-capability/health/personality derivation
+    // `reactToAnimalThreat` already uses (plan npc-057) — computed once here
+    // rather than letting the profession planner rediscover them.
+    const rangedWeapon = resolveNpcRangedWeapon(this.personalInventory, this.role)
+    const hasRangedCapability = rangedWeapon != null && this.resolveRangedAmmo(rangedWeapon.ranged) != null
     return {
       role: this.role,
       x: this.mesh.position.x,
@@ -4998,6 +5017,11 @@ export class NpcAgent {
       mining: this.mining,
       foodSources: this.foodSources,
       herbalGather: this.herbalGather,
+      destinationThreat: this.destinationThreat,
+      healthRatio: this.health.maxHp > 0 ? this.health.currentHp / this.health.maxHp : 0,
+      hasMeleeCapability: resolveNpcMeleeWeapon(this.personalInventory, this.role) != null,
+      hasRangedCapability,
+      neuroticism: this.personality.neuroticism,
       householdExchange: this.householdExchange,
       npcId: this.id,
       transportOrders: this.transportOrders,

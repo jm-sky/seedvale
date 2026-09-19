@@ -185,43 +185,39 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `L` · **Score:**  32  
    → **unlocks:** 0/0
 
-28. `npc-057` — **NPC destination threat assessment**  
+28. `world-terrain-042` — **Medicinal herb meadow patches**  
   🟡 `M` · **Score:**  31  
    → **unlocks:** 1/1
 
-29. `world-terrain-042` — **Medicinal herb meadow patches**  
-  🟡 `M` · **Score:**  31  
-   → **unlocks:** 1/1
-
-30. `npc-054` — **NPC desired gifts, gift acceptance and relationship rewards**  
+29. `npc-054` — **NPC desired gifts, gift acceptance and relationship rewards**  
   🔴 `L` · **Score:**  30  
    → **unlocks:** 0/0
 
-31. `items-player-014` — **Rope-pullable resource transport**  
+30. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-32. `tools-005` — **Seedvale Character Preparation Panel**  
+31. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-33. `world-terrain-039` — **N8AO / post-process cost budget**  
+32. `world-terrain-039` — **N8AO / post-process cost budget**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-34. `items-player-044` — **Shoulder and forearm equipment slots**  
+33. `items-player-044` — **Shoulder and forearm equipment slots**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-35. `world-terrain-041` — **Agent presentation render LOD**  
+34. `world-terrain-041` — **Agent presentation render LOD**  
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-36. `quests-progression-061` — **Builder — Complete an Unfinished Palisade Segment**  
+35. `quests-progression-061` — **Builder — Complete an Unfinished Palisade Segment**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-37. `quests-progression-070` — **Boar at the medicinal meadow — systemic settlement problem**  
+36. `quests-progression-070` — **Boar at the medicinal meadow — systemic settlement problem**  
   🟡 `L` · **Score:**  16  
    → **unlocks:** 0/0
 
@@ -278,7 +274,6 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   - [`settlements-npcs-024-household-owned-profession-workplaces.md`](settlements-npcs-024-household-owned-profession-workplaces.md)
 - [`quests-progression-070-boar-at-the-medicinal-meadow-systemic-settlement-problem.md`](quests-progression-070-boar-at-the-medicinal-meadow-systemic-settlement-problem.md)  
   is blocked by:
-  - [`npc-057-npc-destination-threat-assessment.md`](npc-057-npc-destination-threat-assessment.md)
   - [`world-terrain-042-medicinal-herb-meadow-patches.md`](world-terrain-042-medicinal-herb-meadow-patches.md)
 - [`settlements-npcs-044-authored-outpost-occupants-and-construction-lifecycle.md`](settlements-npcs-044-authored-outpost-occupants-and-construction-lifecycle.md)  
   is blocked by:

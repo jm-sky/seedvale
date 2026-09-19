@@ -9,6 +9,7 @@ import type { PlayAt } from '../audio/createWorldAudio'
 import type { InterSettlementTransportHooks } from '../economy/interSettlementFoodTransport'
 import type { SettlementEconomy } from '../economy/settlementEconomy'
 import type { AnimalAgent, AnimalKind, NearbyNpcCandidate, VillageInfo } from '../fauna/AnimalAgent'
+import type { SettlementDestinationThreatHooks } from '../fauna/destinationThreatHooks'
 import type { SettlementHuntingHooks } from '../fauna/huntingHooks'
 import type { DropLivestockProductHook } from '../fauna/livestockProduction'
 import type { ShepherdFlockHooks } from '../fauna/shepherdFlock'
@@ -385,6 +386,10 @@ export type CreateSettlementDeps = {
    *  — forwarded into every `NpcAgent.create` call the same way
    *  `mining`/`foodSources` are above. */
   hunting?: SettlementHuntingHooks
+  /** Bounded destination-threat snapshot hooks over the live `Fauna` (plan
+   *  npc-057) — forwarded into every `NpcAgent.create` call the same way
+   *  `hunting` is above. */
+  destinationThreat?: SettlementDestinationThreatHooks
   /** Helper resource-delivery target hooks over the player's placed
    *  `Container`s (plan 167) — forwarded into every `NpcAgent.create` call
    *  the same way `foodSources`/`hunting` are above. */
@@ -512,6 +517,7 @@ export async function createSettlement(
     foodSources,
     herbalGather,
     hunting,
+    destinationThreat,
     helperDelivery,
     relations = createNpcRelationships(),
     livestockPersistence,
@@ -1147,6 +1153,7 @@ export async function createSettlement(
         foodSources,
         herbalGather,
         hunting,
+        destinationThreat,
         helperDelivery,
         householdExchange,
         workContracts,

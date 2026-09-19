@@ -25,6 +25,11 @@ export type HerbalGatherTarget = {
  */
 export type SettlementHerbalGatherHooks = {
   queryNearest: (x: number, z: number, range: number) => HerbalGatherTarget | null
+  /** Bounded top-`limit` nearest herbal candidates, nearest-first with a
+   *  stable distance/id tie-break (plan npc-057 §8) — lets a destination-risk
+   *  assessment pick a safer 2nd–5th candidate when the nearest one isn't,
+   *  without re-scanning the world per candidate. */
+  queryCandidates: (x: number, z: number, range: number, limit: number) => readonly HerbalGatherTarget[]
   /** Re-validates and collects `target` — null when already taken. */
   harvest: (target: HerbalGatherTarget) => { count: number, kind: ItemKind } | null
 }
@@ -45,6 +50,15 @@ export function createHerbalGatherHooks(chunkManager: ChunkManager): SettlementH
         range,
         HERBALIST_GATHER_KINDS,
         OFFSCREEN_CHUNK_RADIUS,
+      )
+    },
+    queryCandidates(x, z, range, limit) {
+      return chunkManager.findNearestWorldItems(
+        { x, z },
+        range,
+        HERBALIST_GATHER_KINDS,
+        OFFSCREEN_CHUNK_RADIUS,
+        limit,
       )
     },
     harvest(target) {

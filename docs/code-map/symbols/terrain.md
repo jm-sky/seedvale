@@ -203,23 +203,23 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/chunkManager.ts`
 
-- `applyChunkWaterDayNight` — function — line 996
-- `applyModificationToTile` — function — line 853
-- `ChunkManager` — type — line 532
-- `ChunkManagerConfig` — type — line 334
-- `createChunkManager` — function — line 1021
+- `applyChunkWaterDayNight` — function — line 1009
+- `applyModificationToTile` — function — line 866
+- `ChunkManager` — type — line 533
+- `ChunkManagerConfig` — type — line 335
+- `createChunkManager` — function — line 1034
   - domain: world-terrain
   - system: chunk-manager
   - role: Owns terrain chunk streaming, sampling and environment-facing world queries.
   - simulation: on-demand
   - performance: nearby-only
-- `CropHarvestOutcome` — type — line 1010
-- `drainByBudget` — function — line 971
-- `FinalizeStage` — type — line 440
-- `pickNearestQueuedKey` — function — line 931
-- `pickNextFinalizeKey` — function — line 949
-- `TerrainModification` — type — line 810
-- `tickChunkWaterSurfaces` — function — line 984
+- `CropHarvestOutcome` — type — line 1023
+- `drainByBudget` — function — line 984
+- `FinalizeStage` — type — line 441
+- `pickNearestQueuedKey` — function — line 944
+- `pickNextFinalizeKey` — function — line 962
+- `TerrainModification` — type — line 823
+- `tickChunkWaterSurfaces` — function — line 997
 
 ## `terrain/chunkMeshCache.ts`
 
@@ -298,6 +298,7 @@ Generated from exported TypeScript symbols.
 
 - `chunkCoordFromWorldItemId` — function — line 33
 - `nearestWorldChunkItem` — function — line 69
+- `nearestWorldChunkItems` — function — line 113
 - `proceduralChunkItems` — function — line 50
   - domain: settlements-npcs
 - `WorldChunkItemRef` — type — line 25

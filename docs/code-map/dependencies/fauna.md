@@ -122,6 +122,7 @@ Generated from TypeScript imports.
 - `fauna/animalVariants.test.ts`
 - `fauna/closedPredatorPressure.ts`
 - `fauna/createFauna.ts`
+- `fauna/destinationThreatHooks.test.ts`
 - `fauna/dungeonResidents.ts`
 - `fauna/faunaCombat.test.ts`
 - `fauna/faunaCombat.ts`
@@ -383,6 +384,8 @@ Generated from TypeScript imports.
 - `fauna/animalForaging.test.ts`
 - `fauna/animalForaging.ts`
 - `fauna/animalHarvest.test.ts`
+- `fauna/animalHumanDanger.test.ts`
+- `fauna/animalHumanDanger.ts`
 - `fauna/animalLead.test.ts`
 - `fauna/animalLead.ts`
 - `fauna/animalPack.test.ts`
@@ -396,6 +399,7 @@ Generated from TypeScript imports.
 - `fauna/animalWalkSpeed.ts`
 - `fauna/closedPredatorPressure.ts`
 - `fauna/corpseDecay.test.ts`
+- `fauna/destinationThreatHooks.ts`
 - `fauna/dungeonResidents.test.ts`
 - `fauna/dungeonResidents.ts`
 - `fauna/foodWaterTargeting.test.ts`
@@ -498,6 +502,24 @@ Generated from TypeScript imports.
 
 - `fauna/AnimalAgent.test.ts`
 - `fauna/AnimalAgent.ts`
+
+## `fauna/animalHumanDanger.test.ts`
+
+**Imports**
+
+- `fauna/animalDefs.ts`
+- `fauna/animalHumanDanger.ts`
+
+## `fauna/animalHumanDanger.ts`
+
+**Imports**
+
+- `fauna/animalDefs.ts`
+
+**Imported by**
+
+- `fauna/animalHumanDanger.test.ts`
+- `fauna/destinationThreatHooks.ts`
 
 ## `fauna/animalLead.test.ts`
 
@@ -885,6 +907,7 @@ Generated from TypeScript imports.
 - `app/worldBundle.ts`
 - `assets/assetIndex.ts`
 - `fauna/createFauna.test.ts`
+- `fauna/destinationThreatHooks.ts`
 - `fauna/huntingHooks.ts`
 - `fauna/measureSlope.test.ts`
 - `fauna/spawnerLabels.test.ts`
@@ -898,6 +921,32 @@ Generated from TypeScript imports.
 - `world/caves/productionTopology.floor-continuity.test.ts`
 - `world/createCaves.test.ts`
 - `world/largeCaves.ts`
+
+## `fauna/destinationThreatHooks.test.ts`
+
+**Imports**
+
+- `fauna/AnimalAgent.ts`
+- `fauna/destinationThreatHooks.ts`
+
+## `fauna/destinationThreatHooks.ts`
+
+**Imports**
+
+- `fauna/animalDefs.ts`
+- `fauna/animalHumanDanger.ts`
+- `fauna/createFauna.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `ai/npcDestinationThreat.test.ts`
+- `ai/npcDestinationThreat.ts`
+- `ai/npcProfessionWork.ts`
+- `app/worldBundle.ts`
+- `fauna/destinationThreatHooks.test.ts`
+- `settlement/SettlementsManager.ts`
+- `settlement/createSettlement.ts`
 
 ## `fauna/dogGuard.test.ts`
 

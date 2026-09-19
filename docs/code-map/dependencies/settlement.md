@@ -47,6 +47,7 @@ Generated from TypeScript imports.
 - `fauna/AnimalAgent.ts`
 - `fauna/animalNaturalWater.ts`
 - `fauna/animalOwnership.ts`
+- `fauna/destinationThreatHooks.ts`
 - `fauna/huntingHooks.ts`
 - `fauna/livestockProduction.ts`
 - `fauna/ownedAnimalControl.ts`
@@ -210,6 +211,7 @@ Generated from TypeScript imports.
 - `economy/interSettlementFoodTransport.ts`
 - `economy/settlementEconomy.ts`
 - `fauna/AnimalAgent.ts`
+- `fauna/destinationThreatHooks.ts`
 - `fauna/huntingHooks.ts`
 - `fauna/livestockProduction.ts`
 - `fauna/shepherdFlock.ts`

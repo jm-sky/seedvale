@@ -7,6 +7,7 @@ import type { WorldConfig } from '../config/worldConfig'
 import type { SettlementEconomySnapshot } from '../economy/settlementEconomy'
 import type { AnimalKind } from '../fauna/AnimalAgent'
 import type { AnimalHabitatBinding } from '../fauna/animalCaveHabitat'
+import type { SettlementDestinationThreatHooks } from '../fauna/destinationThreatHooks'
 import type { SettlementHuntingHooks } from '../fauna/huntingHooks'
 import type { PersistentOccupantSnapshot } from '../fauna/persistentOccupants'
 import type { PersistentOccupantDecl } from '../fauna/persistentOccupants'
@@ -48,6 +49,7 @@ import type { WorkContractRecord } from '../world/workContract'
 import { createNaturalWaterKindAt } from '../fauna/animalNaturalWater'
 import { type SavedSpawnPointState, snapshotSpawnPointState } from '../fauna/AnimalSpawner'
 import { createFauna, type Fauna, SPAWNER_RING_OFFSET } from '../fauna/createFauna'
+import { createDestinationThreatHooks } from '../fauna/destinationThreatHooks'
 import { buildDungeonResidentsPlan } from '../fauna/dungeonResidents'
 import { createHuntingHooks } from '../fauna/huntingHooks'
 import { buildAuthoredOneTimePickups } from '../items/authoredWorldPickups'
@@ -561,6 +563,11 @@ function buildSettlementsManager(
    *  `SettlementsManager`/every `NpcAgent`, so this closes over an accessor
    *  rather than a direct `Fauna` reference. */
   hunting?: SettlementHuntingHooks,
+  /** Bounded destination-threat snapshot hooks over the live `Fauna` (plan
+   *  npc-057) — forwarded into every `createSettlement` call → every
+   *  `NpcAgent`, the same way `hunting` is above, and late-bound for the
+   *  same reason. */
+  destinationThreat?: SettlementDestinationThreatHooks,
   /** Carried across an in-session `rebuildWorldBundle` (plan 197 §8) — not
    *  part of `SaveData`, so `createWorldBundle`'s own call site below never
    *  passes this (a genuinely fresh bundle has nothing to carry). */
@@ -657,6 +664,7 @@ function buildSettlementsManager(
     foodSources,
     herbalGather,
     hunting,
+    destinationThreat,
     initialHouseholds,
     initialNpcStates,
     helperDelivery,
@@ -1427,6 +1435,12 @@ async function buildWorldSystems(
   const hunting = createHuntingHooks(() => faunaForHunting, getWorldDays)
   bootMarkEnd('createHuntingHooks')
 
+  // Same late-bound `faunaForHunting` accessor as `hunting` above (plan
+  // npc-057) — one shared "no fauna yet" no-op, no second mutable accessor.
+  bootMark('createDestinationThreatHooks')
+  const destinationThreat = createDestinationThreatHooks(() => faunaForHunting)
+  bootMarkEnd('createDestinationThreatHooks')
+
   // Built ahead of `settlementsManager` (plan 167) — every `NpcAgent`'s
   // `helperDelivery` hooks need a live `PlacedContainers` to resolve a helper
   // assignment's target, the same "built before settlementsManager, forwarded
@@ -1567,7 +1581,7 @@ async function buildWorldSystems(
   // background, not awaited here (world-003 §3) — see
   // `SettlementsManager.homeReady`.
   bootMark('buildSettlementsManager')
-  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, herbalGather, hunting, initialHouseholds, initialNpcStates, helperDelivery, initialNpcRelationships, initialLivestock, initialRemovedLivestockIds, initialRats, initialRemovedRatIds, initialStorageInfestation, seedHomeStorageInfestation, workContracts, transportOrders, resourceSiteInventories, resolveResourceSitePosition, playerWells, droppedItems, grassForage, playerTroughs, terrainPreparations, palisades, standingTorches, residentialBuildings, npcGraves, initialStructureStates, getWorldDays, onSettlementAvailable, npcWorldMovement, onAnimalDeathSound)
+  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, herbalGather, hunting, destinationThreat, initialHouseholds, initialNpcStates, helperDelivery, initialNpcRelationships, initialLivestock, initialRemovedLivestockIds, initialRats, initialRemovedRatIds, initialStorageInfestation, seedHomeStorageInfestation, workContracts, transportOrders, resourceSiteInventories, resolveResourceSitePosition, playerWells, droppedItems, grassForage, playerTroughs, terrainPreparations, palisades, standingTorches, residentialBuildings, npcGraves, initialStructureStates, getWorldDays, onSettlementAvailable, npcWorldMovement, onAnimalDeathSound)
   bootMarkEnd('buildSettlementsManager')
   const homeDef = settlementsManager.getHomeDef()
   const riverWaterQuality = createRiverWaterQualityResolver(chunkManager.riverWaterContext, settlementsManager.peekDef)

@@ -7,6 +7,7 @@ import type { InterSettlementTransportHooks } from '../economy/interSettlementFo
 import type { SettlementEconomy, SettlementEconomySnapshot } from '../economy/settlementEconomy'
 import type { AnimalAgent, AnimalKind, VillageInfo } from '../fauna/AnimalAgent'
 import type { AnimalOwner } from '../fauna/animalOwnership'
+import type { SettlementDestinationThreatHooks } from '../fauna/destinationThreatHooks'
 import type { SettlementHuntingHooks } from '../fauna/huntingHooks'
 import type { DropLivestockProductHook } from '../fauna/livestockProduction'
 import type { OwnedAnimalControlMode } from '../fauna/ownedAnimalControl'
@@ -387,6 +388,11 @@ export async function createSettlementsManager(
    *  — forwarded into every `createSettlement` call the same way `mining`/
    *  `foodSources` are above. */
   hunting?: SettlementHuntingHooks,
+  /** Bounded destination-threat snapshot hooks over the live `Fauna` (plan
+   *  npc-057) — forwarded into every `createSettlement` call the same way
+   *  `hunting` is above, and late-bound by the same caller for the same
+   *  reason. */
+  destinationThreat?: SettlementDestinationThreatHooks,
   /** Carried across a `WorldBundle` rebuild (plan 197 §8) — same
    *  "same-manager-lifetime registry, stock-only carry snapshot on rebuild"
    *  contract as `initialEconomies` above, applied to `Household` (the
@@ -722,6 +728,7 @@ export async function createSettlementsManager(
     foodSources,
     herbalGather,
     hunting,
+    destinationThreat,
     helperDelivery,
     getPlayerSocial,
     getNearbyPlayerWell,

@@ -1279,6 +1279,7 @@ Generated from TypeScript imports.
 - `shared/foodPoisoningExposure.ts`
 - `terrain/chunkItems.ts`
 - `terrain/chunkManager.ts`
+- `terrain/chunkWorldItems.test.ts`
 - `terrain/chunkWorldItems.ts`
 - `terrain/depositMining.ts`
 - `terrain/digAction.ts`

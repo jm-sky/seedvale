@@ -180,25 +180,25 @@ Generated from exported TypeScript symbols.
 
 ## `ai/NpcAgent.ts`
 
-- `classifyPendingActivity` — function — line 748
-- `configureNpcPlayerReactionAudio` — function — line 996
-- `CurrentActivity` — type — line 549
-- `CurrentActivityKind` — type — line 542
-- `HUNT_RESUPPLY_ARROW_TARGET` — const — line 865
-- `NPC_HEIGHT` — const — line 482
-- `NPC_SHADOW_DISTANCE` — const — line 487
-- `NpcAgent` — class — line 1135
+- `classifyPendingActivity` — function — line 749
+- `configureNpcPlayerReactionAudio` — function — line 997
+- `CurrentActivity` — type — line 550
+- `CurrentActivityKind` — type — line 543
+- `HUNT_RESUPPLY_ARROW_TARGET` — const — line 866
+- `NPC_HEIGHT` — const — line 483
+- `NPC_SHADOW_DISTANCE` — const — line 488
+- `NpcAgent` — class — line 1143
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcAgentDeps` — type — line 1013
-- `NpcInspectionSnapshot` — type — line 564
-- `NpcWhy` — type — line 723
-- `projectNpcWhy` — function — line 790
-- `promoteChainKind` — function — line 740
+- `NpcAgentDeps` — type — line 1014
+- `NpcInspectionSnapshot` — type — line 565
+- `NpcWhy` — type — line 724
+- `projectNpcWhy` — function — line 791
+- `promoteChainKind` — function — line 741
 
 ## `ai/npcAnimalThreat.ts`
 
@@ -357,6 +357,17 @@ Generated from exported TypeScript symbols.
 - `NpcInterruptInput` — type — line 113
 - `scoreNpcDecisions` — function — line 105
 - `shouldInterruptAction` — function — line 135
+
+## `ai/npcDestinationThreat.ts`
+
+- `ActivityRiskProfile` — type — line 18
+  - domain: npc
+  - role: Pure, stateless NPC-side destination-risk assessment (plan npc-057) used before selected voluntary outdoor activities — "should I voluntarily start an activity at a place where I can already observe danger?". Never the immediate defend/flee pipeline (`npcAnimalThreat.ts` stays authoritative for that); this only gates *starting* a trip, evaluated once per destination-selection decision, never per-frame.
+- `assessDestinationThreat` — function — line 101
+- `DESTINATION_THREAT_INFLUENCE_RADIUS` — const — line 67
+- `DestinationThreatAssessment` — type — line 48
+- `HERBALIST_GATHER_RISK_PROFILE` — const — line 27
+- `NpcDestinationThreatInput` — type — line 32
 
 ## `ai/npcExpeditionTravel.ts`
 
@@ -556,11 +567,12 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcProfessionWork.ts`
 
-- `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 96
-- `findWeaponNeedingMaintenance` — function — line 112
-- `NpcWorkContext` — type — line 132
-- `planProfessionWork` — function — line 1193
-- `selectTraderCollectionGoods` — function — line 458
+- `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 98
+- `findWeaponNeedingMaintenance` — function — line 114
+- `HERBAL_CANDIDATE_LIMIT` — const — line 1142
+- `NpcWorkContext` — type — line 134
+- `planProfessionWork` — function — line 1237
+- `selectTraderCollectionGoods` — function — line 473
 
 ## `ai/npcSocialTitle.ts`
 
