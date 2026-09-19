@@ -1,7 +1,7 @@
 # Plan: Shared settlement resident runtime
 
 **Created:** 2026-09-19
-**Status:** `draft` 📝
+**Status:** `planned` 📋
 **Type:** refactor
 **Priority:** high · **Effort:** L
 **Depends on:** settlements-020
