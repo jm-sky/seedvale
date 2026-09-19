@@ -109,6 +109,8 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `npc-034-expedition-shared-work-and-activities.md`                          | 🔴 | M      | ~~npc-029~~, npc-032                                                                                                                                                                                                                                                                       | companions                                |
 | 💡 `settlements-npcs-051-travelling-merchant-road-party-travel-and-threat-cooperation.md` | 🔴 | L      | world-035, settlements-npcs-049, settlements-npcs-050, ~~settlements-npcs-048~~, ~~npc-048~~, ~~npc-057~~                                                                                                                                                                                  | quests-travelling-merchant-journeys       |
 | 💡 `world-035-regional-road-travel-itinerary-and-adaptive-traveller-execution.md` | 🔴 | L      | -                                                                                                                                                                                                                                                                                          | quests-travelling-merchant-journeys       |
+| ◼️ `settlements-npcs-052-persistent-economic-work-cargo-and-local-transfer-conservation.md` | 🔴 | M      | ~~settlements-npcs-019~~, ~~settlements-npcs-034~~                                                                                                                                                                                                                                         | -                                         |
+| ◼️ `settlements-npcs-053-active-transport-order-registry-lifecycle.md`         | 🟡 | S      | ~~settlements-npcs-018~~, ~~settlements-npcs-019~~, ~~settlements-npcs-020~~                                                                                                                                                                                                               | -                                         |
 
 ---
 
@@ -239,7 +241,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - persistence: `006`
 - quests-progression: `071`
 - settlements: `023`
-- settlements-npcs: `052`
+- settlements-npcs: `054`
 - tools: `019`
 - ui-input: `026`
 - world: `036`

@@ -5,7 +5,7 @@
 **Priority:** medium · **Effort:** S  
 **Depends on:** ~~settlements-npcs-018~~, ~~settlements-npcs-019~~, ~~settlements-npcs-020~~  
 **Domain:** `settlements-npcs`  
-**Type:** `performance`  
+**Type:** feature
 **Roadmap:** -  
 
 ## Problem
