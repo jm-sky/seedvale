@@ -160,6 +160,20 @@ Near/important journeys may materialize detailed agents, animals, camps and comb
 
 Remote journeys should use existing generic/off-screen continuity and bounded event resolution.
 
+Road travel now has a dedicated shared foundation:
+
+- `world-035-regional-road-travel-itinerary-and-adaptive-traveller-execution.md` owns entity-neutral regional road/path itinerary;
+- `ui-input-025` consumes it for Player Autopilot;
+- `settlements-npcs-051` consumes it for Travelling Merchant detailed party travel and threat cooperation.
+
+Performance invariant:
+
+```text
+journey start / justified replan → bounded route resolve
+ordinary detailed tick          → O(1) waypoint advance
+remote travel                   → existing low-frequency NpcTravel continuity
+```
+
 Do not add a world-global per-frame merchant simulation.
 
 ## 5. Stable identity
@@ -822,21 +836,23 @@ At this point poor/normal/rich variants can be composed from real NPCs, equipmen
 ## Wave 4 — Journey continuity
 
 6. NPC journey provisioning and readiness.
-7. Generic NPC travel camp / overnight stay.
+7. Shared regional road itinerary / adaptive traveller execution (`world-035`).
+8. Travelling Merchant road-party travel + bounded threat cooperation (`settlements-npcs-051`).
+9. Generic NPC travel camp / overnight stay.
 
 This makes long-distance travel believable independently of the player.
 
 ## Wave 5 — Social integration
 
-8. NPC desired gifts and relationship reward.
+10. NPC desired gifts and relationship reward.
 
 This plan can technically be implemented earlier, but it is grouped here because merchant/guard item desires benefit from the richer equipment catalog.
 
 ## Wave 6 — Failure becomes content
 
-9. Travelling NPC journey failure evidence.
-10. Missing merchant investigation quest.
-11. Dangerous merchant route / persistent route consequence.
+11. Travelling NPC journey failure evidence.
+12. Missing merchant investigation quest.
+13. Dangerous merchant route / persistent route consequence.
 
 This is the target emergent narrative chain:
 
@@ -870,6 +886,13 @@ merchant tiers + escorts
                │
                ▼
 journey preparation
+               │
+               ▼
+shared regional road itinerary
+               │
+               ▼
+merchant road-party travel
++ bounded threat cooperation
                │
                ▼
 generic travel camp
@@ -910,7 +933,9 @@ Likely domains:
 | NPC weapon choice and worn armor | `npc` |
 | Animal saddlebags / pack inventory | `fauna` |
 | Merchant tiers / escort / transport profile | `settlements-npcs` |
-| Journey provisioning/readiness | `npc` or `settlements-npcs` after recon |
+| Journey provisioning/readiness | `settlements-npcs` |
+| Shared regional road itinerary / adaptive execution | `world` |
+| Merchant road-party travel / threat cooperation | `settlements-npcs` |
 | Generic travel camp | `npc` or `world` after recon |
 | Desired gifts | `npc` with `quests-progression` relation integration |
 | Journey failure evidence | ownership to be resolved by recon; likely `world` + existing NPC/fauna owners |
