@@ -841,9 +841,9 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/ratPersistence.ts`
 
-- `createRatRegistry` — function — line 41
+- `createRatRegistry` — function — line 49
 - `RatPersistence` — type — line 17
-- `RatRegistry` — type — line 23
+- `RatRegistry` — type — line 27
 - `RatSaveRecord` — type — line 12
   - domain: fauna
   - system: settlement-rat-persistence
@@ -851,9 +851,9 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/rats.ts`
 
-- `createSettlementRats` — function — line 257
+- `createSettlementRats` — function — line 272
 - `infestationReplenishmentRoll` — function — line 102
-- `normalizeRatClipName` — function — line 205
+- `normalizeRatClipName` — function — line 220
 - `RAT_DOG_REPRODUCTION_PRESSURE` — const — line 41
 - `RAT_INFESTATION_FLOOR` — const — line 38
 - `RAT_INFESTATION_PRESSURE_BONUS` — const — line 36
@@ -863,17 +863,19 @@ Generated from exported TypeScript symbols.
   - system: settlement-rats
   - role: Settlement-local rat population pressure/reconciliation (plan fauna-016 §7/§8/§9, quests-progression-006, quests-progression-013) — deliberately not a `RatManager`: rats are plain `AnimalAgent('rat')` instances this module spawns toward a small, food-driven target population. Infestation replenishment is a separate nest-gated roll; excess live rats are never deleted just because the target falls.
 - `RAT_RECONCILE_INTERVAL_DAYS` — const — line 45
-- `RAT_URL` — const — line 196
+- `RAT_URL` — const — line 211
 - `ratDogReproductionMultiplier` — function — line 92
-- `RatFoodSite` — type — line 144
+- `RatFoodSite` — type — line 159
 - `ratNormalPopulationTarget` — function — line 77
 - `ratPopulationTarget` — function — line 85
 - `RatPressureInputs` — type — line 51
-- `ratReconcileAction` — function — line 127
+- `ratReconcileAction` — function — line 142
 - `RatReconcileAction` — type — line 56
-- `SettlementRats` — type — line 168
-- `SettlementRatsDeps` — type — line 146
+- `ratReconcileBucket` — function — line 128
+- `SettlementRats` — type — line 183
+- `SettlementRatsDeps` — type — line 161
 - `shouldInfestationReplenish` — function — line 113
+- `shouldProcessRatReconciliation` — function — line 133
 
 ## `settlement/roadNetwork.ts`
 
@@ -1119,7 +1121,7 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/SettlementsManager.ts`
 
-- `createSettlementsManager` — function — line 374
+- `createSettlementsManager` — function — line 378
   - domain: settlements
   - system: settlements-manager
   - role: Owns settlement generation, streaming and per-settlement economy/household/NPC-state registries.
