@@ -1,14 +1,13 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-19 12:25:35  
+> Date: 2026-09-19 12:29:08  
 
 ## PLANS
 
 - `fauna-040-settlement-rat-reconciliation-checkpoint.md`
 - `fauna-042-fauna-proximity-and-population-scan-cost.md`
 - `fauna-043-frenzy-source-target-claim-cleanup.md`
-- `fauna-044-stag-antler-drop-chance-survival-influence.md`
 - `npc-058-time-skip-resource-and-interrupt-parity.md`
 - `npc-059-need-action-result-revalidation-and-atomic-relief.md`
 - `quests-progression-044-lost-treasure-chronicles-final-treasure-claims-and-resolution.md`
@@ -135,43 +134,6 @@ Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną
 Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
 
 Po ukończeniu implementation notes zaktualizuj też `docs/plans/fauna-043-frenzy-source-target-claim-cleanup.md` i dodaj/ustaw metadata:
-`**Model:** <best>, <cheaper-safe-fallback>`
-Wybierz dokładnie dwa modele spośród: Composer, Grok, Sonnet, Opus.
-Pierwszy ma być najlepszym wyborem do implementacji, drugi tańszym wariantem o minimalnym dodatkowym ryzyku.
-Dobierz modele na podstawie wykonanego reconu i implementation notes, zgodnie z `docs/plans/PLANNING.md`.
-
-Pliki dodaj na branch `main` w repozytorium.
-```
-
-### `fauna-044-stag-antler-drop-chance-survival-influence.md`
-
-Prompt:
-
-```
-Zrób review planu `fauna-044-stag-antler-drop-chance-survival-influence.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/fauna-044-stag-antler-drop-chance-survival-influence.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/fauna-044-stag-antler-drop-chance-survival-influence-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
-
-Po ukończeniu implementation notes zaktualizuj też `docs/plans/fauna-044-stag-antler-drop-chance-survival-influence.md` i dodaj/ustaw metadata:
 `**Model:** <best>, <cheaper-safe-fallback>`
 Wybierz dokładnie dwa modele spośród: Composer, Grok, Sonnet, Opus.
 Pierwszy ma być najlepszym wyborem do implementacji, drugi tańszym wariantem o minimalnym dodatkowym ryzyku.
