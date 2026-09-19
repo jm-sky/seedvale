@@ -260,9 +260,9 @@ Add focused tests for the supported world range:
 - neighbouring cells on either axis;
 - large positive/negative cell coordinates inside the intended playable bound.
 
-The current implementation is arithmetic packing (`cx * CELL_KEY_STRIDE + cz`), not literal two-axis bit packing. Document the supported cell-coordinate/world-coordinate bound for which this mapping is collision-free and test that bound.
+The current implementation is arithmetic packing (`cx * CELL_KEY_STRIDE + cz`), not literal two-axis bit packing. Document the supported cell-coordinate/world-coordinate bound for which this mapping is collision-free and test that assumption directly.
 
-If the intended coordinate bound cannot be stated confidently, replace the packed numeric key with an unambiguous representation instead of relying on an undocumented range assumption.
+Do not replace the numeric key with a string key merely for stylistic certainty. Change the representation only if the tested supported coordinate range can actually produce collisions or if the project later removes the bounded-world assumption.
 
 ### 4. Scratch-buffer reentrancy
 
