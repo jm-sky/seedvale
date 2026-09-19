@@ -257,6 +257,24 @@ describe('updateSpawners', () => {
     )
     expect(queries).toBe(0)
   })
+
+  it('queries occupancy before materializing a respawn, so the sensing pass can finish first', () => {
+    const events: string[] = []
+    const s = spawner({ daysSinceLastRespawn: 10, maxPreyCount: 1 })
+    updateSpawners(
+      [s],
+      1,
+      () => {
+        events.push('occupancy')
+        return 0
+      },
+      () => {
+        events.push('respawn')
+        return true
+      },
+    )
+    expect(events).toEqual(['occupancy', 'respawn'])
+  })
 })
 
 describe('tickSpawnPointRecovery', () => {

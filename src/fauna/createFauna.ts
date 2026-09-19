@@ -1386,6 +1386,11 @@ export async function createFauna(
       const agentCpu = getAgentCpuDiag()
       const diagOn = agentCpu.isEnabled()
       const proximityT0 = diagOn ? performance.now() : 0
+      // fauna-042 snapshot: one rebuild, then every wild agent updates
+      // against that bucket snapshot plus live positions. Physical removal
+      // and managed-spawner respawn run only after this loop so a later
+      // agent still sees current `health.dead` / carcass state and a
+      // same-pass spawn is not required to appear in the index.
       proximity.rebuild(agents)
       if (diagOn) agentCpu.addFaunaProximityRebuildMs(performance.now() - proximityT0)
       agentCpu.beginFaunaAgentUpdates()

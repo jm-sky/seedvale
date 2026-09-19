@@ -17,9 +17,26 @@ import type { AnimalAgent } from './AnimalAgent'
  *  neighbour. */
 export const FAUNA_PROXIMITY_CELL_SIZE = 16
 
-/** Pack signed cell coordinates into a unique Map key. 20 bits per axis
- *  covers ±524 km of cell origins — far beyond the playable map. */
-const CELL_KEY_STRIDE = 1 << 20
+/**
+ * Packed Map key stride per axis (`cellKey = cx * STRIDE + cz`).
+ *
+ * Collision-free for integer cell coordinates
+ * `cx, cz ∈ [-STRIDE/2, STRIDE/2)` = `[-524288, 524287]`. At
+ * `FAUNA_PROXIMITY_CELL_SIZE` that is world X/Z in
+ * `[-FAUNA_PROXIMITY_CELL_KEY_WORLD_EXTENT, FAUNA_PROXIMITY_CELL_KEY_WORLD_EXTENT)`
+ * metres (~±8389 km) — far beyond any playable Seedvale map. Packed keys
+ * stay exact IEEE-754 integers in this range (`|key| < 2^40 ≪ 2^53`).
+ *
+ * Outside this range keys wrap into collisions (e.g.
+ * `cellKey(0, STRIDE) === cellKey(1, 0)`). Do not switch to string keys
+ * unless a supported-range collision is actually observed.
+ */
+export const FAUNA_PROXIMITY_CELL_KEY_STRIDE = 1 << 20
+
+/** Half-open world-axis bound (metres) for which `cellKey()` is
+ *  collision-free: `x, z ∈ [-bound, bound)`. */
+export const FAUNA_PROXIMITY_CELL_KEY_WORLD_EXTENT =
+  (FAUNA_PROXIMITY_CELL_KEY_STRIDE / 2) * FAUNA_PROXIMITY_CELL_SIZE
 
 export type FaunaProximityVisitor = (agent: AnimalAgent) => void
 
@@ -39,14 +56,24 @@ export type FaunaProximityIndex = {
   countNear(x: number, z: number, radius: number, predicate: FaunaProximityPredicate): number
 }
 
-function cellCoord(v: number): number {
+export function cellCoord(v: number): number {
   return Math.floor(v / FAUNA_PROXIMITY_CELL_SIZE)
 }
 
-function cellKey(cx: number, cz: number): number {
-  return cx * CELL_KEY_STRIDE + cz
+/** Arithmetic packing of signed cell coordinates. Unique inside
+ *  `FAUNA_PROXIMITY_CELL_KEY_WORLD_EXTENT`; not a string key. */
+export function cellKey(cx: number, cz: number): number {
+  return cx * FAUNA_PROXIMITY_CELL_KEY_STRIDE + cz
 }
 
+/**
+ * Inclusive cell range that may contain candidates for a disk of `radius`
+ * around world axis `v`. Uses a conservative extra full cell
+ * (`radius + FAUNA_PROXIMITY_CELL_SIZE`) so a same-pass step cannot drop a
+ * just-in-range neighbour from the spatial prefilter. Exact distance still
+ * belongs to the caller. Do not tighten this margin without production
+ * candidate-count evidence — equivalence tests alone do not justify it.
+ */
 function coveringCellRange(v: number, radius: number): { min: number, max: number } {
   const cover = radius + FAUNA_PROXIMITY_CELL_SIZE
   return {

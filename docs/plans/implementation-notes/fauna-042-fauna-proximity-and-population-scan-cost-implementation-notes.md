@@ -1,8 +1,8 @@
 # Implementation notes: fauna-042 — fauna proximity and population scan cost
 
 **Plan:** [fauna-042](../fauna-042-fauna-proximity-and-population-scan-cost.md)  
-**Recon baseline:** reviewed against `main` at `1da5969` on 2026-09-19; current code still wins if `main` advances  
-**Current state:** implementation landed; remaining work is verification/hardening, not a second spatial-system implementation
+**Recon baseline:** reviewed against `main` at `3e34c058` on 2026-09-19; current code still wins if `main` advances  
+**Current state:** implementation landed; hardening/correctness tests landed 2026-09-19. Remaining User-owned work is browser/performance comparison (including cell-size A/B), not a second spatial-system implementation
 
 ## Current-code reality
 
@@ -19,7 +19,7 @@ The implementation introduced:
 
 Do not recreate the plan from scratch or introduce another registry/grid.
 
-The implementation is architecturally in place and baseline technical checks passed. Verification is not closed yet: the remaining implementation work should be limited to correctness hardening/tests or defects found by the checks below.
+The implementation is architecturally in place. Correctness hardening tests now lock the accepted snapshot/`cellKey`/scratch contracts. Remaining User-owned work is browser/performance comparison, not a second spatial system.
 
 ## Ownership and lifecycle boundaries
 
@@ -73,6 +73,8 @@ Do not reintroduce positional occupancy counting for respawn capacity.
 Relevant symbols:
 
 - `FAUNA_PROXIMITY_CELL_SIZE`
+- `FAUNA_PROXIMITY_CELL_KEY_STRIDE`
+- `FAUNA_PROXIMITY_CELL_KEY_WORLD_EXTENT`
 - `FaunaProximityIndex`
 - `createFaunaProximityIndex()`
 - `cellCoord()`
@@ -191,105 +193,64 @@ Do not combine this optimization with:
 
 Those belong to separate plans.
 
-## Hardening checks before closing verification
+## Hardening checks (completed 2026-09-19)
 
-### 1. Covering-range overfetch
+These were the remaining correctness/hardening items after the spatial index landed. They do not change the architecture.
 
-Current `coveringCellRange()` uses:
+### 1. Covering-range overfetch — left unchanged
+
+`coveringCellRange()` still uses:
 
 ```ts
 const cover = radius + FAUNA_PROXIMITY_CELL_SIZE
 ```
 
-Retain the earlier analysis behind this rule: the extra 16 m is a deliberately conservative same-pass movement margin, not an accidental off-by-one. It reduces the chance that a candidate whose live position moved across a bucket boundary during the sequential fauna pass is omitted from a later query.
+The extra 16 m is a deliberately conservative same-pass movement margin, not an accidental off-by-one. It reduces the chance that a candidate whose live position moved across a bucket boundary during the sequential fauna pass is omitted from a later query.
 
-However, without an explicit upper bound on displacement between `rebuild()` and a particular query, do **not** describe `+16 m` as a formal guarantee that every newly-near candidate is discoverable in the same pass. The accepted architectural contract remains that newly-near discovery may lag until the next rebuild, while live radius predicates prevent stale candidates from becoming false positives.
+Without an explicit upper bound on displacement between `rebuild()` and a particular query, `+16 m` is **not** a formal guarantee that every newly-near candidate is discoverable in the same pass. The accepted architectural contract remains that newly-near discovery may lag until the next rebuild, while live radius predicates prevent stale candidates from becoming false positives.
 
-Do not remove or tighten the margin merely because that one-pass lag is accepted. First use the existing diagnostics and equivalence tests. If overfetch is materially weakening the optimization, then either:
+Static brute-force equivalence now passes with the current conservative cover. That is necessary but not sufficient to tighten: there is still no production `agentCpuDiag` candidate-count evidence that the extra cell materially weakens the optimization. Do not remove `+16 m` until that evidence exists and the one-pass discovery lag is an explicit accepted substitute.
 
-- prove/document a same-pass displacement bound and derive an explicit movement margin from it; or
-- tighten to cells intersecting `x/z ± radius` and intentionally rely on the documented one-pass newly-near discovery semantics.
+### 2. Brute-force equivalence test — added
 
-Preserve the current rule until one of those alternatives is justified by evidence.
+`src/fauna/faunaProximity.test.ts` compares spatial query + exact distance predicate against a full-pool scan with the same predicate (`hypot < r` and `hypot <= r`). Coverage includes radii `< 16`, `== 16`, `> 16`, negatives, cell edges/corners, both sides of a cell boundary, exact/just-inside/just-outside radius points, and a few hundred deterministic positions. Candidate *sets* are compared, not order.
 
-### 2. Brute-force equivalence and snapshot tests
+### 3. Numeric cell-key uniqueness — documented and tested
 
-Add deterministic property-style tests in `src/fauna/faunaProximity.test.ts` plus focused integration tests where `AnimalAgent` semantics are involved.
+`cellKey(cx, cz) = cx * FAUNA_PROXIMITY_CELL_KEY_STRIDE + cz` with `STRIDE = 1 << 20`.
 
-Build a few hundred deterministic agents/positions and compare:
+Collision-free for cell coordinates `cx, cz ∈ [-524288, 524287]`, i.e. world X/Z in `[-8_388_608, 8_388_608)` metres (~±8389 km) — `FAUNA_PROXIMITY_CELL_KEY_WORLD_EXTENT`. Packed keys stay exact IEEE-754 integers in this range. A wrapping collision exists *outside* the range (`cellKey(0, STRIDE) === cellKey(1, 0)`); the key stays numeric.
 
-```
-spatial query
-+ exact distance predicate
-```
+### 4. Scratch-buffer reentrancy — current callers are safe
 
-against:
+Audited `nearbyOthers()` / `nearbyAgentScratch` call sites:
 
-```
-full agents scan
-+ the same exact distance predicate
-```
+- `advanceCorpseDecay` → `advanceAnimalCorpse` (synchronous iteration, no re-entry);
+- `updateRabid` → `pickRabidTarget` (synchronous scan, no re-entry);
+- `pursueNeeds` → `findFoodTarget` / `findCarcassTarget` (synchronous scan + `claimAsFood`, no re-entry).
 
-Test multiple centers/radii including:
+No caller retains the array or nests another `nearbyOthers()` while iterating. JSDoc now states the borrowed-view contract. No extra scratch buffers.
 
-- radius below 16 m;
-- radius exactly 16 m;
-- radius above 16 m;
-- negative coordinates;
-- points on both sides of a cell boundary;
-- points exactly on/just inside/just outside the requested radius.
+### 5. Remaining `currentOthers` scans — still intentional
 
-Compare candidate sets, not result order.
-
-Also pin snapshot/commitment semantics explicitly:
-
-- rebuild, then move a target outside radius without rebuilding: local prefilter may still visit it, but the live radius predicate must reject it;
-- rebuild, then move a previously distant target into radius without rebuilding: same-pass discovery is not required unless the current conservative cover happens to include its old bucket; next rebuild must discover it;
-- a committed wild prey target that remains in `proximity.has()` must not be invalidated merely because a local query would not return it;
-- if that committed target dies during an earlier animal's update, a later animal must observe the live dead/carcass state rather than stale liveness;
-- removal happens only after all wild-agent updates, and new managed-spawner agents are appended only after that sensing pass.
-
-### 3. Numeric cell-key uniqueness
-
-`cellKey(cx, cz)` uses numeric packing with `CELL_KEY_STRIDE = 1 << 20`.
-
-Add focused tests for the supported world range:
-
-- negative X/Z;
-- cells around zero;
-- neighbouring cells on either axis;
-- large positive/negative cell coordinates inside the intended playable bound.
-
-The current implementation is arithmetic packing (`cx * CELL_KEY_STRIDE + cz`), not literal two-axis bit packing. Document the supported cell-coordinate/world-coordinate bound for which this mapping is collision-free and test that assumption directly.
-
-Do not replace the numeric key with a string key merely for stylistic certainty. Change the representation only if the tested supported coordinate range can actually produce collisions or if the project later removes the bounded-world assumption.
-
-### 4. Scratch-buffer reentrancy
-
-`nearbyAgentScratch` is module-level and reused by `nearbyOthers()`.
-
-Current call sites are synchronous and sequential, but verify that no consumer:
-
-- retains the returned array;
-- calls another `nearbyOthers()` before finishing its own iteration;
-- passes the array into code that may synchronously re-enter the same helper.
-
-Treat the returned array as a borrowed synchronous view: callers must not retain it beyond the immediate call, iterate it across another `nearbyOthers()` invocation, or pass it to code that can synchronously re-enter the helper.
-
-Current call sites are synchronous/sequential and appear compatible with that contract. Add a focused regression test or an explicit code comment pinning the borrowed-view rule. If a nested/reentrant consumer exists or is introduced, move to caller-owned/reentrant scratch storage rather than copying arrays per query.
-
-### 5. Remaining `currentOthers` scans
-
-Inventory remaining reads of `currentOthers`.
-
-Current known intentional cases:
+Still the only full-pool identity/herd reads:
 
 - juvenile mother lookup via `currentOthers.find(...motherId...)`;
 - herd leader selection via `pickHerdLeader(this.currentOthers, herdId)`.
 
-Do not mechanically spatialize these.
+Not spatialized.
 
-Mother lookup is identity/membership-oriented, and herd leadership is defined over the herd rather than “nearest local herd member”. Only change them if a separate profiling result shows material cost and a semantic-preserving data structure is clear.
+### Snapshot pass order — regression-tested, not incrementally bucketed
+
+Accepted one-rebuild-per-pass semantics are locked by tests:
+
+- a target that walks out of radius after `rebuild()` may still appear in the spatial prefilter, but the live distance predicate rejects it;
+- a target that walks into radius is not required this pass and is found after the next rebuild;
+- committed wild prey uses `proximity.has()`, not local-query membership;
+- a later agent in the same pass observes live `health.dead` / carcass state;
+- physical removal and managed-spawner respawn run after the wild-agent loop (`createFauna.update`).
+
+Do not change this to incremental bucket updates.
 
 ## Diagnostics to reuse
 
@@ -308,16 +269,9 @@ The useful scaling signal is candidate reduction, not just raw query-call count.
 
 ## Implementation order for remaining hardening
 
-1. Add brute-force equivalence coverage for static `FaunaProximityIndex` queries.
-2. Add snapshot/commitment regression tests: moved-away, newly-near lag, committed-target global membership, death during the pass, removal/respawn ordering.
-3. Add numeric cell-key boundary/uniqueness tests and document the supported coordinate bound.
-4. Audit `nearbyAgentScratch` consumers and pin the borrowed synchronous-view contract.
-5. Run targeted tests and technical checks.
-6. Compare proximity candidate counts in the existing high-fauna diagnostic scenario.
-7. Only if diagnostics justify it, revisit `coveringCellRange()`; preserve the current `+16 m` margin unless a tighter rule is explicitly justified.
-8. Re-run equivalence/snapshot tests after any covering-range change.
+Completed in this order: brute-force equivalence, `cellKey` uniqueness, scratch-buffer audit, snapshot-semantics tests, targeted/technical checks. `coveringCellRange()` was **not** tightened — see hardening check 1.
 
-Do not refactor `AnimalAgent`, spawner ownership or NPC proximity while doing this.
+Do not refactor `AnimalAgent`, spawner ownership or NPC proximity while doing follow-up work.
 
 ## Verification
 

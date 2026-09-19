@@ -864,9 +864,16 @@ const dogGuardPreyTargetScratch: { animalId: string, ownerHouseId?: string }[] =
 const dogPestScratch: DogPestCandidate[] = []
 const dogHowlScratch: RecentVocalizeCandidate[] = []
 const dogStrangerScratch: StrangerNpcCandidate[] = []
-/** Reused covering-cell agent list for carcass/rabid/corpse scans that still
- *  take an array (plan fauna-042). Sequential fauna-pass processing makes a
- *  module buffer safe the same way `preyAlertScratch` is. */
+/**
+ * Borrowed covering-cell scratch for `nearbyOthers()` (plan fauna-042).
+ * Sequential fauna-pass processing makes one module buffer safe the same
+ * way `preyAlertScratch` is: each caller must finish reading the returned
+ * view before another `nearbyOthers()` / `forEachNearby()` call, and must
+ * not retain the array. Current production callers
+ * (`advanceCorpseDecay` → `advanceAnimalCorpse`, `updateRabid` →
+ * `pickRabidTarget`, `pursueNeeds` → `findFoodTarget`) iterate
+ * synchronously and do not re-enter these helpers.
+ */
 const nearbyAgentScratch: AnimalAgent[] = []
 
 function scratchAt<T>(buf: T[], i: number, create: () => T): T {
@@ -1650,7 +1657,9 @@ export class AnimalAgent {
   /** This frame's live agent array, refreshed at the top of every `update()`
    *  call — read by `pickWanderTarget()`'s herd/mother bias without
    *  threading it through `wander()`'s call sites (same technique as
-   *  `currentVillages` above, plan 118). */
+   *  `currentVillages` above, plan 118). Local nearest discovery uses
+   *  `tickProximity` instead (plan fauna-042); juvenile mother lookup and
+   *  herd-leader selection stay on this full-pool identity/herd scan. */
   private currentOthers: AnimalAgent[] = []
   /** This frame's optional wild proximity index (plan fauna-042). */
   private tickProximity: FaunaProximityIndex | undefined
@@ -5762,6 +5771,14 @@ export class AnimalAgent {
     getAgentCpuDiag().recordFaunaProximityQuery(visited)
   }
 
+  /**
+   * Borrowed synchronous view of covering-cell wild candidates when
+   * `tickProximity` is present (plan fauna-042). The returned array is
+   * `nearbyAgentScratch` — do not retain it, iterate it after another
+   * `nearbyOthers()` / `forEachNearby()` call, or pass it into code that
+   * may re-enter those helpers. Without a proximity index the fallback
+   * pool is returned as-is (tests, livestock).
+   */
   private nearbyOthers(radius: number, fallback: readonly AnimalAgent[]): AnimalAgent[] {
     if (!this.tickProximity) return fallback as AnimalAgent[]
     let n = 0

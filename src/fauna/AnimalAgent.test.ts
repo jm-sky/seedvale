@@ -2331,5 +2331,125 @@ describe('AnimalAgent proximity candidate narrowing (plan fauna-042)', () => {
     expect(rabid.getDebugInfo().aiBranch).toBe('rabid')
     expect(rabid.getDebugInfo().intent).toBe('chase')
   })
+
+  it('keeps a committed wild prey present in proximity.has() even when the local query misses it this pass', () => {
+    const wolf = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.wolf, animalId: 'wolf-has', x: 0, z: 0 }))
+    const deer = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.deer, animalId: 'deer-has', x: 4, z: 0 }))
+    tick([wolf, deer])
+    expect(wolf.huntingPrey()?.animalId).toBe('deer-has')
+
+    deer.mesh.position.x = 400
+    const proximity = createFaunaProximityIndex()
+    proximity.rebuild([wolf, deer])
+    deer.mesh.position.x = 4
+    expect(proximity.has(deer)).toBe(true)
+    const local: string[] = []
+    proximity.forEachNear(wolf.mesh.position.x, wolf.mesh.position.z, ANIMAL_DEFS.wolf.detectRange, (agent) => {
+      local.push(agent.animalId)
+    })
+    expect(local).not.toContain('deer-has')
+
+    wolf.update({
+      dt: 1,
+      others: [wolf, deer],
+      proximity,
+      observerPos: farObserver(),
+      dayFactor: 1,
+      forestFactor: 0,
+      litFires: [],
+    })
+    expect(wolf.huntingPrey()?.animalId).toBe('deer-has')
+  })
+
+  it('lets a later agent in the same pass observe live health.dead / carcass state', () => {
+    const deer = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.deer, animalId: 'deer-dies-first', x: 2, z: 0 }))
+    const wolf = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.wolf, animalId: 'wolf-later', x: 0, z: 0 }))
+    const agents = [deer, wolf]
+    const proximity = createFaunaProximityIndex()
+    proximity.rebuild(agents)
+    deer.update({
+      dt: 1,
+      others: agents,
+      proximity,
+      observerPos: farObserver(),
+      dayFactor: 1,
+      forestFactor: 0,
+      litFires: [],
+    })
+    deer.takeDamage(9999)
+    expect(deer.health.dead).toBe(true)
+    wolf.update({
+      dt: 1,
+      others: agents,
+      proximity,
+      observerPos: farObserver(),
+      dayFactor: 1,
+      forestFactor: 0,
+      litFires: [],
+    })
+    expect(deer.health.dead).toBe(true)
+    expect(deer.corpsePhase()).toBe('fresh')
+    expect(wolf.huntingPrey()).toBeNull()
+  })
+
+  it('runs every wild update before physical removal, so a ready-to-remove corpse stays visitable this pass', () => {
+    const corpse = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.rabbit, animalId: 'old-corpse', x: 1, z: 0 }))
+    corpse.takeDamage(9999)
+    corpse.update({
+      dt: 1,
+      others: [corpse],
+      observerPos: farObserver(),
+      dayFactor: 1,
+      forestFactor: 0,
+      litFires: [],
+      nowDays: 0,
+    })
+    corpse.update({
+      dt: 1,
+      others: [corpse],
+      observerPos: farObserver(),
+      dayFactor: 1,
+      forestFactor: 0,
+      litFires: [],
+      nowDays: 10,
+    })
+    expect(corpse.readyToRemove()).toBe(true)
+
+    const wolf = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.wolf, animalId: 'wolf-sees-corpse', x: 0, z: 0 }))
+    wolf.life.hunger = 0.9
+    wolf.life.thirst = 0.2
+    const agents = [corpse, wolf]
+    const proximity = createFaunaProximityIndex()
+    proximity.rebuild(agents)
+    for (const agent of agents) {
+      agent.update({
+        dt: 1,
+        others: agents,
+        proximity,
+        observerPos: farObserver(),
+        dayFactor: 1,
+        forestFactor: 0,
+        litFires: [],
+        nowDays: 10,
+      })
+    }
+    expect(proximity.has(corpse)).toBe(true)
+    expect(corpse.readyToRemove()).toBe(true)
+  })
+
+  it('reuses nearbyAgentScratch sequentially without leaking the previous covering set into a later search', () => {
+    const rabidA = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.wolf, animalId: 'scratch-rabid-a', x: 0, z: 0 }))
+    const rabidB = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.wolf, animalId: 'scratch-rabid-b', x: 40, z: 0 }))
+    rabidA.infectWithRabies()
+    rabidB.infectWithRabies()
+    const nearA = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.deer, animalId: 'scratch-deer-a', x: 3, z: 0 }))
+    const nearB = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.deer, animalId: 'scratch-deer-b', x: 43, z: 0 }))
+    tick([rabidA, rabidB, nearA, nearB])
+    expect(rabidA.getDebugInfo().aiBranch).toBe('rabid')
+    expect(rabidB.getDebugInfo().aiBranch).toBe('rabid')
+    expect(rabidA.getDebugInfo().intent).toBe('chase')
+    expect(rabidB.getDebugInfo().intent).toBe('chase')
+  })
 })
+
 

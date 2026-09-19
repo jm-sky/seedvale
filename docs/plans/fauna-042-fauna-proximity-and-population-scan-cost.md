@@ -13,13 +13,14 @@ See [implementation notes](./implementation-notes/fauna-042-fauna-proximity-and-
 
 ## Implementation status (2026-09-19)
 
-**Implemented; baseline technical checks passed; correctness hardening remains before closing verification.** Browser/gameplay/performance comparison is User-owned. Post-implementation verification should also compare two grid-cell sizes; no pre-implementation benchmark is required.
+**Implemented + technically verified, including hardening/correctness tests.** Browser/gameplay/performance comparison (including post-implementation cell-size A/B) is User-owned.
 
 - `src/fauna/faunaProximity.ts` — fauna-owned runtime spatial hash (16 m cells, extra neighbour covering). Rebuilt once per `Fauna.update()` from the wild `agents` array. Not a second registry, not persisted.
 - `AnimalAgent` sensing/targeting (`nearest`, prey commitment membership, rabid search, carcass search, prey-alert copy, scare-herd, rotting-corpse neighbours) visits covering cells when `AnimalUpdateContext.proximity` is supplied; tests and livestock ticks without it keep the original full-`others` scan.
 - `huntableLivestock` remains a separate encounter set and is never inserted into wild buckets.
 - `updateSpawners()` keeps fauna-041 membership occupancy (`spawnPointId`). `createFauna()` fills a reusable `Map<spawnPointId, count>` in one O(N) pass when `dayDelta > 0` — no per-frame `filter().map()`, occupancy queried only for spawners that can respawn. Recovery still uses nearby same-kind population.
 - `agentCpuDiag` records proximity rebuild ms, spawner bookkeeping ms, and proximity query/candidate counts alongside existing nearest-scan counters.
+- Hardening (2026-09-19): brute-force spatial↔scan equivalence; snapshot-semantics regressions; `cellKey()` uniqueness inside `FAUNA_PROXIMITY_CELL_KEY_WORLD_EXTENT`; `nearbyAgentScratch` borrowed-view contract. `coveringCellRange()` still uses `radius + 16 m` — static equivalence passed, but there is no production candidate-count evidence that the extra cell weakens the optimization.
 
 **Not claimed:** a measured FPS win. Do not treat technical checks as browser verification.
 
@@ -71,7 +72,7 @@ Existing consumers must retain:
 
 A query may inspect extra neighboring cells but must apply the original radius predicate before selection.
 
-`coveringCellRange()` must cover every cell that can contain a candidate within the requested radius for the index snapshot, but should not add a full-cell safety margin by default. The current `radius + cellSize` coverage is a conservative implementation from the initial movement-snapshot analysis; it is not considered proven necessary. Keep the rationale documented, then reduce the margin if deterministic brute-force equivalence tests demonstrate that a tighter range preserves the accepted snapshot semantics. A later-updated animal discovering an earlier animal that moved into range during the same fauna pass may still be deferred until the next rebuild; that one-tick discovery difference is explicitly acceptable.
+`coveringCellRange()` must cover every cell that can contain a candidate within the requested radius for the index snapshot, but should not add a full-cell safety margin by default. The current `radius + cellSize` coverage is a conservative implementation from the initial movement-snapshot analysis; it is not considered proven necessary. Keep the rationale documented, then reduce the margin if deterministic brute-force equivalence tests demonstrate that a tighter range preserves the accepted snapshot semantics **and** production candidate counts show the extra cell materially weakens the optimization. A later-updated animal discovering an earlier animal that moved into range during the same fauna pass may still be deferred until the next rebuild; that one-tick discovery difference is explicitly acceptable.
 
 Local discovery and global membership are distinct contracts:
 
