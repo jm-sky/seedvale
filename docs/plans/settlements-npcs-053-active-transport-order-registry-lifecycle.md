@@ -7,6 +7,7 @@
 **Domain:** `settlements-npcs`  
 **Type:** feature
 **Roadmap:** -  
+**Model:** Composer, Grok  
 
 ## Problem
 
