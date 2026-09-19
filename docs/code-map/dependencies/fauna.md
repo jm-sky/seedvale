@@ -231,6 +231,8 @@ Generated from TypeScript imports.
 - `quests/QuestManager.test.ts`
 - `quests/QuestManager.ts`
 - `quests/huntersBrotherhoodIntroduction.test.ts`
+- `quests/huntersBrotherhoodInvestigation.test.ts`
+- `quests/huntersBrotherhoodInvestigation.ts`
 - `quests/opportunities/hunterProfessionQuests.test.ts`
 - `quests/opportunities/hunterProfessionQuests.ts`
 - `quests/opportunities/settlementQuestOpportunities.test.ts`
@@ -1083,6 +1085,10 @@ Generated from TypeScript imports.
 
 - `fauna/createFauna.ts`
 - `fauna/habitatPressure.test.ts`
+- `persistence/saveData.ts`
+- `quests/huntersBrotherhoodInvestigation.test.ts`
+- `quests/huntersBrotherhoodInvestigation.ts`
+- `quests/quests.ts`
 
 ## `fauna/harvestedRemains.test.ts`
 

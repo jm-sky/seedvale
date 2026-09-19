@@ -40,6 +40,7 @@ Generated from TypeScript imports.
 - `fauna/AnimalAgent.ts`
 - `fauna/AnimalSpawner.ts`
 - `fauna/animalStray.ts`
+- `fauna/habitatPressure.ts`
 - `fauna/persistentOccupants.ts`
 - `items/HeldTool.ts`
 - `items/Inventory.ts`

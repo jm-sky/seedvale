@@ -58,8 +58,8 @@
    🔴 `M` · ✅ ready · unlocks 3/5
 4. `world-031` — **Authored Persistent World Consequences**  
    🔴 `M` · ✅ ready · unlocks 3/3
-5. `quests-progression-049` — **Hunters Brotherhood — hunting-ground investigation**  
-   🟡 `M` · ✅ ready · unlocks 1/2
+5. `settlements-npcs-022` — **Household help and age-based work participation**  
+   🔴 `M` · ✅ ready · unlocks 1/1
 
 ---
 
@@ -117,56 +117,56 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `M` · **Score:**  69  
    → **unlocks:** 3/3
 
-11. `quests-progression-049` — **Hunters Brotherhood — hunting-ground investigation**  
-  🟡 `M` · **Score:**  67  
-   → **unlocks:** 1/2
-
-12. `quests-progression-046` — **Lost Treasure Chronicles — integration, legacy catch-up and superseded quest cleanup**  
+11. `quests-progression-046` — **Lost Treasure Chronicles — integration, legacy catch-up and superseded quest cleanup**  
   🔴 `L` · **Score:**  66  
    → **unlocks:** 0/0
 
-13. `items-player-032` — **NPC player-storage resource and context rules**  
+12. `items-player-032` — **NPC player-storage resource and context rules**  
   🟡 `L` · **Score:**  64  
    → **unlocks:** 1/4
 
-14. `npc-032` — **Expedition needs and survival**  
+13. `npc-032` — **Expedition needs and survival**  
   🔴 `L` · **Score:**  98  
    → **unlocks:** 3/3
 
-15. `settlements-npcs-022` — **Household help and age-based work participation**  
+14. `settlements-npcs-022` — **Household help and age-based work participation**  
   🔴 `M` · **Score:**  57  
    → **unlocks:** 1/1
 
-16. `quests-progression-053` — **Hunters Brotherhood — competing hunting strategies**  
+15. `quests-progression-053` — **Hunters Brotherhood — competing hunting strategies**  
   🟡 `L` · **Score:**  56  
    → **unlocks:** 1/1
 
-17. `settlements-npcs-043` — **Settlement Cultivation Hydration, Rain & Farmer Watering**  
+16. `settlements-npcs-043` — **Settlement Cultivation Hydration, Rain & Farmer Watering**  
   🔴 `L` · **Score:**  56  
    → **unlocks:** 1/1
 
-18. `quests-progression-069` — **Quest offer pacing and conservative settlement gating**  
+17. `quests-progression-069` — **Quest offer pacing and conservative settlement gating**  
   🔴 `M` · **Score:**  51  
    → **unlocks:** 0/0
 
-19. `quests-progression-063` — **Healer — Injured Resident**  
+18. `quests-progression-063` — **Healer — Injured Resident**  
   🟡 `M` · **Score:**  49  
    → **unlocks:** 1/1
 
-20. `quests-progression-060` — **Builder — Finish the Local Well**  
+19. `quests-progression-060` — **Builder — Finish the Local Well**  
   🔴 `M` · **Score:**  47  
    → **unlocks:** 0/0
 
-21. `quests-progression-054` — **Hunters Brotherhood — exceptional animal finale**  
+20. `quests-progression-054` — **Hunters Brotherhood — exceptional animal finale**  
   🟡 `L` · **Score:**  44  
    → **unlocks:** 0/0
 
-22. `settlements-npcs-044` — **Authored Outpost Occupants & Construction Lifecycle**  
+21. `settlements-npcs-044` — **Authored Outpost Occupants & Construction Lifecycle**  
   🔴 `L` · **Score:**  40  
    → **unlocks:** 1/1
 
-23. `quests-progression-058` — **Injured dog discovery thread**  
+22. `quests-progression-058` — **Injured dog discovery thread**  
   🟡 `M` · **Score:**  37  
+   → **unlocks:** 0/0
+
+23. `tools-017` — **Custom UBC NPC model source and build pipeline**  
+  🔴 `M` · **Score:**  37  
    → **unlocks:** 0/0
 
 24. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
@@ -252,9 +252,6 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   - [`quests-progression-042-lost-treasure-chronicles-expedition-remains-journal-and-missing-key-trail.md`](quests-progression-042-lost-treasure-chronicles-expedition-remains-journal-and-missing-key-trail.md)
   - [`quests-progression-041-lost-treasure-chronicles-dungeon-binding-and-persistent-collapsed-access.md`](quests-progression-041-lost-treasure-chronicles-dungeon-binding-and-persistent-collapsed-access.md)
   - [`quests-progression-040-lost-treasure-chronicles-dark-forest-estate-alpha-bear-and-treasure-map.md`](quests-progression-040-lost-treasure-chronicles-dark-forest-estate-alpha-bear-and-treasure-map.md)
-- [`quests-progression-053-hunters-brotherhood-competing-hunting-strategies.md`](quests-progression-053-hunters-brotherhood-competing-hunting-strategies.md)  
-  is blocked by:
-  - [`quests-progression-049-hunters-brotherhood-hunting-ground-investigation.md`](quests-progression-049-hunters-brotherhood-hunting-ground-investigation.md)
 - [`quests-progression-054-hunters-brotherhood-exceptional-animal-finale.md`](quests-progression-054-hunters-brotherhood-exceptional-animal-finale.md)  
   is blocked by:
   - [`quests-progression-053-hunters-brotherhood-competing-hunting-strategies.md`](quests-progression-053-hunters-brotherhood-competing-hunting-strategies.md)
@@ -606,6 +603,7 @@ graph TD
   tools_013["tools-013 — NPC decision verification and scenario tooling"]
   tools_014["tools-014 — Player-owned horse debug controls"]
   tools_016["tools-016 — Heavy settlement performance benchmark"]
+  tools_017["tools-017 — Custom UBC NPC model source and build pipeline"]
   ui_input_001["ui-input-001 — Developer Debug API"]
   ui_input_002["ui-input-002 — UI/UX Interaction and Action System Polish"]
   ui_input_003["ui-input-003 — Merchant Trade UI/UX Redesign"]
@@ -931,7 +929,9 @@ graph TD
   npc_034 --> npc_035
   npc_039 --> npc_040
   npc_039 --> npc_055
+  npc_039 --> tools_017
   npc_040 --> npc_012
+  npc_040 --> tools_017
   npc_041 --> npc_042
   npc_044 --> npc_045
   npc_044 --> npc_049

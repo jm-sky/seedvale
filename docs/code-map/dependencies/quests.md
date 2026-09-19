@@ -52,6 +52,7 @@ Generated from TypeScript imports.
 - `quests/QuestManager.test.ts`
 - `quests/dungeonBanditTreasure.test.ts`
 - `quests/huntersBrotherhoodIntroduction.test.ts`
+- `quests/huntersBrotherhoodInvestigation.test.ts`
 - `quests/lostHunterNaturalCave.test.ts`
 - `quests/lostTreasureChronicleDeciphering.test.ts`
 - `quests/lostTreasureChronicleSearch.test.ts`
@@ -234,6 +235,36 @@ Generated from TypeScript imports.
 
 - `app/createApp.ts`
 - `quests/huntersBrotherhoodIntroduction.test.ts`
+- `quests/huntersBrotherhoodInvestigation.test.ts`
+- `quests/huntersBrotherhoodInvestigation.ts`
+
+## `quests/huntersBrotherhoodInvestigation.test.ts`
+
+**Imports**
+
+- `fauna/AnimalSpawner.ts`
+- `fauna/habitatPressure.ts`
+- `items/Inventory.ts`
+- `quests/QuestManager.ts`
+- `quests/huntersBrotherhoodIntroduction.ts`
+- `quests/huntersBrotherhoodInvestigation.ts`
+- `quests/opportunities/hunterProfessionQuests.ts`
+- `quests/opportunities/worldQuestOpportunityTypes.ts`
+- `quests/quests.ts`
+
+## `quests/huntersBrotherhoodInvestigation.ts`
+
+**Imports**
+
+- `fauna/AnimalSpawner.ts`
+- `fauna/habitatPressure.ts`
+- `quests/huntersBrotherhoodIntroduction.ts`
+- `quests/quests.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `quests/huntersBrotherhoodInvestigation.test.ts`
 
 ## `quests/landmarkLocationDescription.test.ts`
 
@@ -598,6 +629,7 @@ Generated from TypeScript imports.
 - `app/createApp.ts`
 - `quests/huntersBrotherhoodIntroduction.test.ts`
 - `quests/huntersBrotherhoodIntroduction.ts`
+- `quests/huntersBrotherhoodInvestigation.test.ts`
 - `quests/opportunities/hunterProfessionQuests.test.ts`
 
 ## `quests/opportunities/rpgQuestMaterialization.ts`
@@ -755,6 +787,7 @@ Generated from TypeScript imports.
 - `quests/dungeonBanditTreasure.ts`
 - `quests/huntersBrotherhoodIntroduction.test.ts`
 - `quests/huntersBrotherhoodIntroduction.ts`
+- `quests/huntersBrotherhoodInvestigation.test.ts`
 - `quests/lostTreasureExpedition.ts`
 - `quests/opportunities/guardProfessionQuests.ts`
 - `quests/opportunities/hunterProfessionQuests.test.ts`
@@ -783,6 +816,7 @@ Generated from TypeScript imports.
 
 - `fauna/AnimalAgent.ts`
 - `fauna/AnimalSpawner.ts`
+- `fauna/habitatPressure.ts`
 - `items/items.ts`
 - `reputation/ReputationManager.ts`
 - `settlement/npcState.ts`
@@ -807,6 +841,8 @@ Generated from TypeScript imports.
 - `quests/dungeonBanditTreasure.ts`
 - `quests/guardRewards.ts`
 - `quests/huntersBrotherhoodIntroduction.ts`
+- `quests/huntersBrotherhoodInvestigation.test.ts`
+- `quests/huntersBrotherhoodInvestigation.ts`
 - `quests/lostHunterNaturalCave.test.ts`
 - `quests/lostHunterNaturalCave.ts`
 - `quests/lostTreasureChronicleDeciphering.ts`

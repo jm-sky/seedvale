@@ -194,6 +194,7 @@ Generated from TypeScript imports.
 - `quests/QuestManager.ts`
 - `quests/dungeonBanditTreasure.test.ts`
 - `quests/huntersBrotherhoodIntroduction.test.ts`
+- `quests/huntersBrotherhoodInvestigation.test.ts`
 - `quests/lostHunterNaturalCave.test.ts`
 - `quests/lostTreasureChronicleDeciphering.test.ts`
 - `quests/lostTreasureChronicleSearch.test.ts`
