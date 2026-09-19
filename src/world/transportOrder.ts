@@ -16,9 +16,10 @@ import type { HouseholdId } from '../settlement/household'
  * after unload:   destination owns goods
  * ```
  *
- * Pure domain record: no `THREE`, no runtime object refs. World-owned
- * registry lives in `createTransportOrders.ts`. Active/non-terminal orders
- * persist as `SaveData.transportOrders` and carry across an in-session
+ * Pure domain record: no `THREE`, no runtime object refs. The world-owned
+ * active registry lives in `createTransportOrders.ts` (plan
+ * settlements-npcs-053). Active/non-terminal orders persist as
+ * `SaveData.transportOrders` and carry across an in-session
  * `WorldBundle` rebuild; cargo itself persists separately, on the carrier's
  * own `NpcAuthoritativeState.transportCargo` (`settlement/npcState.ts`) —
  * never reconstructed from this record's quantities.

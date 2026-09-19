@@ -161,13 +161,13 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `L` · **Score:**  56  
    → **unlocks:** 1/1
 
-20. `settlements-npcs-053` — **Active TransportOrder registry lifecycle**  
-  🟡 `S` · **Score:**  55  
-   → **unlocks:** 0/0
-
-21. `fauna-041` — **Managed spawner population authority**  
+20. `fauna-041` — **Managed spawner population authority**  
   🔴 `S` · **Score:**  51  
    → **unlocks:** 1/1
+
+21. `items-player-049` — **Poisoned meat predator bait**  
+  🟡 `S` · **Score:**  51  
+   → **unlocks:** 0/0
 
 22. `quests-progression-069` — **Quest offer pacing and conservative settlement gating**  
   🔴 `M` · **Score:**  51  
@@ -277,27 +277,35 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-49. `world-terrain-041` — **Agent presentation render LOD**  
+49. `quests-progression-071` — **Generated opportunity retention semantics**  
+  🟡 `S` · **Score:**  25  
+   → **unlocks:** 0/0
+
+50. `world-terrain-041` — **Agent presentation render LOD**  
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-50. `fauna-043` — **Frenzy source-target claim cleanup**  
+51. `fauna-043` — **Frenzy source-target claim cleanup**  
   🟡 `S` · **Score:**  23  
    → **unlocks:** 0/0
 
-51. `tools-018` — **Codebase domain and flow audit master**  
+52. `quests-progression-072` — **Invalidated quest restore metadata continuity**  
+  🟡 `XS` · **Score:**  20  
+   → **unlocks:** 0/0
+
+53. `tools-018` — **Codebase domain and flow audit master**  
   🔴 `XL` · **Score:**  20  
    → **unlocks:** 0/0
 
-52. `npc-060` — **NPC social pairing cadence and allocation**  
+54. `npc-060` — **NPC social pairing cadence and allocation**  
   🟡 `S` · **Score:**  19  
    → **unlocks:** 0/0
 
-53. `quests-progression-061` — **Builder — Complete an Unfinished Palisade Segment**  
+55. `quests-progression-061` — **Builder — Complete an Unfinished Palisade Segment**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-54. `quests-progression-070` — **Boar at the medicinal meadow — systemic settlement problem**  
+56. `quests-progression-070` — **Boar at the medicinal meadow — systemic settlement problem**  
   🟡 `L` · **Score:**  16  
    → **unlocks:** 0/0
 
@@ -502,6 +510,7 @@ graph TD
   items_player_046["items-player-046 — Medicine targeted treatment interaction"]
   items_player_047["items-player-047 — Additional compact weapons and master hunting bow"]
   items_player_048["items-player-048 — Handheld torch retention across combat weapon draw"]
+  items_player_049["items-player-049 — Poisoned meat predator bait"]
   npc_001["npc-001 — NPC Physical Stats — Sex & Age"]
   npc_002["npc-002 — NPC Healing"]
   npc_004["npc-004 — Drzewo genealogiczne NPC"]
@@ -635,6 +644,8 @@ graph TD
   quests_progression_068["quests-progression-068 — Dangerous Merchant route and persistent world consequence"]
   quests_progression_069["quests-progression-069 — Quest offer pacing and conservative settlement gating"]
   quests_progression_070["quests-progression-070 — Boar at the medicinal meadow — systemic settlement problem"]
+  quests_progression_071["quests-progression-071 — Generated opportunity retention semantics"]
+  quests_progression_072["quests-progression-072 — Invalidated quest restore metadata continuity"]
   settlements_001["settlements-001 — House Collision Geometry"]
   settlements_002["settlements-002 — House Browser"]
   settlements_003["settlements-003 — Colony settlement bootstrap"]
@@ -935,6 +946,7 @@ graph TD
   fauna_022 --> quests_progression_021
   fauna_022 --> quests_progression_040
   fauna_023 --> fauna_027
+  fauna_023 --> items_player_049
   fauna_023 --> quests_progression_020
   fauna_024 --> fauna_025
   fauna_027 --> quests_progression_026
@@ -953,6 +965,7 @@ graph TD
   fauna_041 --> fauna_042
   items_player_001 --> fauna_002
   items_player_002 --> items_player_025
+  items_player_002 --> items_player_049
   items_player_009 --> items_player_013
   items_player_009 --> items_player_015
   items_player_010 --> items_player_013
@@ -1145,6 +1158,7 @@ graph TD
   quests_progression_028 --> quests_progression_033
   quests_progression_029 --> quests_progression_030
   quests_progression_030 --> quests_progression_031
+  quests_progression_031 --> quests_progression_071
   quests_progression_031 --> ui_input_017
   quests_progression_032 --> quests_progression_037
   quests_progression_032 --> quests_progression_038
@@ -1224,6 +1238,7 @@ graph TD
   settlements_npcs_005 --> settlements_npcs_008
   settlements_npcs_005 --> settlements_npcs_009
   settlements_npcs_006 --> settlements_npcs_007
+  settlements_npcs_007 --> items_player_049
   settlements_npcs_008 --> settlements_npcs_009
   settlements_npcs_008 --> settlements_npcs_014
   settlements_npcs_009 --> settlements_npcs_010

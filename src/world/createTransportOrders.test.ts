@@ -65,6 +65,95 @@ describe('createTransportOrders', () => {
     const failed = orders.create(makeParams({ carrierNpcId: 'npc:1' }))!
     orders.fail(failed.id)
     expect(orders.findByCarrier('npc:1')).toBeUndefined()
+    expect(orders.find(failed.id)).toBeUndefined()
+    expect(orders.list()).toEqual([])
+  })
+
+  it('terminal transitions return the record but remove it from active lookup', () => {
+    const orders = createTransportOrders()
+    const assigned = orders.create(makeParams({ carrierNpcId: 'npc:1' }))!
+    orders.completePickup(assigned.id, 'npc:1', 4)
+    const completed = orders.completeDelivery(assigned.id, 'npc:1')!
+    expect(completed.state).toBe('completed')
+    expect(orders.find(assigned.id)).toBeUndefined()
+    expect(orders.list()).toEqual([])
+
+    const cancelled = orders.create(makeParams({ carrierNpcId: 'npc:2' }))!
+    const cancelResult = orders.cancel(cancelled.id)!
+    expect(cancelResult.state).toBe('cancelled')
+    expect(orders.find(cancelled.id)).toBeUndefined()
+  })
+
+  it('rejected transition leaves active indexes unchanged', () => {
+    const orders = createTransportOrders()
+    const assigned = orders.create(makeParams({ carrierNpcId: 'npc:1' }))!
+    expect(orders.completeDelivery(assigned.id, 'npc:1')).toBeNull()
+    expect(orders.find(assigned.id)).toEqual(assigned)
+    expect(orders.findByCarrier('npc:1')).toEqual(assigned)
+  })
+
+  it('pre-pickup cancel frees the carrier for a new order', () => {
+    const orders = createTransportOrders()
+    const first = orders.create(makeParams({ carrierNpcId: 'npc:1' }))!
+    orders.cancel(first.id)
+    const second = orders.create(makeParams({ carrierNpcId: 'npc:1' }))
+    expect(second?.state).toBe('assigned')
+  })
+
+  it('does not retain terminal rows from initial seed', () => {
+    const terminal = createTransportOrderRecord({
+      id: 'transportOrder:done',
+      source,
+      destination,
+      itemKind: 'bread',
+      requestedQuantity: 1,
+    })
+    terminal.state = 'completed'
+    terminal.carrierNpcId = 'npc:old'
+    const active = createTransportOrderRecord({
+      id: 'transportOrder:active',
+      source,
+      destination,
+      itemKind: 'carrot',
+      requestedQuantity: 2,
+    })
+    const orders = createTransportOrders([terminal, active])
+    expect(orders.list()).toHaveLength(1)
+    expect(orders.find('transportOrder:done')).toBeUndefined()
+    expect(orders.find('transportOrder:active')).toBeDefined()
+  })
+
+  it('ignores duplicate active carrier assignments in initial seed', () => {
+    const first = createTransportOrderRecord({
+      id: 'transportOrder:a',
+      source,
+      destination,
+      itemKind: 'bread',
+      requestedQuantity: 1,
+    })
+    const assignedFirst = { ...first, state: 'assigned' as const, carrierNpcId: 'npc:1' }
+    const second = createTransportOrderRecord({
+      id: 'transportOrder:b',
+      source,
+      destination,
+      itemKind: 'carrot',
+      requestedQuantity: 2,
+    })
+    const assignedSecond = { ...second, state: 'assigned' as const, carrierNpcId: 'npc:1' }
+    const orders = createTransportOrders([assignedFirst, assignedSecond])
+    expect(orders.list()).toHaveLength(1)
+    expect(orders.findByCarrier('npc:1')?.id).toBe('transportOrder:a')
+  })
+
+  it('many sequential terminal transitions do not grow the active registry', () => {
+    const orders = createTransportOrders()
+    for (let i = 0; i < 1000; i++) {
+      const record = orders.create(makeParams({ carrierNpcId: 'npc:loop' }))!
+      orders.completePickup(record.id, 'npc:loop', 4)
+      orders.completeDelivery(record.id, 'npc:loop')
+    }
+    expect(orders.list()).toEqual([])
+    expect(orders.findByCarrier('npc:loop')).toBeUndefined()
   })
 
   it('unknown ids are no-ops', () => {

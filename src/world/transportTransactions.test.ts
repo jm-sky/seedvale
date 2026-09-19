@@ -63,8 +63,8 @@ describe('executeTransportPickup / executeTransportUnload', () => {
     expect(source.count('carrot')).toBe(3)
     expect(carrier.count('carrot')).toBe(0)
     expect(destination.count('carrot')).toBe(8)
-    expect(orders.find(order.id)?.state).toBe('completed')
-    expect(orders.find(order.id)?.deliveredQuantity).toBe(5)
+    expect(orders.find(order.id)).toBeUndefined()
+    expect(orders.list()).toEqual([])
     expect(totals(source, carrier, destination)).toBe(before)
   })
 
@@ -85,8 +85,7 @@ describe('executeTransportPickup / executeTransportUnload', () => {
     executeTransportUnload({ orders, orderId: order.id, carrierNpcId: 'npc:1', carrier, destination })
     expect(source.count('carrot')).toBe(0)
     expect(destination.count('carrot')).toBe(11)
-    expect(orders.find(order.id)?.claimedQuantity).toBe(4)
-    expect(orders.find(order.id)?.requestedQuantity).toBe(6)
+    expect(orders.find(order.id)).toBeUndefined()
     expect(totals(source, carrier, destination)).toBe(before)
   })
 
@@ -103,8 +102,8 @@ describe('executeTransportPickup / executeTransportUnload', () => {
     })).toEqual({ ok: false, claimed: 0, reason: 'failed' })
     expect(source.count('carrot')).toBe(2)
     expect(carrier.count('carrot')).toBe(0)
-    expect(orders.find(order.id)?.state).toBe('failed')
-    expect(orders.find(order.id)?.claimedQuantity).toBe(0)
+    expect(orders.find(order.id)).toBeUndefined()
+    expect(orders.list()).toEqual([])
   })
 
   it('refunds source and stays assigned when the carrier cannot hold the claim', () => {
@@ -189,7 +188,7 @@ describe('executeTransportPickup / executeTransportUnload', () => {
     expect(source.count('carrot')).toBe(after.source)
     expect(carrier.count('carrot')).toBe(after.carrier)
     expect(destination.count('carrot')).toBe(after.destination)
-    expect(orders.find(order.id)?.state).toBe('completed')
+    expect(orders.find(order.id)).toBeUndefined()
   })
 
   it('does not mint missing carrier cargo and does not complete', () => {

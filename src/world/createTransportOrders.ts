@@ -23,15 +23,17 @@ export type CreateTransportOrderParams = {
 }
 
 /**
- * World-owned runtime store for `TransportOrder` commitments (plan
- * settlements-npcs-018). Lookup by id and bounded lookup of the one active
- * order per carrier — no tick, no matching, no pathfinding.
+ * World-owned runtime store for active `TransportOrder` commitments (plan
+ * settlements-npcs-018; active-only registry plan settlements-npcs-053).
+ * Lookup by id and by carrier — no tick, no matching, no pathfinding.
  *
- * Active/non-terminal orders carry across an in-session `WorldBundle`
- * rebuild and persist as `SaveData.transportOrders` (plan
- * settlements-npcs-019) via `createTransportOrders(initial)`'s seed param —
- * no separate restore API. Cargo itself never lives here; see
- * `transportOrder.ts`'s doc.
+ * Only non-terminal orders live here. Terminal transitions return the final
+ * record to the caller but remove it from this store immediately.
+ *
+ * Active orders carry across an in-session `WorldBundle` rebuild and persist
+ * as `SaveData.transportOrders` (plan settlements-npcs-019) via
+ * `createTransportOrders(initial)`'s seed param — no separate restore API.
+ * Cargo itself never lives here; see `transportOrder.ts`'s doc.
  *
  * @domain settlements-npcs
  */
@@ -62,40 +64,60 @@ let nextTransportOrderId = 0
 export function createTransportOrders(
   initial: readonly TransportOrder[] = [],
 ): TransportOrders {
-  const records: TransportOrder[] = [...initial]
+  const activeById = new Map<string, TransportOrder>()
+  const carrierToOrderId = new Map<string, string>()
 
-  const indexOf = (id: string): number => records.findIndex((r) => r.id === id)
+  for (const order of initial) {
+    if (!isTransportOrderActive(order.state)) continue
+    if (activeById.has(order.id)) continue
+    const carrierId = order.carrierNpcId
+    if (carrierId && carrierToOrderId.has(carrierId)) continue
+    activeById.set(order.id, order)
+    if (carrierId) carrierToOrderId.set(carrierId, order.id)
+  }
 
   /** Collision-free by construction (plan settlements-npcs-019 §3) —
-   *  restored orders seed `records` directly (not through `nextId`'s
+   *  restored orders seed the active map directly (not through `nextId`'s
    *  counter), so a fresh id must be checked against them rather than
    *  trusted from `Date.now()` uniqueness alone. */
   const nextId = (): string => {
     let id: string
     do {
       id = `transportOrder:${Date.now()}:${nextTransportOrderId++}`
-    } while (indexOf(id) !== -1)
+    } while (activeById.has(id))
     return id
   }
 
   const findByCarrier = (npcId: string): TransportOrder | undefined => {
-    for (const order of records) {
-      if (order.carrierNpcId === npcId && isTransportOrderActive(order.state)) return order
-    }
-    return undefined
+    const orderId = carrierToOrderId.get(npcId)
+    if (!orderId) return undefined
+    return activeById.get(orderId)
   }
 
-  const replace = (id: string, updated: TransportOrder | null): TransportOrder | null => {
+  const applyTransition = (
+    id: string,
+    transition: (order: TransportOrder) => TransportOrder | null,
+  ): TransportOrder | null => {
+    const current = activeById.get(id)
+    if (!current) return null
+    const updated = transition(current)
     if (!updated) return null
-    const index = indexOf(id)
-    if (index === -1) return null
-    records[index] = updated
+    if (isTransportOrderActive(updated.state)) {
+      activeById.set(id, updated)
+      if (current.carrierNpcId !== updated.carrierNpcId) {
+        if (current.carrierNpcId) carrierToOrderId.delete(current.carrierNpcId)
+        if (updated.carrierNpcId) carrierToOrderId.set(updated.carrierNpcId, id)
+      }
+      return updated
+    }
+    activeById.delete(id)
+    if (current.carrierNpcId) carrierToOrderId.delete(current.carrierNpcId)
     return updated
   }
 
   return {
-    list: () => records,
-    find: (id) => records.find((r) => r.id === id),
+    list: () => Array.from(activeById.values()),
+    find: (id) => activeById.get(id),
     findByCarrier,
     create(params) {
       if (!(params.requestedQuantity > 0)) return null
@@ -113,47 +135,38 @@ export function createTransportOrders(
         if (!assigned) return null
         record = assigned
       }
-      records.push(record)
+      activeById.set(record.id, record)
+      if (record.carrierNpcId) carrierToOrderId.set(record.carrierNpcId, record.id)
       return record
     },
     assign(id, carrierNpcId) {
       if (findByCarrier(carrierNpcId)) return null
-      const index = indexOf(id)
-      if (index === -1) return null
-      return replace(id, assignTransportOrder(records[index]!, carrierNpcId))
+      return applyTransition(id, (order) => assignTransportOrder(order, carrierNpcId))
     },
     completePickup(id, carrierNpcId, claimedQuantity) {
-      const index = indexOf(id)
-      if (index === -1) return null
-      return replace(id, completeTransportPickup(records[index]!, carrierNpcId, claimedQuantity))
+      return applyTransition(id, (order) =>
+        completeTransportPickup(order, carrierNpcId, claimedQuantity))
     },
     completeDelivery(id, carrierNpcId) {
-      const index = indexOf(id)
-      if (index === -1) return null
-      return replace(id, completeTransportDelivery(records[index]!, carrierNpcId))
+      return applyTransition(id, (order) =>
+        completeTransportDelivery(order, carrierNpcId))
     },
     fail(id) {
-      const index = indexOf(id)
-      if (index === -1) return null
-      return replace(id, failTransportOrder(records[index]!))
+      return applyTransition(id, (order) => failTransportOrder(order))
     },
     cancel(id) {
-      const index = indexOf(id)
-      if (index === -1) return null
-      return replace(id, cancelTransportOrder(records[index]!))
+      return applyTransition(id, (order) => cancelTransportOrder(order))
     },
     beginOffscreenExecution(id, arrivesAtDays) {
-      const index = indexOf(id)
-      if (index === -1) return null
-      return replace(id, beginOffscreenTransportExecution(records[index]!, arrivesAtDays))
+      return applyTransition(id, (order) =>
+        beginOffscreenTransportExecution(order, arrivesAtDays))
     },
     clearExecution(id) {
-      const index = indexOf(id)
-      if (index === -1) return null
-      return replace(id, clearTransportExecution(records[index]!))
+      return applyTransition(id, (order) => clearTransportExecution(order))
     },
     dispose() {
-      records.length = 0
+      activeById.clear()
+      carrierToOrderId.clear()
     },
   }
 }

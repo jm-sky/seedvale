@@ -982,8 +982,8 @@ Generated from exported TypeScript symbols.
 ## `world/createTransportOrders.ts`
 
 - `CreateTransportOrderParams` — type — line 16
-- `createTransportOrders` — function — line 62
-- `TransportOrders` — type — line 38
+- `createTransportOrders` — function — line 64
+- `TransportOrders` — type — line 40
   - domain: settlements-npcs
 
 ## `world/createWater.ts`
@@ -2045,20 +2045,20 @@ Generated from exported TypeScript symbols.
 
 ## `world/transportOrder.ts`
 
-- `assignTransportOrder` — function — line 131
-- `beginOffscreenTransportExecution` — function — line 194
-- `cancelTransportOrder` — function — line 183
-- `clearTransportExecution` — function — line 208
-- `completeTransportDelivery` — function — line 160
-- `completeTransportPickup` — function — line 143
-- `createTransportOrderRecord` — function — line 110
-- `failTransportOrder` — function — line 176
-- `isTransportOrderActive` — function — line 106
-- `isTransportOrderTerminal` — function — line 102
-- `TransportEndpointRef` — type — line 39
-- `TransportExecution` — type — line 65
-- `TransportOrder` — type — line 73
-- `TransportOrderState` — type — line 29
+- `assignTransportOrder` — function — line 132
+- `beginOffscreenTransportExecution` — function — line 195
+- `cancelTransportOrder` — function — line 184
+- `clearTransportExecution` — function — line 209
+- `completeTransportDelivery` — function — line 161
+- `completeTransportPickup` — function — line 144
+- `createTransportOrderRecord` — function — line 111
+- `failTransportOrder` — function — line 177
+- `isTransportOrderActive` — function — line 107
+- `isTransportOrderTerminal` — function — line 103
+- `TransportEndpointRef` — type — line 40
+- `TransportExecution` — type — line 66
+- `TransportOrder` — type — line 74
+- `TransportOrderState` — type — line 30
   - domain: settlements-npcs
 
 ## `world/transportTransactions.ts`

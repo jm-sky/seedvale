@@ -120,7 +120,7 @@ describe('resolveOffscreenTransportArrivals', () => {
   it('completes delivery exactly once the arrival time has elapsed', () => {
     const { orders, economy, carrierState, lookup } = setupInTransitOrder(10)
     resolveOffscreenTransportArrivals(orders, lookup, 10)
-    expect(orders.find('order:1')?.state).toBe('completed')
+    expect(orders.find('order:1')).toBeUndefined()
     expect(carrierState.transportCargo.count('carrot')).toBe(0)
     expect(economy.items.count('carrot')).toBe(3)
   })
@@ -129,7 +129,7 @@ describe('resolveOffscreenTransportArrivals', () => {
     const { orders, economy, carrierState, lookup } = setupInTransitOrder(10)
     resolveOffscreenTransportArrivals(orders, lookup, 10)
     resolveOffscreenTransportArrivals(orders, lookup, 20)
-    expect(orders.find('order:1')?.state).toBe('completed')
+    expect(orders.find('order:1')).toBeUndefined()
     expect(carrierState.transportCargo.count('carrot')).toBe(0)
     expect(economy.items.count('carrot')).toBe(3)
   })
@@ -207,7 +207,7 @@ describe('resolveOffscreenTransportArrivals', () => {
       getEconomy: (id) => (id === 's1' ? economy : undefined),
       getNpcState: (id) => (id === 'npc:carrier' ? carrierState : undefined),
     }, 5)
-    expect(orders.find('order:ore')?.state).toBe('completed')
+    expect(orders.find('order:ore')).toBeUndefined()
     expect(carrierState.transportCargo.count('iron')).toBe(0)
     expect(economy.items.count('iron')).toBe(0)
     expect(economy.query('iron')).toBe(2)

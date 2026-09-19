@@ -47,7 +47,7 @@ describe('resolveTransportTravelArrivals', () => {
   it('unloads cargo exactly once when transport-purpose travel has reached', () => {
     const { dest, carrier, orders, lookup } = setup()
     resolveTransportTravelArrivals(orders, lookup, 10, (fn) => fn(carrier, 'npc:carrier'))
-    expect(orders.find('order:1')?.state).toBe('completed')
+    expect(orders.find('order:1')).toBeUndefined()
     expect(carrier.transportCargo.count('carrot')).toBe(0)
     expect(dest.items.count('carrot')).toBe(3)
     expect(carrier.travel).toBeNull()
