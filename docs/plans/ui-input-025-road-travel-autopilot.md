@@ -9,6 +9,7 @@
 **Subdomains:** `input` `interaction` `feedback`
 **Tags:** `autopilot` `travel` `roads` `riding` `notifications`
 **Roadmap:** -
+**Model:** `Sonnet`, `Composer`
 
 ## Goal
 
