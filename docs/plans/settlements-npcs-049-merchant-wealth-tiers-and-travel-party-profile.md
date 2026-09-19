@@ -804,11 +804,11 @@ Future business progression może dodać promotion/demotion jako jawne events.
 
 ---
 
-## 28. Route risk deferred
+## 28. Route risk and party-threat handoff
 
-Nie istnieje canonical route-risk score.
+Nie istnieje canonical historical/full-route risk score.
 
-Nie używać `npc-030` default danger estimate jako world truth.
+Nie używać `npc-030` default danger estimate jako world truth i nie skanować całej trasy przy wyliczaniu wealth tier.
 
 Wealth tier określa:
 
@@ -822,7 +822,25 @@ a nie:
 how dangerous this exact route is
 ```
 
-Future Dangerous Route system może wpływać na desired escort count/readiness.
+Jednocześnie escort nie może być wyłącznie wizualnym followerem. Ten plan musi przygotować actor-neutral party contracts tak, aby kolejny plan `settlements-npcs-051` mógł podpiąć realną współpracę przy zagrożeniu bez Merchant-specific combat AI:
+
+```text
+merchant / escort / pack animal receives real local threat
+→ bounded party-local threat information
+→ existing npcAnimalThreat arbitration
+→ capable escort may defend
+→ injured / incapable escort may flee
+```
+
+W tym planie:
+- utrzymać stable `world-party` identity;
+- NPC→NPC accompany musi zachować realne `NpcId`;
+- nie implementować osobnego combat state dla party;
+- nie kopiować guard responsibility / combat scoring.
+
+`npc-048` pozostaje wzorcem generic local assistance, a `settlements-npcs-051` rozszerzy composition poza settlement-local forwarding tylko w zakresie wymaganym przez travelling party.
+
+Future Dangerous Route system może wpływać na desired escort count/readiness jako osobny historyczny/world-risk input.
 
 ---
 
@@ -1030,6 +1048,8 @@ Nie implementować:
 - trade-history progression;
 - tier promotion/demotion;
 - route-risk score;
+- detailed road-following journey execution (`settlements-npcs-051`);
+- party-local threat forwarding / escort combat cooperation (`settlements-npcs-051`);
 - merchant cart/wagon journey;
 - caravan formation;
 - synthetic guard NPCs;
@@ -1068,7 +1088,8 @@ Plan jest wykonany, gdy:
 - no unavailable party member is spawned;
 - equipment expectation nie mintuje ani nie provisionuje gearu;
 - `npc-053` pozostaje authority dla actual equipment use;
-- prosperity/trade-success/route-risk pozostają future inputs.
+- prosperity/trade-success/history-based route-risk pozostają future inputs;
+- party identity/escort commitments są wystarczająco actor-neutral, aby `settlements-npcs-051` mógł reuse istniejącego threat/combat arbitration bez nowego Merchant combat systemu.
 
 Manualne/browser gameplay verification wykonuje User.
 
