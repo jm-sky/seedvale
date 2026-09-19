@@ -3,7 +3,7 @@
 **Created:** 2026-09-18
 **Status:** `draft` 📝
 **Priority:** medium-high · **Effort:** L
-**Depends on:** quests-progression-067, world-032, world-031
+**Depends on:** quests-progression-067, world-032, world-031, settlements-npcs-051
 **Domain:** `quests-progression`
 **Type:** `feature`
 **Roadmap:** `quests-travelling-merchant-journeys.md`
@@ -124,7 +124,19 @@ Jeżeli późniejszy Merchant decision potrzebuje risk input, może derive bound
 - historical failure facts;
 - persistent safety consequence.
 
-Exact consumer jest poza tym draftem i wymaga reconu aktualnych merchant journey policies.
+Exact consumer ma wejść przez route-policy seam przygotowany przez `settlements-npcs-051`, bez modyfikowania canonical road geometry ani tworzenia drugiego graphu.
+
+Rozdzielić dwa poziomy:
+
+```text
+npc-057
+= current observable danger przy konkretnym next destination/road-leg decision
+
+068 consequence/history
+= known persistent route problem / known safety improvement
+```
+
+Historyczny signal może wpływać na przyszłe przygotowanie/route choice tylko przy nowym journey/leg commitment albo uzasadnionym replanie — nigdy jako per-frame global route-risk scan.
 
 ---
 
