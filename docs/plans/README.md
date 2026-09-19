@@ -38,6 +38,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | `tools-000-weapon-browser-observatory.md`                                      | 🟡 | M      | -                                                                                                                                                                                                                                                                                          | -                                         |
 | `tools-006--world-observatory.md`                                              | ⚪ | XL     | -                                                                                                                                                                                                                                                                                          | -                                         |
 | `tools-007--mpfb2-npc-hero-character-pipeline.md`                              | 🔴 | L      | -                                                                                                                                                                                                                                                                                          | -                                         |
+| `ui-input-025-road-travel-autopilot.md`                                        | 🔴 | L      | ~~fauna-003~~, ~~npc-006~~                                                                                                                                                                                                                                                                 | -                                         |
 | `world-032-travelling-merchant-journey-failure-and-persistent-road-evidence.md` | 🔴 | L      | ~~settlements-npcs-048~~, settlements-npcs-050, ~~fauna-039~~                                                                                                                                                                                                                              | quests-travelling-merchant-journeys       |
 | `world-terrain-009-seasonal-ground-and-grass-appearance.md`                    | ⚪ | M      | -                                                                                                                                                                                                                                                                                          | -                                         |
 | `world-terrain-015-water-reflection-content-budget.md`                         | ⚪ | S      | -                                                                                                                                                                                                                                                                                          | -                                         |
@@ -100,6 +101,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `settlements-021-shared-settlement-resident-runtime.md`                     | 🔴 | L      | settlements-020                                                                                                                                                                                                                                                                            | quests-abandoned-gold-mine-colony         |
 | 💡 `settlements-022-founded-settlement-live-runtime-and-streaming.md`          | 🔴 | L      | settlements-021                                                                                                                                                                                                                                                                            | quests-abandoned-gold-mine-colony         |
 | ◼️ `tools-018-codebase-domain-and-flow-audit-master.md`                        | 🔴 | XL     | -                                                                                                                                                                                                                                                                                          | -                                         |
+| ◼️ `world-033-worldbundle-rebuild-transaction-and-lifecycle-safety.md`         | 🔴 | M      | -                                                                                                                                                                                                                                                                                          | -                                         |
 
 ---
 
@@ -232,8 +234,8 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - settlements: `023`
 - settlements-npcs: `051`
 - tools: `019`
-- ui-input: `025`
-- world: `033`
+- ui-input: `026`
+- world: `034`
 - world-terrain: `043`
 
 This ids section is maintained automatically from the plan files.
