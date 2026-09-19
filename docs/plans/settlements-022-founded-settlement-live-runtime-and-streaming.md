@@ -1,7 +1,7 @@
 # Plan: Founded settlement live runtime and streaming
 
 **Created:** 2026-09-19
-**Status:** `draft` 📝
+**Status:** `planned` 📋
 **Type:** feature
 **Priority:** high · **Effort:** L
 **Depends on:** settlements-021
