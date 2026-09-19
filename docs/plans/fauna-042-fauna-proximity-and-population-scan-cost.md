@@ -13,7 +13,7 @@ See [implementation notes](./implementation-notes/fauna-042-fauna-proximity-and-
 
 ## Implementation status (2026-09-19)
 
-**Implemented; baseline technical checks passed; correctness hardening remains before closing verification.** Browser/gameplay/performance comparison is User-owned.
+**Implemented; baseline technical checks passed; correctness hardening remains before closing verification.** Browser/gameplay/performance comparison is User-owned. Post-implementation verification should also compare two grid-cell sizes; no pre-implementation benchmark is required.
 
 - `src/fauna/faunaProximity.ts` — fauna-owned runtime spatial hash (16 m cells, extra neighbour covering). Rebuilt once per `Fauna.update()` from the wild `agents` array. Not a second registry, not persisted.
 - `AnimalAgent` sensing/targeting (`nearest`, prey commitment membership, rabid search, carcass search, prey-alert copy, scare-herd, rotting-corpse neighbours) visits covering cells when `AnimalUpdateContext.proximity` is supplied; tests and livestock ticks without it keep the original full-`others` scan.
@@ -70,6 +70,8 @@ Existing consumers must retain:
 - carcass claim/revalidation rules.
 
 A query may inspect extra neighboring cells but must apply the original radius predicate before selection.
+
+`coveringCellRange()` must cover every cell that can contain a candidate within the requested radius for the index snapshot, but should not add a full-cell safety margin by default. The current `radius + cellSize` coverage is a conservative implementation from the initial movement-snapshot analysis; it is not considered proven necessary. Keep the rationale documented, then reduce the margin if deterministic brute-force equivalence tests demonstrate that a tighter range preserves the accepted snapshot semantics. A later-updated animal discovering an earlier animal that moved into range during the same fauna pass may still be deferred until the next rebuild; that one-tick discovery difference is explicitly acceptable.
 
 Local discovery and global membership are distinct contracts:
 
@@ -130,18 +132,22 @@ Add tests proving candidate narrowing preserves:
 9. a committed wild target remains valid when it is globally present but absent from the local candidate slice, until ordinary death/range/membership rules invalidate it;
 10. rebuild → movement without rebuild cannot make a moved-away target pass the live radius predicate;
 11. snapshot lifecycle ordering is covered: all wild-agent updates run before removal, and spawner respawns occur only after the sensing pass;
-12. deterministic brute-force equivalence of static spatial queries vs. a full scan across cell boundaries, negative coordinates and radii below/equal/above cell size;
+12. **mandatory correctness gate:** deterministic brute-force equivalence of static spatial queries vs. a full scan across cell boundaries, negative coordinates, query centers near cell edges/corners, and radii below/equal/above cell size; this must pass before tightening `coveringCellRange()` is accepted;
 13. spatial cell keys are collision-free throughout the documented supported world-coordinate range.
 
 ## Performance verification
 
-Use existing diagnostics with a high-fauna scenario before/after.
+Use existing diagnostics after implementation. Do not require a pre-implementation benchmark as a gate for the code change.
+
+After correctness is established, compare two practical spatial-cell sizes using the same deterministic/high-fauna scenario. Keep 16 m as one candidate and select the second candidate from the observed real query radii and density profile rather than assuming a winner in the plan. Compare at representative populations (at least 50, 100, 500 and 2000 wild agents) and include one intentionally dense-cluster case to expose worst-case degradation.
 
 Success criteria:
 
 - local target discovery no longer scans the full wild array per animal in the common case;
 - no per-frame `filter().map()` chain remains for managed-spawner occupancy;
 - candidate-set construction is O(N) or better per fauna pass;
+- spatial-query candidate count depends primarily on local density and query radius, not total wild-fauna population, except in intentionally dense worst-case layouts;
+- the selected cell size is justified by post-implementation A/B diagnostics rather than intuition alone;
 - behavior/correctness tests remain unchanged.
 
 Do not claim a measured FPS win unless the user performs browser verification.
