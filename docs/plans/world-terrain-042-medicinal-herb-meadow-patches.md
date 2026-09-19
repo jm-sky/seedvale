@@ -9,6 +9,7 @@
 **Subdomains:** `\` `vegetation\` `\` `terrain\` `\` `resources\`
 **Tags:** `\` `herbs\` `\` `meadow\` `\` `world-generation\` `\` `resources\`
 **Roadmap:** -
+**Model:** Sonnet, Composer
 
 ## Goal
 
