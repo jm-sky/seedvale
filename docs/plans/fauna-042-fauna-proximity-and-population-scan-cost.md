@@ -7,6 +7,7 @@
 **Domain:** `fauna`
 **Type:** `optimization`
 **Roadmap:** -
+**Model:** Grok, Composer
 
 ## Goal
 
