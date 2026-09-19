@@ -16,28 +16,28 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/AnimalAgent.ts`
 
-- `AnimalAgent` — class — line 1186
+- `AnimalAgent` — class — line 1193
   - domain: fauna
   - system: animal-agent
   - role: Central per-animal behaviour integration point: predator/prey AI, needs, health, production (livestock) and riding (mounts).
   - uses: HealthState, StaminaState
   - simulation: tick
 - `AnimalAgentDebugInfo` — type — line 599
-- `AnimalAgentDeps` — type — line 962
+- `AnimalAgentDeps` — type — line 969
 - `AnimalSaveState` — type — line 732
-- `AnimalUpdateContext` — type — line 1034
+- `AnimalUpdateContext` — type — line 1041
 - `BURY_DURATION_SEC` — const — line 412
 - `canPredatorPursueIntoVillage` — function — line 816
 - `FAUNA_SHADOW_DISTANCE` — const — line 381
 - `FaunaAiBranch` — type — line 536
 - `FaunaNavRescueDebugInfo` — type — line 583
 - `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 471
-- `FrenzyWolfCandidate` — type — line 897
+- `FrenzyWolfCandidate` — type — line 904
 - `HARVEST_MEAT_DURATION_SEC` — const — line 415
 - `isWithinVillageRadius` — function — line 797
-- `NearbyNpcCandidate` — type — line 892
-- `pickNearestEligibleWolf` — function — line 906
-- `pickRabidTarget` — function — line 931
+- `NearbyNpcCandidate` — type — line 899
+- `pickNearestEligibleWolf` — function — line 913
+- `pickRabidTarget` — function — line 938
 - `RABIES_BITE_INFECTION_CHANCE` — const — line 399
 - `villageFleeBiasFalloff` — function — line 824
 - `VillageInfo` — type — line 791
@@ -615,13 +615,17 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/faunaProximity.ts`
 
-- `createFaunaProximityIndex` — function — line 63
+- `cellCoord` — function — line 59
+- `cellKey` — function — line 65
+- `createFaunaProximityIndex` — function — line 90
+- `FAUNA_PROXIMITY_CELL_KEY_STRIDE` — const — line 34
+- `FAUNA_PROXIMITY_CELL_KEY_WORLD_EXTENT` — const — line 38
 - `FAUNA_PROXIMITY_CELL_SIZE` — const — line 18
   - domain: fauna
   - role: Runtime-only coarse spatial hash for local inter-animal queries (plan fauna-042). Derived from the live `AnimalAgent[]` owned by `createFauna()`; not an authoritative registry and not persisted. Cell covering may include neighbouring cells so a target on a cell boundary is still visited. Callers must still apply the original radius / role / dead / self predicates before selection.
-- `FaunaProximityIndex` — type — line 28
-- `FaunaProximityPredicate` — type — line 26
-- `FaunaProximityVisitor` — type — line 24
+- `FaunaProximityIndex` — type — line 45
+- `FaunaProximityPredicate` — type — line 43
+- `FaunaProximityVisitor` — type — line 41
 
 ## `fauna/habitatPressure.ts`
 
