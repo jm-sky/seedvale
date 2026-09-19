@@ -3,6 +3,7 @@
 **Created:** 2026-09-19
 **Status:** `planned` 📋
 **Priority:** medium · **Effort:** S
+**Model:** Composer, Sonnet
 **Depends on:** ~~fauna-036~~, ~~fauna-017~~
 **Domain:** `fauna`
 **Type:** `bug`
@@ -28,7 +29,7 @@ A predator may therefore:
 3. leave the corpse's `foodClaimedBy` pointing at itself;
 4. block other scavengers until the original claimant eventually revisits/invalidates the source or the corpse disappears.
 
-Death-side claim cleanup is already handled; this plan is only about live behaviour transitions.
+Death-side and direct-dispose claim cleanup are already handled; this plan is only about live behaviour transitions.
 
 ## Scope
 
@@ -49,8 +50,9 @@ Preserve all other frenzy state:
 - `threateningHuman`;
 - NPC target commitment;
 - strategic village destination;
-- aggression/fear semantics;
-- source target may be reacquired normally after frenzy no longer overrides needs.
+- aggression/fear semantics.
+
+Current `main` has no `frenzied → false` transition: `setFrenzied()` sets the runtime flag and no production path clears it. “Source target may be reacquired after frenzy no longer overrides needs” means when ordinary predator needs execution becomes reachable again (for example after the strategic beeline is no longer valid), not when the flag is cleared.
 
 ### 3. Avoid duplicate claim logic
 
@@ -64,6 +66,7 @@ If the two branches share identical transition cleanup, factor only the smallest
 
 - `src/fauna/AnimalAgent.ts` behaviour execution switch
 - `src/fauna/AnimalAgent.ts::cancelSourceTarget`
+- `src/fauna/AnimalAgent.ts::setFrenzied`
 - `src/fauna/animalForaging.ts`
 - `src/fauna/animalCorpse.ts`
 - fauna decision/feeding tests.
@@ -77,13 +80,13 @@ Add focused tests proving:
 3. a second eligible scavenger can claim the corpse after that transition;
 4. normal uninterrupted feeding keeps its claim until completion/cancellation;
 5. ignore branches that intentionally continue normal predator execution do not spuriously cancel feeding;
-6. death cleanup remains exact-once and unchanged.
+6. death and direct-dispose cleanup remain exact-once/idempotent and unchanged.
 
 ## Guardrails
 
 - no new corpse manager;
 - no new claim field;
-- no frenzy rebalance;
+- no frenzy rebalance or new frenzy-reset lifecycle;
 - no persistence change;
 - no unrelated `AnimalAgent` refactor;
 - no browser verification by the implementing agent.
