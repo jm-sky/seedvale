@@ -117,6 +117,8 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `fauna-041-managed-spawner-population-authority.md`                         | 🔴 | S      | ~~fauna-018~~                                                                                                                                                                                                                                                                              | -                                         |
 | ◼️ `fauna-042-fauna-proximity-and-population-scan-cost.md`                     | 🟡 | M      | fauna-041, ~~fauna-028~~, ~~fauna-033~~                                                                                                                                                                                                                                                    | -                                         |
 | ◼️ `fauna-043-frenzy-source-target-claim-cleanup.md`                           | 🟡 | S      | ~~fauna-036~~, ~~fauna-017~~                                                                                                                                                                                                                                                               | -                                         |
+| ◼️ `quests-progression-071-generated-opportunity-retention-semantics.md`       | 🟡 | S      | ~~quests-progression-031~~                                                                                                                                                                                                                                                                 | -                                         |
+| ◼️ `quests-progression-072-invalidated-quest-restore-metadata-continuity.md`   | 🟡 | XS     | -                                                                                                                                                                                                                                                                                          | -                                         |
 
 ---
 
@@ -245,7 +247,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - items-player: `049`
 - npc: `061`
 - persistence: `006`
-- quests-progression: `071`
+- quests-progression: `073`
 - settlements: `023`
 - settlements-npcs: `054`
 - tools: `019`
