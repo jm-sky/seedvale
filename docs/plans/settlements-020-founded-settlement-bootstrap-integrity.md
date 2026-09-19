@@ -1,7 +1,7 @@
 # Plan: Founded settlement bootstrap integrity
 
 **Created:** 2026-09-19
-**Status:** `draft` 📝
+**Status:** `planned` 📋
 **Type:** fix
 **Priority:** high · **Effort:** M
 **Depends on:** none
