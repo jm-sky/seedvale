@@ -1,7 +1,7 @@
 # Plan: Handheld torch retention across combat weapon draw
 
 **Created:** 2026-09-19  
-**Status:** `planned` 📋  
+**Status:** `done` ✅ (implemented 2026-09-19 — browser verification by user)  
 **Type:** polish  
 **Priority:** medium · **Effort:** S  
 **Depends on:** ~~ui-input-018~~  

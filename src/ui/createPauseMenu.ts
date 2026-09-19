@@ -28,6 +28,7 @@ export type PauseMenuHandlers = {
   onBuildGrate?: () => ActionResult
   onLightBranch?: () => ActionResult
   onLightWoodenTorch?: () => ActionResult
+  onExtinguishPortableTorch?: () => ActionResult
   /** `seedChoice` resolves through `world/seedLibrary.ts`'s
    *  `resolveNewGameSeed()` (plan world-015 §3) — reusing an existing seed
    *  must never fall back to a fresh `randomSeed()`. */

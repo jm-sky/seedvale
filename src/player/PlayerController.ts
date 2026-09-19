@@ -441,6 +441,13 @@ export class PlayerController {
   private rightWrist: THREE.Object3D | null
   /** UBC `hand_l` for wooden_torch (`Idle_Torch_Loop`); null on Adventurer / capsule. */
   private leftWrist: THREE.Object3D | null
+  /**
+   * Hip/belt mount for a lit wooden torch while a combat weapon uses the hand
+   * (items-player-048). Parent follows `modelRoot`; tune the local TRS block.
+   *
+   * @domain items-player
+   */
+  private readonly torchBeltCarrySocket: THREE.Group
   private heldToolObject: THREE.Object3D | null = null
   private heldToolKind: ToolKind | null = null
   /** Bumps on each `setHeldTool` so stale async GLB loads are ignored. */
@@ -507,6 +514,12 @@ export class PlayerController {
     if (!isCapsule && !this.rightWrist) {
       console.warn('[player] right-hand bone not found; held tools parent to model root (feet)')
     }
+
+    // Approximate belt/hip — manual tuning expected (items-player-048).
+    this.torchBeltCarrySocket = new THREE.Group()
+    this.torchBeltCarrySocket.position.set(0.34, 0.92, 0.1)
+    this.torchBeltCarrySocket.rotation.set(0, -0.35, -0.45)
+    this.modelRoot.add(this.torchBeltCarrySocket)
 
     this.bindMixer(root, animations)
 
@@ -706,6 +719,25 @@ export class PlayerController {
     return this.rightWrist ?? this.modelRoot
   }
 
+  /**
+   * Left-hand (or model-root) socket for portable torch flame/light in normal
+   * hand carry — independent of the current `HeldTool` kind.
+   *
+   * @domain items-player
+   */
+  torchHandSocket(): THREE.Object3D {
+    return this.leftWrist ?? this.modelRoot
+  }
+
+  /**
+   * Stable body mount while a lit wooden torch is belt-carried during combat.
+   *
+   * @domain items-player
+   */
+  torchBeltSocket(): THREE.Object3D {
+    return this.torchBeltCarrySocket
+  }
+
   /** Currently-mounted held-tool mesh (visual only), or `null` while
    *  unarmed/still loading. */
   getHeldToolObject(): THREE.Object3D | null {
@@ -808,6 +840,8 @@ export class PlayerController {
     this.modelRoot = next
     this.modelRoot.rotation.copy(poseRot)
     this.modelRoot.position.copy(posePos)
+    this.torchBeltCarrySocket.removeFromParent()
+    this.modelRoot.add(this.torchBeltCarrySocket)
     this.rightWrist = findRightHandSocket(next)
     this.leftWrist = findUbcLeftHandSocket(next)
     if (!this.rightWrist) {

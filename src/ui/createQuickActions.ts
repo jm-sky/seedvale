@@ -38,6 +38,7 @@ export type QuickActionsHandlers = {
   onBuildGrate?: () => ActionResult
   onLightBranch?: () => ActionResult
   onLightWoodenTorch?: () => ActionResult
+  onExtinguishPortableTorch?: () => ActionResult
   /** Starts a "wait" time skip (1/3/6h, visible fast-forward) — see
    *  `world/timeSkip.ts`. */
   onWait?: (hours: number) => void

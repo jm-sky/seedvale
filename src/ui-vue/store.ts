@@ -174,6 +174,7 @@ type PauseMenuState = {
   onRefresh: (() => void) | null
   onBuildSimpleFire: (() => ActionResult) | null; onBuildFirePit: (() => ActionResult) | null; onBuildWoodPile: (() => ActionResult) | null; onBuildGrate: (() => ActionResult) | null
   onLightBranch: (() => ActionResult) | null; onLightWoodenTorch: (() => ActionResult) | null
+  onExtinguishPortableTorch: (() => ActionResult) | null
   onNewGame: ((name: string, seedChoice: SeedChoice) => void) | null; onQuestLog: (() => void) | null; onVillagers: (() => void) | null; onInventory: (() => void) | null; onWorldMap: (() => void) | null
   /** Plan ui-input-019 — Character Screen needs a known-settlement reputation
    *  refresh at open time (see `CharacterReputationView`'s doc), so it gets
@@ -218,7 +219,14 @@ type FlavorDialogState = {
   onOpen: (() => void) | null
   onClose: (() => void) | null
 }
-export type FireActionId = 'lightBranch' | 'lightWoodenTorch' | 'buildFirePit' | 'buildSimpleFire' | 'buildWoodPile' | 'buildGrate'
+export type FireActionId =
+  | 'lightBranch'
+  | 'lightWoodenTorch'
+  | 'extinguishPortableTorch'
+  | 'buildFirePit'
+  | 'buildSimpleFire'
+  | 'buildWoodPile'
+  | 'buildGrate'
 
 /** Each fire action's structural `ActionAvailability` (plan `ui-input-007`)
  *  — kept live by `createApp.ts`'s `syncQuickActionAvailability`, derived
@@ -273,6 +281,7 @@ type QuickActionsState = {
   onBuildGrate: (() => ActionResult) | null
   onLightBranch: (() => ActionResult) | null
   onLightWoodenTorch: (() => ActionResult) | null
+  onExtinguishPortableTorch: (() => ActionResult) | null
   onWait: ((hours: number) => void) | null
   onRest: ((variant: RestVariant) => RestOutcome) | null
   onDig: (() => void) | null
@@ -777,7 +786,7 @@ export const ui = reactive({
     open: false, seed: 0, playerName: '', activeSaveName: '', onPause: null, onResume: null, onToggleGui: null,
     onNameChange: null, onNameCommit: null, onSave: null, onSaveAs: null, onLoadSave: null, onListSaves: null,
     onListSaveManagement: null, onDeleteSave: null, onListSeeds: null, onRefresh: null,
-    onBuildSimpleFire: null, onBuildFirePit: null, onBuildWoodPile: null, onBuildGrate: null, onLightBranch: null, onLightWoodenTorch: null,
+    onBuildSimpleFire: null, onBuildFirePit: null, onBuildWoodPile: null, onBuildGrate: null, onLightBranch: null, onLightWoodenTorch: null, onExtinguishPortableTorch: null,
     onNewGame: null, onQuestLog: null, onVillagers: null, onInventory: null, onWorldMap: null, onCharacter: null,
     saveStatus: '',
   } as PauseMenuState,
@@ -794,8 +803,9 @@ export const ui = reactive({
       buildGrate: NOT_YET_AVAILABLE,
       lightBranch: NOT_YET_AVAILABLE,
       lightWoodenTorch: NOT_YET_AVAILABLE,
+      extinguishPortableTorch: NOT_YET_AVAILABLE,
     },
-    onBuildSimpleFire: null, onBuildFirePit: null, onBuildWoodPile: null, onBuildGrate: null, onLightBranch: null, onLightWoodenTorch: null,
+    onBuildSimpleFire: null, onBuildFirePit: null, onBuildWoodPile: null, onBuildGrate: null, onLightBranch: null, onLightWoodenTorch: null, onExtinguishPortableTorch: null,
     onWait: null, onRest: null,
     onDig: null, onLevel: null, onMound: null, onPrepareTerrain: null, onStartPlacementPreview: null, onPlaceTrap: null, onOpen: null, onClose: null,
     hasCarriedContainer: false, onPutDownContainer: null, onBuildWell: null, onBuildGarden: null, onHireHelp: null, onHireEscort: null,

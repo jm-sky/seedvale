@@ -1,7 +1,7 @@
 import { Group, Matrix4, type Object3D, PointLight, Vector3 } from 'three'
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js'
 import { disposeObject3D, loadGltf, preparePropFitMax } from '../assets/loadGltf'
-import { BRANCH_HELD_ATTACH, HELD_ATTACH, mountAttachOnSocket } from '../items/heldToolVisual'
+import { BRANCH_HELD_ATTACH, HELD_ATTACH, mountAttachOnSocket, TORCH_BELT_CARRY_ATTACH } from '../items/heldToolVisual'
 import { createItemMesh } from '../items/items'
 import { createFireVisual } from '../shared/getFireParticles'
 import { TORCH_DEFAULT_FIRE_VISUAL } from '../shared/torchConfig'
@@ -25,22 +25,38 @@ export const TORCH_FUEL_WOODEN = 240
 
 export type TorchSource = 'branch' | 'wooden_torch'
 
+/** Runtime-only presentation for a lit `wooden_torch` (items-player-048). */
+export type TorchCarryMode = 'hand' | 'belt'
+
 export type PlayerTorch = {
   isLit: () => boolean
   source: () => TorchSource | null
+  /** Belt carry applies only to a lit `wooden_torch`; branches stay hand-only. */
+  carryMode: () => TorchCarryMode
   fuelRemaining: () => number
   /** Ignites — caller checks inventory / held tool first.
    *  Optional `fuelRemaining` restores a mid-burn torch from save.
    *  `silent` skips ignite SFX (save restore). */
   light: (source: TorchSource, opts?: { fuelRemaining?: number, silent?: boolean }) => Promise<void>
+  /**
+   * Reparents an already-lit `wooden_torch` flame/light without changing
+   * fuel, source, or ignite/extinguish semantics (items-player-048).
+   *
+   * @domain items-player
+   */
+  setCarryMode: (mode: TorchCarryMode) => void
   extinguish: () => void
   update: (dt: number) => void
   dispose: () => void
 }
 
 type HandAccess = {
-  /** Right wrist (or model root fallback). */
-  handSocket: () => Object3D
+  /** Left wrist for wooden-torch hand carry (items-player-048). */
+  torchHandSocket: () => Object3D
+  /** Hip/belt mount while a combat weapon occupies the hand. */
+  torchBeltSocket: () => Object3D
+  /** @deprecated Prefer `torchHandSocket` / `torchBeltSocket`; kept for branch carry. */
+  handSocket?: () => Object3D
   /** Currently-equipped held-tool mesh (`PlayerController.getHeldToolObject`).
    *  Not the same object as this module's own `mount` (sparks/light
    *  overlay); the visible tool mesh lives in `heldToolVisual.ts`/
@@ -132,6 +148,7 @@ export function createPlayerTorch(
   let pointLight: PointLight | null = null
   let worldUpFire: Object3D | null = null
   let loadToken = 0
+  let carryMode: TorchCarryMode = 'hand'
 
   const clearMount = () => {
     if (mount) {
@@ -148,10 +165,25 @@ export function createPlayerTorch(
 
   const notify = () => hand.onChange?.()
 
+  const remountWoodenTorchPresentation = () => {
+    if (!mount || current !== 'wooden_torch' || !lit) return
+    const socket = carryMode === 'belt' ? hand.torchBeltSocket() : hand.torchHandSocket()
+    const attach = carryMode === 'belt' ? TORCH_BELT_CARRY_ATTACH : HELD_ATTACH.wooden_torch
+    mount.removeFromParent()
+    mountAttachOnSocket(mount, socket, attach)
+    if (worldUpFire) alignLocalYToWorldUp(worldUpFire)
+  }
+
   return {
     isLit: () => lit,
     source: () => current,
+    carryMode: () => carryMode,
     fuelRemaining: () => (lit ? fuelRemaining : 0),
+    setCarryMode(mode) {
+      if (!lit || current !== 'wooden_torch' || carryMode === mode) return
+      carryMode = mode
+      remountWoodenTorchPresentation()
+    },
     async light(source, opts) {
       const token = ++loadToken
       await ensureTemplates()
@@ -160,6 +192,7 @@ export function createPlayerTorch(
       clearMount()
       lit = true
       current = source
+      carryMode = 'hand'
       fuelMax = source === 'wooden_torch' ? TORCH_FUEL_WOODEN : TORCH_FUEL_BRANCH
       const restored = opts?.fuelRemaining
       fuelRemaining =
@@ -167,7 +200,9 @@ export function createPlayerTorch(
           ? Math.max(0.05, Math.min(fuelMax, restored))
           : fuelMax
 
-      const socket = hand.handSocket()
+      const socket = source === 'wooden_torch'
+        ? hand.torchHandSocket()
+        : (hand.handSocket?.() ?? hand.torchHandSocket())
       const group = new Group()
       const ratio = fuelRemaining / fuelMax
 
@@ -239,6 +274,7 @@ export function createPlayerTorch(
       loadToken++
       lit = false
       current = null
+      carryMode = 'hand'
       fuelRemaining = 0
       clearMount()
       notify()
@@ -271,6 +307,7 @@ export function createPlayerTorch(
       loadToken++
       lit = false
       current = null
+      carryMode = 'hand'
       clearMount()
     },
   }

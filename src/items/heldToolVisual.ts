@@ -231,6 +231,18 @@ export const BRANCH_HELD_ATTACH: HeldAttach = {
   gripLocalOffset: [0, 0, -0.08],
 }
 
+/**
+ * Lit wooden-torch flame/light while the stick is off the hand (belt carry,
+ * items-player-048). Tune alongside `PlayerController`'s belt socket offset.
+ *
+ * @domain items-player
+ */
+export const TORCH_BELT_CARRY_ATTACH: HeldAttach = {
+  position: [0, 0.05, 0],
+  rotation: [Math.PI / 2, 0, Math.PI / 4],
+  scale: 0.85,
+}
+
 /** Longest-axis size while held (meters). Separate from ground-drop sizing. */
 export const HELD_GLB: Partial<Record<ToolKind, { url: string, maxSize: number }>> = {
   axe: { url: '/models/items/axe.glb', maxSize: 0.55 },

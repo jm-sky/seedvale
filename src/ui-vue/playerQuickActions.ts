@@ -20,6 +20,7 @@ export type { FireActionId }
 export type FireActionHandlers = {
   onLightBranch: (() => ActionResult) | null
   onLightWoodenTorch: (() => ActionResult) | null
+  onExtinguishPortableTorch: (() => ActionResult) | null
   onBuildFirePit: (() => ActionResult) | null
   onBuildSimpleFire: (() => ActionResult) | null
   onBuildWoodPile: (() => ActionResult) | null
@@ -49,6 +50,7 @@ const TARGET_REQUIREMENT_LABEL: Record<string, string> = {
   firePlacement: 'Nie można postawić ognia w tym miejscu',
   grateTarget: 'Musisz stać przy własnym ognisku',
   torchNotLit: 'Już płonie',
+  torchLit: 'Pochodnia nie jest zapalona',
   freeHand: 'Weź pochodnię w rękę',
 }
 
@@ -93,6 +95,7 @@ export function formatCostItems(items: readonly { item: ItemKind; count: number 
 export const FIRE_COST_ITEMS: Record<FireActionId, readonly { item: ItemKind; count: number }[]> = {
   lightBranch: [{ item: 'branch', count: TORCH_BRANCH_COST }],
   lightWoodenTorch: [],
+  extinguishPortableTorch: [],
   buildFirePit: [{ item: 'stone', count: FIRE_PIT_STONE_COST }],
   buildSimpleFire: [{ item: 'branch', count: SIMPLE_FIRE_BRANCH_COST }],
   buildWoodPile: [{ item: 'beam', count: WOOD_PILE_BEAM_COST }],
@@ -115,6 +118,13 @@ export const FIRE_QUICK_ACTIONS: readonly FireActionDef[] = [
     label: 'Zapal pochodnię',
     costItems: FIRE_COST_ITEMS.lightWoodenTorch,
     run: (handlers) => runResult(requireHandler(handlers.onLightWoodenTorch, 'lightWoodenTorch')(), 'Zapalono pochodnię!'),
+  },
+  {
+    id: 'extinguishPortableTorch',
+    label: 'Zgaś pochodnię',
+    costItems: FIRE_COST_ITEMS.extinguishPortableTorch,
+    run: (handlers) =>
+      runResult(requireHandler(handlers.onExtinguishPortableTorch, 'extinguishPortableTorch')(), 'Zgaszono pochodnię.'),
   },
   {
     id: 'buildFirePit',

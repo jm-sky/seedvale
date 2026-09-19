@@ -278,10 +278,11 @@ Generated from exported TypeScript symbols.
 
 ## `player/PlayerTorch.ts`
 
-- `createPlayerTorch` — function — line 118
-- `PlayerTorch` — type — line 28
+- `createPlayerTorch` — function — line 134
+- `PlayerTorch` — type — line 31
 - `TORCH_FUEL_BRANCH` — const — line 22
 - `TORCH_FUEL_WOODEN` — const — line 24
+- `TorchCarryMode` — type — line 29
 - `TorchSource` — type — line 26
 
 ## `player/playerVisualPreset.ts`

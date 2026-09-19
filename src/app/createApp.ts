@@ -1043,6 +1043,7 @@ export async function createApp(
       buildGrate: availableGrate(),
       lightBranch: availableLightBranch(),
       lightWoodenTorch: availableLightWoodenTorch(),
+      extinguishPortableTorch: availableExtinguishPortableTorch(),
     })
     vueUi.setQuickActionsHasCarriedContainer(bundle.placedContainers.hasCarried())
     vueUi.setQuickActionsHasTreeSeed(inventory.has('tree_seed', 1))
@@ -1175,7 +1176,8 @@ export async function createApp(
   // Assigned below; PlayerTorch onChange closes over the live binding.
   let syncHeldHud = (): void => {}
   const playerTorch = createPlayerTorch({
-    handSocket: () => player.handSocket(),
+    torchHandSocket: () => player.torchHandSocket(),
+    torchBeltSocket: () => player.torchBeltSocket(),
     heldToolObject: () => player.getHeldToolObject(),
     onChange: () => syncHeldHud(),
     onIgnite: () => playActionFireIgnite(worldAudio.playAt, player.mesh.position),
@@ -1227,6 +1229,16 @@ export async function createApp(
       primaryWeapons.primaryRanged() ? ITEM_DEFS[primaryWeapons.primaryRanged()!.kind].label : '',
     )
     hud.setCombatWeapon(playerCombatMode.activeWeapon())
+    if (playerTorch.isLit() && playerTorch.source() === 'wooden_torch' && playerCombatMode.isActive()) {
+      playerTorch.setCarryMode('belt')
+    } else if (
+      playerTorch.isLit()
+      && playerTorch.source() === 'wooden_torch'
+      && !playerCombatMode.isActive()
+      && held === 'wooden_torch'
+    ) {
+      playerTorch.setCarryMode('hand')
+    }
   }
   syncHeldHud()
 
@@ -3005,7 +3017,9 @@ export async function createApp(
 
   const {
     previewFirePlacement, buildSimpleFire, buildFirePit, buildWoodPile, buildGrate, lightBranch, lightWoodenTorch,
-    availableSimpleFire, availableFirePit, availableWoodPile, availableGrate, availableLightBranch, availableLightWoodenTorch,
+    extinguishPortableTorch,
+    availableSimpleFire, availableFirePit, availableWoodPile, availableGrate, availableLightBranch,
+    availableLightWoodenTorch, availableExtinguishPortableTorch,
   } = getUserActions(
     inventory,
     bundle,
@@ -3016,6 +3030,7 @@ export async function createApp(
     syncHeldHud,
     mouseLook,
     placement.tentBlockers,
+    syncQuickActionAvailability,
   )
 
   const placementPreview = createPlacementPreviewActions(actionCtx, {
@@ -3123,6 +3138,7 @@ export async function createApp(
     onBuildGrate: buildGrate,
     onLightBranch: lightBranch,
     onLightWoodenTorch: lightWoodenTorch,
+    onExtinguishPortableTorch: extinguishPortableTorch,
     onWait: rest.startWait,
     onRest: rest.startRest,
     onDig: () => {
@@ -3292,6 +3308,7 @@ export async function createApp(
     onBuildGrate: buildGrate,
     onLightBranch: lightBranch,
     onLightWoodenTorch: lightWoodenTorch,
+    onExtinguishPortableTorch: extinguishPortableTorch,
     // Wrapped in `runExclusive` for the same reason as `onLoadSave` — the
     // world-transition contract (plan persistence-004 §7) must not let an
     // autosave capture the old world under `beginNewSave`'s pending name/the

@@ -241,6 +241,12 @@ Generated from TypeScript imports.
 - `ui-vue/store.ts`
 - `world/animalTraps.test.ts`
 
+## `player/PlayerTorch.test.ts`
+
+**Imports**
+
+- `player/PlayerTorch.ts`
+
 ## `player/PlayerTorch.ts`
 
 **Imports**
@@ -261,6 +267,7 @@ Generated from TypeScript imports.
 - `app/inventoryWiring.ts`
 - `app/saveState.ts`
 - `app/userActions.ts`
+- `player/PlayerTorch.test.ts`
 
 ## `player/cameraBoom.test.ts`
 

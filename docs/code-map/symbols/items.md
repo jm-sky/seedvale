@@ -278,16 +278,18 @@ Generated from exported TypeScript symbols.
 ## `items/heldToolVisual.ts`
 
 - `BRANCH_HELD_ATTACH` — const — line 226
-- `createHeldToolObject` — function — line 330
-- `findRightHandSocket` — function — line 302
-- `findUbcLeftHandSocket` — function — line 307
+- `createHeldToolObject` — function — line 342
+- `findRightHandSocket` — function — line 314
+- `findUbcLeftHandSocket` — function — line 319
 - `HELD_ATTACH` — const — line 45
-- `HELD_GLB` — const — line 235
+- `HELD_GLB` — const — line 247
 - `HeldAttach` — type — line 18
-- `HeldMountContext` — type — line 288
-- `mountAttachOnSocket` — function — line 404
-- `mountHeldToolOnSocket` — function — line 358
-- `preloadHeldToolModels` — function — line 311
+- `HeldMountContext` — type — line 300
+- `mountAttachOnSocket` — function — line 416
+- `mountHeldToolOnSocket` — function — line 370
+- `preloadHeldToolModels` — function — line 323
+- `TORCH_BELT_CARRY_ATTACH` — const — line 240
+  - domain: items-player
 
 ## `items/Inventory.ts`
 

@@ -37,8 +37,10 @@ function makeActions(opts: {
   const playerTorch = {
     isLit: () => lit,
     source: () => null,
+    carryMode: () => 'hand' as const,
     fuelRemaining: () => 0,
     light: vi.fn(async () => { lit = true }),
+    setCarryMode: () => {},
     extinguish: () => { lit = false },
     update: () => {},
     dispose: () => {},
@@ -184,5 +186,18 @@ describe('userActions fire contracts', () => {
       { kind: 'target', id: 'freeHand' },
       { kind: 'item', item: 'wooden_torch', required: 1, actual: 0 },
     ])
+  })
+
+  it('extinguishPortableTorch is available only while a portable light is lit', () => {
+    const { actions } = makeActions({ torchLit: false })
+    expect(actions.availableExtinguishPortableTorch()).toEqual({
+      available: false,
+      missing: [{ kind: 'target', id: 'torchLit' }],
+    })
+
+    const lit = makeActions({ torchLit: true })
+    expect(lit.actions.availableExtinguishPortableTorch()).toEqual({ available: true })
+    lit.actions.extinguishPortableTorch()
+    expect(lit.actions.availableExtinguishPortableTorch().available).toBe(false)
   })
 })

@@ -238,6 +238,17 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
     guardLocalKnowledge,
   } = deps
 
+  /** Lit portable wooden torch must still be owned in inventory (items-player-048). */
+  const reconcileLitWoodenTorchWithInventory = (): void => {
+    if (
+      playerTorch.isLit()
+      && playerTorch.source() === 'wooden_torch'
+      && !inventory.has('wooden_torch', 1)
+    ) {
+      playerTorch.extinguish()
+    }
+  }
+
   let activeMerchantPricing: MerchantPricing | null = null
 
   const findSettlementForNpc = (npc: NpcAgent | null): Settlement | null => {
@@ -417,6 +428,7 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
     if (result.result === 'ok') {
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       heldTool.syncWithInventory()
+      reconcileLitWoodenTorchWithInventory()
       deps.syncHeldHud()
       deps.syncQuickActionAvailability()
       deps.syncPlayerAppearance()
@@ -554,9 +566,7 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
       unitBatches = expandFoodBatchesToUnits(removed)
     }
     heldTool.syncWithInventory()
-    if (playerTorch.isLit() && playerTorch.source() === 'wooden_torch' && heldTool.held() !== 'wooden_torch') {
-      playerTorch.extinguish()
-    }
+    reconcileLitWoodenTorchWithInventory()
     for (let i = 0; i < count; i++) {
       const angle = i * ((Math.PI * 2) / count)
       bundle.droppedItems.drop(
@@ -611,8 +621,17 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
     category: CombatWeaponCategory,
   ): boolean => {
     if (!choice) return false
-    if (playerTorch.isLit()) playerTorch.extinguish()
-    if (!heldTool.equip(choice.kind, choice.instanceId ?? undefined)) return false
+    const preserveLitWoodenTorch =
+      playerTorch.isLit() && playerTorch.source() === 'wooden_torch'
+    if (playerTorch.isLit() && playerTorch.source() === 'branch') {
+      playerTorch.extinguish()
+    } else if (preserveLitWoodenTorch) {
+      playerTorch.setCarryMode('belt')
+    }
+    if (!heldTool.equip(choice.kind, choice.instanceId ?? undefined)) {
+      if (preserveLitWoodenTorch) playerTorch.setCarryMode('hand')
+      return false
+    }
     playerCombatMode.noteDrawn(category)
     deps.syncHeldHud()
     deps.refreshInventoryScreen()
@@ -628,7 +647,19 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
   /** Sheathes the drawn primary combat weapon and leaves the hand empty (V1). */
   const sheatheCombatWeapon = (): void => {
     if (!playerCombatMode.isActive()) return
+    const restoreLitWoodenTorch =
+      playerTorch.isLit()
+      && playerTorch.source() === 'wooden_torch'
+      && inventory.has('wooden_torch', 1)
     playerCombatMode.noteSheathed()
+    if (restoreLitWoodenTorch) {
+      heldTool.unequip()
+      heldTool.equip('wooden_torch')
+      playerTorch.setCarryMode('hand')
+      deps.syncHeldHud()
+      deps.refreshInventoryScreen()
+      return
+    }
     unequipTool()
   }
 
@@ -773,6 +804,7 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
   const afterTrade = (horseOffer?: MerchantHorseOffer | MerchantHorseOffer[] | null): void => {
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
     heldTool.syncWithInventory()
+    reconcileLitWoodenTorchWithInventory()
     deps.syncHeldHud()
     deps.syncQuickActionAvailability()
     deps.syncPlayerAppearance()

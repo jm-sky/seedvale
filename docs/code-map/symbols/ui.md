@@ -64,8 +64,8 @@ Generated from exported TypeScript symbols.
 
 ## `ui/createPauseMenu.ts`
 
-- `createPauseMenu` — function — line 47
-- `PauseMenu` — type — line 45
+- `createPauseMenu` — function — line 48
+- `PauseMenu` — type — line 46
 - `PauseMenuHandlers` — type — line 6
 
 ## `ui/createQuestLog.ts`
@@ -76,8 +76,8 @@ Generated from exported TypeScript symbols.
 
 ## `ui/createQuickActions.ts`
 
-- `createQuickActions` — function — line 152
-- `QuickActions` — type — line 143
+- `createQuickActions` — function — line 153
+- `QuickActions` — type — line 144
 - `QuickActionsCropSeeds` — type — line 13
 - `QuickActionsHandlers` — type — line 29
 - `QuickActionsTraps` — type — line 9

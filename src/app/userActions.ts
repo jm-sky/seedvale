@@ -70,6 +70,7 @@ const getUserActions = (
   /** Shared nearby-object blocker query (`placementActions.ts`'s
    *  `tentBlockers`) — reused here rather than a second blocker service. */
   blockersNear: (x: number, z: number) => PlacementBlocker[],
+  syncQuickActionAvailability: () => void = () => {},
 ) => {
   // Shared by the pause menu's fire/torch buttons and the quick-actions popup
   // below — two UI entry points onto identical logic, not a duplicate.
@@ -265,6 +266,22 @@ const getUserActions = (
     return { ok: true }
   }
 
+  const extinguishPortableTorchRequirements = (): (ActionRequirement | null)[] => [
+    targetRequirement(playerTorch.isLit(), 'torchLit'),
+  ]
+
+  const availableExtinguishPortableTorch = (): ActionAvailability =>
+    toAvailability(extinguishPortableTorchRequirements())
+
+  const extinguishPortableTorch = (): ActionResult => {
+    const result = toResult(extinguishPortableTorchRequirements())
+    if (!result.ok) return result
+    playerTorch.extinguish()
+    syncHeldHud()
+    syncQuickActionAvailability()
+    return { ok: true }
+  }
+
   return {
     previewFirePlacement,
     buildSimpleFire,
@@ -273,12 +290,14 @@ const getUserActions = (
     buildGrate,
     lightBranch,
     lightWoodenTorch,
+    extinguishPortableTorch,
     availableSimpleFire,
     availableFirePit,
     availableWoodPile,
     availableGrate,
     availableLightBranch,
     availableLightWoodenTorch,
+    availableExtinguishPortableTorch,
   }
 }
 

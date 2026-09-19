@@ -10,6 +10,7 @@ function fullyAvailable(): QuickActionsFireAvailability {
   return {
     lightBranch: OK,
     lightWoodenTorch: OK,
+    extinguishPortableTorch: OK,
     buildFirePit: OK,
     buildSimpleFire: OK,
     buildWoodPile: OK,
@@ -21,6 +22,7 @@ function noopHandlers(): FireActionHandlers {
   return {
     onLightBranch: () => ({ ok: true }),
     onLightWoodenTorch: () => ({ ok: true }),
+    onExtinguishPortableTorch: () => ({ ok: true }),
     onBuildFirePit: () => ({ ok: true }),
     onBuildSimpleFire: () => ({ ok: true }),
     onBuildWoodPile: () => ({ ok: true }),
@@ -45,19 +47,28 @@ describe('visibleFireActions', () => {
     const avail: QuickActionsFireAvailability = {
       lightBranch: NOT_OK('torchNotLit'),
       lightWoodenTorch: OK,
+      extinguishPortableTorch: NOT_OK('torchLit'),
       buildFirePit: NOT_OK('firePlacement'),
       buildSimpleFire: OK,
       buildWoodPile: NOT_OK('firePlacement'),
       buildGrate: NOT_OK('grateTarget'),
     }
-    // Catalog order is: lightBranch, lightWoodenTorch, buildFirePit, buildSimpleFire, buildWoodPile, buildGrate.
+    // Catalog order is: lightBranch, lightWoodenTorch, extinguishPortableTorch, buildFirePit, buildSimpleFire, buildWoodPile, buildGrate.
     // Available subset in catalog order: lightWoodenTorch, buildSimpleFire.
-    // Unavailable subset in catalog order: lightBranch, buildFirePit, buildWoodPile, buildGrate.
+    // Unavailable subset in catalog order: lightBranch, extinguishPortableTorch, buildFirePit, buildWoodPile, buildGrate.
 
     const rows = visibleFireActions(avail, noopHandlers())
 
-    expect(rows.map((r) => r.id)).toEqual(['lightWoodenTorch', 'buildSimpleFire', 'lightBranch', 'buildFirePit', 'buildWoodPile', 'buildGrate'])
-    expect(rows.map((r) => r.available)).toEqual([true, true, false, false, false, false])
+    expect(rows.map((r) => r.id)).toEqual([
+      'lightWoodenTorch',
+      'buildSimpleFire',
+      'lightBranch',
+      'extinguishPortableTorch',
+      'buildFirePit',
+      'buildWoodPile',
+      'buildGrate',
+    ])
+    expect(rows.map((r) => r.available)).toEqual([true, true, false, false, false, false, false])
   })
 
   it('exposes the structural missing requirements for an unavailable row', () => {
