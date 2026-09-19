@@ -9,6 +9,7 @@
 **Subdomains:** `population` `development`
 **Tags:** `colony` `founding` `persistence` `residency`
 **Roadmap:** `quests-abandoned-gold-mine-colony.md`
+**Model:** Sonnet, Grok
 
 ## Goal
 
