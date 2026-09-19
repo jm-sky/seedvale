@@ -114,6 +114,9 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `npc-059-need-action-result-revalidation-and-atomic-relief.md`              | 🔴 | S      | -                                                                                                                                                                                                                                                                                          | -                                         |
 | 💡 `items-player-048-handheld-torch-retention-across-combat-weapon-draw.md`    | 🟡 | S      | ~~ui-input-018~~                                                                                                                                                                                                                                                                           | -                                         |
 | ◼️ `npc-060-social-pairing-cadence-and-allocation.md`                          | 🟡 | S      | -                                                                                                                                                                                                                                                                                          | -                                         |
+| ◼️ `fauna-041-managed-spawner-population-authority.md`                         | 🔴 | S      | ~~fauna-018~~                                                                                                                                                                                                                                                                              | -                                         |
+| ◼️ `fauna-042-fauna-proximity-and-population-scan-cost.md`                     | 🟡 | M      | fauna-041, ~~fauna-028~~, ~~fauna-033~~                                                                                                                                                                                                                                                    | -                                         |
+| ◼️ `fauna-043-frenzy-source-target-claim-cleanup.md`                           | 🟡 | S      | ~~fauna-036~~, ~~fauna-017~~                                                                                                                                                                                                                                                               | -                                         |
 
 ---
 
@@ -238,7 +241,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 ## Next plan IDs
 
 - ai: `005`
-- fauna: `041`
+- fauna: `044`
 - items-player: `049`
 - npc: `061`
 - persistence: `006`
