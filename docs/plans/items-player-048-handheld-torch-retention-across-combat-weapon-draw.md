@@ -8,7 +8,8 @@
 **Domain:** `items-player`  
 **Subdomains:** `inventory` `items` `interaction`  
 **Tags:** `torch` `combat-mode` `held-tool`  
-**Roadmap:** -
+**Roadmap:** -  
+**Model:** Sonnet, Composer
 
 ## Problem
 
@@ -110,13 +111,15 @@ Prefer extending the existing player visual/socket ownership in `PlayerControlle
 
 The belt-mounted torch should:
 
-- follow the player skeleton/body,
-- remain visually plausible during existing combat locomotion/attacks,
-- keep flame/light aligned correctly,
+- follow the player,
+- sit approximately around the belt/hip,
+- keep flame/light functional,
 - avoid occupying the weapon hand,
 - avoid introducing new combat animations.
 
-The mount may be a bone/socket if the current UBC/player rigs provide a stable candidate, otherwise a player-model-local attachment group with a single centralized offset is acceptable.
+**Exact placement is not implementation scope.** The implementation agent should create one reasonable initial belt/body transform and keep position/rotation/scale in one obvious constant block for later manual tuning by the user. Do not spend time polishing clipping across animations or finding a perfect anatomical socket.
+
+The mount may be a bone/socket if the current player rigs already expose a convenient stable candidate. Otherwise a player-model-local attachment group with a centralized offset is acceptable and should not block implementation.
 
 ### 3. Weapon draw must preserve lit wooden torch
 
@@ -279,7 +282,7 @@ Implementation should follow the actual current file boundaries if they have mov
 
 - lighting a `wooden_torch` behaves as before;
 - drawing a configured melee weapon while that torch is lit does not extinguish it;
-- the torch leaves the weapon hand and is visibly carried at the belt/body;
+- the torch leaves the weapon hand and is carried approximately at the belt/body;
 - existing melee attack animation and weapon mesh remain unchanged;
 - drawing a ranged weapon also does not create a duplicate hand mesh;
 - sheathing the weapon automatically returns the still-lit torch to normal hand carry;
@@ -325,7 +328,7 @@ User verifies in browser:
 2. light the wooden torch;
 3. draw the primary sword;
 4. confirm the cave remains lit and the sword animation is normal;
-5. confirm the torch is visible at the belt/body and not duplicated in the hand;
+5. confirm the torch is approximately at the belt/body and not duplicated in the hand; exact placement is left for manual tuning;
 6. attack several times and move/sprint;
 7. sheathe the sword with `X`;
 8. confirm the torch returns automatically to normal hand carry;
