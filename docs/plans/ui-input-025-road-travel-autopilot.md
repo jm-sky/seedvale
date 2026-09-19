@@ -1,7 +1,7 @@
 # Plan: Road travel autopilot for player and mounts
 
 **Created:** 2026-09-19
-**Status:** `draft` 📝
+**Status:** `planned` 📋
 **Type:** feature
 **Priority:** high · **Effort:** L
 **Depends on:** ~~fauna-003~~, ~~npc-006~~
@@ -376,29 +376,58 @@ actual damage / fall / route failure
 
 Nie spamować toastami przy każdym frame/ponownym sense tego samego threat episode.
 
-## Push notifications — unresolved product/infrastructure decision
+## Notifications
 
-Aktualny recon nie znalazł istniejącej infrastruktury:
+V1 obejmuje dwa kanały:
+
+1. **in-game notifications** przez istniejący Toast/HUD;
+2. **browser/system notifications** przez `Notification API`, ale wyłącznie gdy aplikacja nadal działa w otwartej karcie/sesji.
+
+Nie implementować w tym planie:
 
 - Web Push,
-- Notification API wrapper,
-- service-worker notification delivery,
-- permission lifecycle.
+- service-worker push delivery,
+- backend subscription storage,
+- VAPID/provider infrastructure,
+- background/off-screen player travel.
 
-Dlatego plan pozostaje `draft`.
+### Notification permission
 
-Przed zmianą statusu na `planned` trzeba zdecydować, czy „push notification” oznacza:
+Permission request musi być user-driven i wykonywany w sensownym UX momencie, nie automatycznie przy starcie aplikacji.
 
-1. browser/system Notification API tylko wtedy, gdy karta istnieje, ale nie jest obserwowana;
-2. prawdziwy Web Push działający również przy nieaktywnej/nieotwartej aplikacji;
-3. wyłącznie in-game notification w V1, a system push trafia do osobnego planu infrastrukturalnego.
+Autopilot nie może zakładać, że permission jest dostępne.
 
-Ważne ograniczenie: autopilot jest live detailed movementem. Jeżeli aplikacja/browser nie wykonuje symulacji w tle, prawdziwy push o zdarzeniu podróży wymaga najpierw określenia, **czy i jak świat/autopilot ma progresować bez aktywnej karty**. Nie tworzyć background travel simulation tylko po to, aby wysłać notification.
+Jeżeli:
 
-Preferowany bezpieczny podział po decyzji:
+```text
+Notification.permission !== 'granted'
+```
 
-- core autopilot + in-game alerts w tym planie;
-- Web Push/service worker jako osobny `ui-input`/infrastructure plan, jeśli rzeczywiście potrzebny.
+system nadal używa in-game toast/HUD i nie traktuje braku permission jako błędu podróży.
+
+### When to emit a system notification
+
+System notification ma sens tylko dla zdarzeń wymagających uwagi i tylko gdy karta nie jest aktywnie obserwowana, np.:
+
+- autopilot zatrzymany przez realny atak/damage,
+- player downed,
+- fall from mount,
+- mount death/unavailable,
+- route failure.
+
+Nie wysyłać system notification dla zwykłego `escape` przy pierwszym wykryciu zagrożenia, jeśli podróż nadal postępuje.
+
+Arrival może używać system notification opcjonalnie, jeżeli karta jest ukryta/backgrounded.
+
+Preferowany gate:
+
+```text
+document.visibilityState !== 'visible'
+&& Notification.permission === 'granted'
+→ emit system notification
+```
+
+Nie tworzyć background simulation tylko po to, aby generować notification events.
 
 ## Runtime and persistence
 
@@ -508,10 +537,12 @@ Implementation notes mają zweryfikować dokładne current call-sites po zamkni�
 - damage/combat/fall/unreachable → STOP;
 - deduplicated alerts.
 
-### Stage 5 — System notification, only after product decision
+### Stage 5 — System notifications
 
-- Notification API lub osobny Web Push plan;
-- bez background-simulation hacków.
+- user-driven Notification permission flow;
+- Notification API dla działającej sesji;
+- emit tylko dla ważnych interruption/arrival events, gdy karta nie jest aktywnie obserwowana;
+- brak Web Push i brak background-simulation hacków.
 
 ## Non-goals
 
@@ -567,13 +598,15 @@ Implementation notes mają zweryfikować dokładne current call-sites po zamkni�
 
 Browser verification is performed by the User, not the AI agent.
 
-## Draft exit criteria
+## Scope decision
 
-Change status to `planned` after deciding the notification scope:
+Notification scope for V1 is resolved:
 
-- in-game only in V1, or
-- foreground/background browser Notification API semantics, or
-- separate Web Push infrastructure plan.
+- in-game Toast/HUD;
+- browser/system `Notification API` for an already running session when the tab is not actively observed;
+- no Web Push;
+- no service-worker push delivery;
+- no background/off-screen player travel.
 
 No further architectural decision is required for the core road-autopilot flow unless implementation notes discover current code contradicting this recon.
 
