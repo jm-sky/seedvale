@@ -102,6 +102,9 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-018-codebase-domain-and-flow-audit-master.md`                        | 🔴 | XL     | -                                                                                                                                                                                                                                                                                          | -                                         |
 | ◼️ `world-033-worldbundle-rebuild-transaction-and-lifecycle-safety.md`         | 🔴 | M      | -                                                                                                                                                                                                                                                                                          | -                                         |
 | 💡 `ui-input-025-road-travel-autopilot.md`                                     | 🔴 | L      | ~~fauna-003~~, ~~npc-006~~                                                                                                                                                                                                                                                                 | -                                         |
+| ◼️ `fauna-040-settlement-rat-reconciliation-checkpoint.md`                     | 🔴 | S      | -                                                                                                                                                                                                                                                                                          | -                                         |
+| ◼️ `npc-058-time-skip-resource-and-interrupt-parity.md`                        | 🔴 | M      | -                                                                                                                                                                                                                                                                                          | -                                         |
+| ◼️ `world-034-time-skip-clock-exactness-and-catch-up-coverage.md`              | 🔴 | M      | -                                                                                                                                                                                                                                                                                          | -                                         |
 
 ---
 
@@ -226,16 +229,16 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 ## Next plan IDs
 
 - ai: `005`
-- fauna: `040`
+- fauna: `041`
 - items-player: `048`
-- npc: `058`
+- npc: `059`
 - persistence: `006`
 - quests-progression: `071`
 - settlements: `023`
 - settlements-npcs: `051`
 - tools: `019`
 - ui-input: `026`
-- world: `034`
+- world: `035`
 - world-terrain: `043`
 
 This ids section is maintained automatically from the plan files.
