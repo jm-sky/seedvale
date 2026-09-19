@@ -56,10 +56,10 @@
    🟡 `L` · ✅ ready · unlocks 3/5
 3. `items-player-028` — **NPC player-storage access policies**  
    🔴 `M` · ✅ ready · unlocks 3/5
-4. `settlements-003` — **Colony settlement bootstrap**  
-   🔴 `L` · ✅ ready · unlocks 1/1
-5. `world-031` — **Authored Persistent World Consequences**  
+4. `world-031` — **Authored Persistent World Consequences**  
    🔴 `M` · ✅ ready · unlocks 3/3
+5. `quests-progression-049` — **Hunters Brotherhood — hunting-ground investigation**  
+   🟡 `M` · ✅ ready · unlocks 1/2
 
 ---
 
@@ -113,111 +113,103 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `L` · **Score:**  78  
    → **unlocks:** 1/1
 
-10. `settlements-003` — **Colony settlement bootstrap**  
-  🔴 `L` · **Score:**  70  
-   → **unlocks:** 1/1
-
-11. `world-031` — **Authored Persistent World Consequences**  
+10. `world-031` — **Authored Persistent World Consequences**  
   🔴 `M` · **Score:**  69  
    → **unlocks:** 3/3
 
-12. `quests-progression-049` — **Hunters Brotherhood — hunting-ground investigation**  
+11. `quests-progression-049` — **Hunters Brotherhood — hunting-ground investigation**  
   🟡 `M` · **Score:**  67  
    → **unlocks:** 1/2
 
-13. `quests-progression-046` — **Lost Treasure Chronicles — integration, legacy catch-up and superseded quest cleanup**  
+12. `quests-progression-046` — **Lost Treasure Chronicles — integration, legacy catch-up and superseded quest cleanup**  
   🔴 `L` · **Score:**  66  
    → **unlocks:** 0/0
 
-14. `items-player-032` — **NPC player-storage resource and context rules**  
+13. `items-player-032` — **NPC player-storage resource and context rules**  
   🟡 `L` · **Score:**  64  
    → **unlocks:** 1/4
 
-15. `npc-032` — **Expedition needs and survival**  
+14. `npc-032` — **Expedition needs and survival**  
   🔴 `L` · **Score:**  98  
    → **unlocks:** 3/3
 
-16. `quests-progression-010` — **Abandoned gold mine → mining colony integration**  
-  🔴 `M` · **Score:**  61  
-   → **unlocks:** 0/0
-
-17. `settlements-npcs-022` — **Household help and age-based work participation**  
+15. `settlements-npcs-022` — **Household help and age-based work participation**  
   🔴 `M` · **Score:**  57  
    → **unlocks:** 1/1
 
-18. `quests-progression-053` — **Hunters Brotherhood — competing hunting strategies**  
+16. `quests-progression-053` — **Hunters Brotherhood — competing hunting strategies**  
   🟡 `L` · **Score:**  56  
    → **unlocks:** 1/1
 
-19. `settlements-npcs-043` — **Settlement Cultivation Hydration, Rain & Farmer Watering**  
+17. `settlements-npcs-043` — **Settlement Cultivation Hydration, Rain & Farmer Watering**  
   🔴 `L` · **Score:**  56  
    → **unlocks:** 1/1
 
-20. `quests-progression-069` — **Quest offer pacing and conservative settlement gating**  
+18. `quests-progression-069` — **Quest offer pacing and conservative settlement gating**  
   🔴 `M` · **Score:**  51  
    → **unlocks:** 0/0
 
-21. `quests-progression-063` — **Healer — Injured Resident**  
+19. `quests-progression-063` — **Healer — Injured Resident**  
   🟡 `M` · **Score:**  49  
    → **unlocks:** 1/1
 
-22. `quests-progression-060` — **Builder — Finish the Local Well**  
+20. `quests-progression-060` — **Builder — Finish the Local Well**  
   🔴 `M` · **Score:**  47  
    → **unlocks:** 0/0
 
-23. `quests-progression-054` — **Hunters Brotherhood — exceptional animal finale**  
+21. `quests-progression-054` — **Hunters Brotherhood — exceptional animal finale**  
   🟡 `L` · **Score:**  44  
    → **unlocks:** 0/0
 
-24. `settlements-npcs-044` — **Authored Outpost Occupants & Construction Lifecycle**  
+22. `settlements-npcs-044` — **Authored Outpost Occupants & Construction Lifecycle**  
   🔴 `L` · **Score:**  40  
    → **unlocks:** 1/1
 
-25. `quests-progression-058` — **Injured dog discovery thread**  
+23. `quests-progression-058` — **Injured dog discovery thread**  
   🟡 `M` · **Score:**  37  
    → **unlocks:** 0/0
 
-26. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
+24. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
   🔴 `M` · **Score:**  35  
    → **unlocks:** 0/0
 
-27. `npc-055` — **Semantic profession and activity animation coverage**  
+25. `npc-055` — **Semantic profession and activity animation coverage**  
   🔴 `L` · **Score:**  32  
    → **unlocks:** 0/0
 
-28. `world-terrain-042` — **Medicinal herb meadow patches**  
+26. `world-terrain-042` — **Medicinal herb meadow patches**  
   🟡 `M` · **Score:**  31  
    → **unlocks:** 1/1
 
-29. `npc-054` — **NPC desired gifts, gift acceptance and relationship rewards**  
+27. `npc-054` — **NPC desired gifts, gift acceptance and relationship rewards**  
   🔴 `L` · **Score:**  30  
    → **unlocks:** 0/0
 
-30. `items-player-014` — **Rope-pullable resource transport**  
+28. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-31. `tools-005` — **Seedvale Character Preparation Panel**  
+29. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-32. `world-terrain-039` — **N8AO / post-process cost budget**  
+30. `world-terrain-039` — **N8AO / post-process cost budget**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-33. `items-player-044` — **Shoulder and forearm equipment slots**  
+31. `items-player-044` — **Shoulder and forearm equipment slots**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-34. `world-terrain-041` — **Agent presentation render LOD**  
+32. `world-terrain-041` — **Agent presentation render LOD**  
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-35. `quests-progression-061` — **Builder — Complete an Unfinished Palisade Segment**  
+33. `quests-progression-061` — **Builder — Complete an Unfinished Palisade Segment**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-36. `quests-progression-070` — **Boar at the medicinal meadow — systemic settlement problem**  
+34. `quests-progression-070` — **Boar at the medicinal meadow — systemic settlement problem**  
   🟡 `L` · **Score:**  16  
    → **unlocks:** 0/0
 

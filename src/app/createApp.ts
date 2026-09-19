@@ -801,6 +801,7 @@ export async function createApp(
     consumedWorldPickupIds,
     onAnimalDeathSound,
     loadingScreen.setStage,
+    initialSave?.foundedSettlements,
   )
   bootMarkEnd('createWorldBundle')
   // Already logged inside `worldBundle.ts` on failure — nothing else to do

@@ -55,6 +55,7 @@ Generated from TypeScript imports.
 - `quests/quests.ts`
 - `reputation/ReputationManager.ts`
 - `settlement/PlacedFires.ts`
+- `settlement/foundedSettlement.ts`
 - `settlement/household.ts`
 - `settlement/livestock.ts`
 - `settlement/npcRelationships.ts`

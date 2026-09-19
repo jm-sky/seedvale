@@ -2484,6 +2484,7 @@ Generated from TypeScript imports.
 - `ai/npcExpeditionTravel.ts`
 - `app/worldBundle.ts`
 - `persistence/saveData.ts`
+- `settlement/foundedSettlementBootstrap.ts`
 - `world/createExpeditionAssignments.test.ts`
 - `world/createExpeditionAssignments.ts`
 - `world/expeditionParty.ts`

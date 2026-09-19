@@ -480,6 +480,29 @@ describe('createHouseholdRegistry', () => {
     expect(household.foodCount()).toBeGreaterThan(0)
   })
 
+  it('an explicit snapshot opts a genuinely new household out of the usual free starting supplies (plan settlements-003)', () => {
+    const registry = createHouseholdRegistry()
+    const id = householdIdFor('0_0', 0)
+    const household = registry.getOrCreate(id, '0_0', '0_0:home:0', undefined, {
+      water: 0,
+      items: { counts: {}, instances: [] },
+      agriculture: { starterSeedsGranted: true },
+    })
+    expect(household.foodCount()).toBe(0)
+    expect(household.woodCount()).toBe(0)
+    expect(household.water.current).toBe(0)
+  })
+
+  it('an explicit snapshot is ignored once the household already exists', () => {
+    const registry = createHouseholdRegistry()
+    const id = householdIdFor('0_0', 0)
+    const first = registry.getOrCreate(id, '0_0', '0_0:home:0')
+    const foodBefore = first.foodCount()
+    const again = registry.getOrCreate(id, '0_0', '0_0:home:0', undefined, { water: 0, items: { counts: {}, instances: [] } })
+    expect(again).toBe(first)
+    expect(again.foodCount()).toBe(foodBefore)
+  })
+
   it('forwards hasHunter to a genuinely new household (plan 178 §11)', () => {
     const registry = createHouseholdRegistry()
     const household = registry.getOrCreate(householdIdFor('0_0', 0), '0_0', '0_0:home:0', { hasHunter: true })

@@ -56,6 +56,8 @@ Generated from TypeScript imports.
 - `perf/agentCpuDiag.ts`
 - `player/PlayerController.ts`
 - `settlement/createSettlement.ts`
+- `settlement/foundedSettlement.ts`
+- `settlement/foundedSettlementBootstrap.ts`
 - `settlement/household.ts`
 - `settlement/livestock.ts`
 - `settlement/merchantJourney.ts`
@@ -439,6 +441,56 @@ Generated from TypeScript imports.
 - `settlement/settlementPalisade.test.ts`
 - `settlement/settlementPalisade.ts`
 
+## `settlement/foundedSettlement.test.ts`
+
+**Imports**
+
+- `settlement/foundedSettlement.ts`
+
+## `settlement/foundedSettlement.ts`
+
+**Imports**
+
+- `settlement/npcState.ts`
+
+**Imported by**
+
+- `app/worldBundle.ts`
+- `persistence/saveData.ts`
+- `settlement/SettlementsManager.ts`
+- `settlement/foundedSettlement.test.ts`
+- `settlement/foundedSettlementBootstrap.test.ts`
+- `settlement/foundedSettlementBootstrap.ts`
+
+## `settlement/foundedSettlementBootstrap.test.ts`
+
+**Imports**
+
+- `economy/registry.ts`
+- `items/itemInstances.ts`
+- `settlement/foundedSettlement.ts`
+- `settlement/foundedSettlementBootstrap.ts`
+- `settlement/household.ts`
+- `settlement/npcState.ts`
+
+## `settlement/foundedSettlementBootstrap.ts`
+
+**Imports**
+
+- `ai/npcTravel.ts`
+- `economy/registry.ts`
+- `items/itemInstances.ts`
+- `settlement/foundedSettlement.ts`
+- `settlement/household.ts`
+- `settlement/npcState.ts`
+- `world/expeditionAssignment.ts`
+
+**Imported by**
+
+- `app/worldBundle.ts`
+- `settlement/SettlementsManager.ts`
+- `settlement/foundedSettlementBootstrap.test.ts`
+
 ## `settlement/frameYield.ts`
 
 **Imported by**
@@ -658,6 +710,8 @@ Generated from TypeScript imports.
 - `persistence/saveData.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
+- `settlement/foundedSettlementBootstrap.test.ts`
+- `settlement/foundedSettlementBootstrap.ts`
 - `settlement/household.test.ts`
 - `settlement/householdExchange.test.ts`
 - `settlement/householdExchange.ts`
@@ -1327,6 +1381,9 @@ Generated from TypeScript imports.
 - `quests/suspiciousTransportCaveCache.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
+- `settlement/foundedSettlement.ts`
+- `settlement/foundedSettlementBootstrap.test.ts`
+- `settlement/foundedSettlementBootstrap.ts`
 - `settlement/lostTreasureChroniclesArchaeologistResident.ts`
 - `settlement/lostTreasureChroniclesSpecialistResident.ts`
 - `settlement/merchantTrade.ts`

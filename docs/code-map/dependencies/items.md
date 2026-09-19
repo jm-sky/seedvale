@@ -1084,6 +1084,8 @@ Generated from TypeScript imports.
 - `quests/lostTreasureExpedition.ts`
 - `quests/oldBonesAdventureCave.ts`
 - `quests/suspiciousTransportCaveCache.ts`
+- `settlement/foundedSettlementBootstrap.test.ts`
+- `settlement/foundedSettlementBootstrap.ts`
 - `settlement/householdProfessionStock.test.ts`
 - `settlement/householdProfessionStock.ts`
 - `settlement/merchantTrade.test.ts`

@@ -106,6 +106,34 @@ Generated from exported TypeScript symbols.
 - `SITE_RIVER_CLEARANCE` — const — line 60
 - `SITE_SCORE_WEIGHTS` — const — line 28
 
+## `settlement/foundedSettlement.ts`
+
+- `createFoundedSettlementRegistry` — function — line 84
+- `foundedHouseholdId` — function — line 36
+- `foundedSettlementId` — function — line 31
+  - domain: settlements
+- `FoundedSettlementRecord` — type — line 13
+  - domain: settlements
+- `FoundedSettlementRegistry` — type — line 66
+  - domain: settlements
+  - system: founded-settlement
+  - role: Owns founded-settlement records and NPC settlement-residency overrides.
+  - owns: FoundedSettlementRecord
+- `FoundedSettlementRegistrySnapshot` — type — line 49
+- `foundedTentId` — function — line 41
+
+## `settlement/foundedSettlementBootstrap.ts`
+
+- `bootstrapFoundedSettlement` — function — line 102
+  - domain: settlements
+  - system: founded-settlement
+  - role: Turns an arrived expedition into ordinary founded-settlement/household/economy state.
+- `BootstrapFoundedSettlementDeps` — type — line 62
+- `BootstrapFoundedSettlementFailureReason` — type — line 35
+- `BootstrapFoundedSettlementInput` — type — line 18
+- `BootstrapFoundedSettlementResult` — type — line 44
+- `FoundedSettlementTentsDeps` — type — line 51
+
 ## `settlement/frameYield.ts`
 
 - `createPropYieldGate` — function — line 22
@@ -219,7 +247,7 @@ Generated from exported TypeScript symbols.
 ## `settlement/household.ts`
 
 - `createHousehold` — function — line 390
-- `createHouseholdRegistry` — function — line 608
+- `createHouseholdRegistry` — function — line 620
 - `FARMER_STARTING_SEED_COUNT` — const — line 271
 - `HayForageState` — type — line 129
 - `Household` — type — line 274
@@ -1084,13 +1112,13 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/SettlementsManager.ts`
 
-- `createSettlementsManager` — function — line 334
+- `createSettlementsManager` — function — line 369
   - domain: settlements
   - system: settlements-manager
   - role: Owns settlement generation, streaming and per-settlement economy/household/NPC-state registries.
   - owns: SettlementEconomy, Household
   - lifecycle: streaming
-- `SettlementsManager` — type — line 134
+- `SettlementsManager` — type — line 146
 
 ## `settlement/settlementStructures.ts`
 

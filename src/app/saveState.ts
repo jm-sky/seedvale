@@ -334,6 +334,7 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
       removedPersistentOccupantSlots: persistentOccupants.removedSlots,
       storageInfestation: bundle.settlementsManager.snapshotStorageInfestation(),
       structureStates: bundle.settlementsManager.snapshotStructureStates(),
+      foundedSettlements: bundle.settlementsManager.snapshotFoundedSettlements(),
     }
   }
 

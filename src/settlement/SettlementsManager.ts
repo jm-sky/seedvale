@@ -52,6 +52,18 @@ import {
 } from '../world/transportOffscreen'
 import { resolveTransportTravelArrivals } from '../world/transportTravelArrival'
 import { createSettlement, type CreateSettlementDeps, type Settlement } from './createSettlement'
+import {
+  createFoundedSettlementRegistry,
+  type FoundedSettlementRecord,
+  type FoundedSettlementRegistrySnapshot,
+} from './foundedSettlement'
+import {
+  type BootstrapFoundedSettlementDeps,
+  type BootstrapFoundedSettlementInput,
+  type BootstrapFoundedSettlementResult,
+  bootstrapFoundedSettlement as bootstrapFoundedSettlementTx,
+  type FoundedSettlementTentsDeps,
+} from './foundedSettlementBootstrap'
 import { createHouseholdRegistry, type Household, type HouseholdId, householdIdFor, type HouseholdSnapshot } from './household'
 import {
   createLivestockRegistry,
@@ -239,6 +251,29 @@ export type SettlementsManager = {
     destination: DispatchReadyExpeditionInput['destination'],
     nowDays: number,
   ) => DispatchReadyExpeditionResult
+  /** Founded (nonprocedural) colony records — read-only (plan settlements-003).
+   *  Not derivable from procedural `SettlementDef`s; a settlement founded via
+   *  `bootstrapFoundedSettlement` below has no grid cell. */
+  listFoundedSettlements: () => readonly FoundedSettlementRecord[]
+  getFoundedSettlement: (settlementId: string) => FoundedSettlementRecord | undefined
+  getFoundedSettlementBySiteId: (siteId: string) => FoundedSettlementRecord | undefined
+  /** Explicit `NpcId -> settlementId` residency override (plan settlements-003)
+   *  — `undefined` for every procedural resident, who keeps their ordinary
+   *  source-settlement interpretation. */
+  residencySettlementId: (npcId: NpcId) => string | undefined
+  /** Plain-data snapshot of founded records + residency overrides — see
+   *  `FoundedSettlementRegistry.serialize`. */
+  snapshotFoundedSettlements: () => FoundedSettlementRegistrySnapshot
+  /**
+   * Reusable, idempotent expedition-arrival -> settlement transaction (plan
+   * settlements-003). `placedTents` is caller-supplied because `PlacedTents`
+   * is owned by `WorldBundle`, not this manager — see
+   * `foundedSettlementBootstrap.ts` for the full transaction boundary.
+   */
+  bootstrapFoundedSettlement: (
+    input: BootstrapFoundedSettlementInput,
+    placedTents: FoundedSettlementTentsDeps,
+  ) => BootstrapFoundedSettlementResult
   /** Plain-data snapshot of every non-zero NPC↔NPC relation pair so far —
    *  see `NpcRelationships.snapshot` (plan persistence-001). */
   snapshotRelationships: () => NpcRelationshipEntry[]
@@ -508,6 +543,12 @@ export async function createSettlementsManager(
    *  don't pass one. */
   sampleBridgeDeck: (x: number, z: number) => number | null = () => null,
   onAnimalDeathSound?: (kind: AnimalKind, x: number, z: number) => void,
+  /** Persisted founded-settlement records + NPC residency overrides (plan
+   *  settlements-003) — same "one manager-lifetime registry, `initial*`/
+   *  `snapshot*` idiom" contract as `initialHouseholds`/`initialStorageInfestation`
+   *  above. Absent (including every pre-settlements-003 save) restores an
+   *  empty registry. */
+  initialFoundedSettlements?: FoundedSettlementRegistrySnapshot,
 ): Promise<SettlementsManager> {
   const surfaceSampleHeight: HeightSampler = (x, z) => sampleBridgeDeck(x, z) ?? sampleHeight(x, z)
   const surfaceSampleLocalWater = (x: number, z: number): LocalWaterSample =>
@@ -655,6 +696,12 @@ export async function createSettlementsManager(
   // `Settlement`/Three.js object.
   const structureStates = createSettlementStructureStateRegistry(initialStructureStates)
   const residentialRepairPolicy = structureRepairPolicy('residential')!
+
+  // Founded (nonprocedural) colony registry (plan settlements-003) — same
+  // "one manager-lifetime registry, survives settlement unload/reload and
+  // in-session rebuilds" reasoning as `households`/`npcStates`/
+  // `ratInfestation` above.
+  const foundedSettlements = createFoundedSettlementRegistry(initialFoundedSettlements)
 
   // One shared deps object for every `createSettlement` call (createSettlement
   // refactor review, P1) — was a 26-argument positional call duplicated
@@ -1247,6 +1294,21 @@ export async function createSettlementsManager(
       }
       return result
     },
+    listFoundedSettlements: () => foundedSettlements.list(),
+    getFoundedSettlement: (settlementId) => foundedSettlements.get(settlementId),
+    getFoundedSettlementBySiteId: (siteId) => foundedSettlements.getBySiteId(siteId),
+    residencySettlementId: (npcId) => foundedSettlements.residencyOf(npcId),
+    snapshotFoundedSettlements: () => foundedSettlements.serialize(),
+    bootstrapFoundedSettlement(input, placedTents) {
+      const deps: BootstrapFoundedSettlementDeps = {
+        founded: foundedSettlements,
+        getNpcState: (id) => npcStates.get(id),
+        households,
+        economies,
+        placedTents,
+      }
+      return bootstrapFoundedSettlementTx(input, deps)
+    },
     snapshotRelationships: () => npcRelationships.snapshot(),
     snapshotLivestock: () => {
       for (const entry of entries.values()) {
@@ -1350,6 +1412,7 @@ export async function createSettlementsManager(
       rats.clear()
       ratInfestation.clear()
       structureStates.clear()
+      foundedSettlements.clear()
     },
   }
 }

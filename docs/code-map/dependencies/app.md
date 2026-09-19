@@ -1759,6 +1759,8 @@ Generated from TypeScript imports.
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
 - `settlement/families.ts`
+- `settlement/foundedSettlement.ts`
+- `settlement/foundedSettlementBootstrap.ts`
 - `settlement/household.ts`
 - `settlement/livestock.ts`
 - `settlement/lostTreasureChroniclesElderResident.ts`

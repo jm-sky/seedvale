@@ -1,7 +1,7 @@
 # Plan: Colony settlement bootstrap
 
 **Created:** 2026-09-08
-**Status:** `planned` 📋
+**Status:** `in progress` 🔄
 **Type:** feature
 **Priority:** high · **Effort:** L
 **Depends on:** ~~world-019~~, ~~settlements-npcs-028~~
@@ -281,6 +281,37 @@ Nie dodawać colony-specific off-screen loop.
 Founded settlement ma wejść do tych samych registries i generic travel/work/economy ownershipów. Jeżeli konkretna profession nadal wymaga live `Settlement`, jej off-screen rozszerzenie jest osobnym shared-system problemem; bootstrap nie może go zasymulować questowym timerem.
 
 ## Proposed implementation stages
+
+### Implementation status (2026-09-19)
+
+Stages 1 and 3 are implemented and tested. Stages 2 and 4 — the live
+resident-materialization refactor of `createSettlement()` and the founded-
+settlement streaming/runtime — are **not implemented yet**.
+
+`createSettlement()`'s per-member `NpcAgent` construction turned out to also
+require a fully-populated `SettlementLandmarks` (well/market/notice-board/
+houses/land-plots/…, most fields non-optional) that a founded colony has no
+procedural source for — building that safely is a substantial, high-risk
+piece of work in its own right (exactly the "highest-risk stage… isolated
+from bootstrap side effects" the implementation notes called out), not a
+small extension of the bootstrap transaction. Rather than ship an
+under-verified live-presentation hack, this delivery stops at ordinary,
+fully-owned settlement-domain state:
+
+- `bootstrapFoundedSettlement(...)` is idempotent and real — founded
+  residents get correct authoritative `NpcId`/household/economy/residency
+  state, a real physical tent, and cleared travel, exactly as specced.
+- What's missing: a founded settlement never streams in as a live,
+  walking-NPC `Settlement` — `SettlementsManager` does not yet check founded
+  records by world position for load/unload, and there is no founded-runtime
+  adapter producing `NpcAgent`s from real tent/well/cultivation anchors.
+
+A consumer (`quests-progression-010`) can already call
+`WorldBundle.bootstrapFoundedSettlement(...)` and observe
+`created | existing | not_ready`, and the founded settlement's economy/
+household/NPC state is real and will resolve correctly through the normal
+registries — it just has no live on-screen presence yet. Stages 2/4 remain
+open follow-up work on this same plan.
 
 ### Stage 1 — founded state + persistence foundation
 

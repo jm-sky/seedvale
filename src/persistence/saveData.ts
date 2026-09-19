@@ -14,6 +14,7 @@ import type { ContainerKind } from '../items/container'
 import type { InventoryContentsSnapshot, SaveItemInstance } from '../items/Inventory'
 import type { SkillId } from '../player/PlayerSkills'
 import type { Reputation, ReputationDimension } from '../reputation/ReputationManager'
+import type { FoundedSettlementRecord, FoundedSettlementRegistrySnapshot } from '../settlement/foundedSettlement'
 import type { HouseholdId, HouseholdSnapshot } from '../settlement/household'
 import type { LivestockSaveRecord } from '../settlement/livestock'
 import type { NpcRelationshipEntry } from '../settlement/npcRelationships'
@@ -904,6 +905,12 @@ export type SaveData = {
    *  the whole field, for an older save) restores that structure as pristine
    *  (`condition: 100`, no active repair). */
   structureStates?: Record<string, SettlementStructureState>
+  /** Founded (nonprocedural) colony records + NPC residency overrides (plan
+   *  settlements-003) — see `settlement/foundedSettlement.ts`'s
+   *  `FoundedSettlementRegistrySnapshot`. Sparse/optional, same fallback
+   *  contract as `structureStates`/`households` above — absent (including
+   *  every pre-settlements-003 save) restores an empty registry. */
+  foundedSettlements?: FoundedSettlementRegistrySnapshot
   /** Sparse grass forage patch depletion overrides (plan fauna-010 §3/§4) —
    *  `patchId -> availableAtDays`, see `world/grassForage.ts`'s
    *  `GrassForageOverrides`. Patch *placement* is deterministic and never
@@ -2561,6 +2568,26 @@ function isStructureStatesField(value: unknown): value is Record<string, Settlem
   return Object.values(value as Record<string, unknown>).every(isSettlementStructureState)
 }
 
+function isFoundedSettlementRecord(value: unknown): value is FoundedSettlementRecord {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const e = value as Record<string, unknown>
+  if (typeof e.id !== 'string' || typeof e.siteId !== 'string') return false
+  if (typeof e.x !== 'number' || typeof e.z !== 'number') return false
+  if (typeof e.sponsorSettlementId !== 'string') return false
+  if (typeof e.foundedAtDays !== 'number') return false
+  if (!Array.isArray(e.residentNpcIds) || !e.residentNpcIds.every((id) => typeof id === 'string')) return false
+  return true
+}
+
+function isFoundedSettlementsField(value: unknown): value is FoundedSettlementRegistrySnapshot {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const e = value as Record<string, unknown>
+  if (!e.records || typeof e.records !== 'object' || Array.isArray(e.records)) return false
+  if (!Object.values(e.records as Record<string, unknown>).every(isFoundedSettlementRecord)) return false
+  if (!e.residency || typeof e.residency !== 'object' || Array.isArray(e.residency)) return false
+  return Object.values(e.residency as Record<string, unknown>).every((v) => typeof v === 'string')
+}
+
 function isQuestProgressEntry(value: unknown): value is QuestProgressEntry {
   if (!value || typeof value !== 'object') return false
   const e = value as Record<string, unknown>
@@ -2752,6 +2779,7 @@ export function isSaveData(value: unknown): value is SaveData {
   if (v.waterDrinkEventCount !== undefined && typeof v.waterDrinkEventCount !== 'number') return false
   if (v.unsafeFoodEventCount !== undefined && typeof v.unsafeFoodEventCount !== 'number') return false
   if (v.structureStates !== undefined && !isStructureStatesField(v.structureStates)) return false
+  if (v.foundedSettlements !== undefined && !isFoundedSettlementsField(v.foundedSettlements)) return false
   return true
 }
 

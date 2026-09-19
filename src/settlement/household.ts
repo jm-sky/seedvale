@@ -597,7 +597,19 @@ export function createHousehold(
  * does not reset (plan 069 §22).
  */
 export type HouseholdRegistry = {
-  getOrCreate: (id: HouseholdId, settlementId: string, homeId: string, starting?: HouseholdStartingContext) => Household
+  /** `explicitSnapshot` (plan settlements-003) only matters the first time
+   *  `id` is genuinely new to this registry (no saved/carried entry either)
+   *  — it lets a caller (colony bootstrap) deliberately opt a fresh
+   *  household out of the usual jittered starting food/wood/water instead
+   *  of silently minting free supplies. Ignored once `id` already exists or
+   *  is found in this registry's own carried/saved `initial` map. */
+  getOrCreate: (
+    id: HouseholdId,
+    settlementId: string,
+    homeId: string,
+    starting?: HouseholdStartingContext,
+    explicitSnapshot?: HouseholdSnapshot,
+  ) => Household
   get: (id: HouseholdId) => Household | undefined
   clear: () => void
   /** Stock-only snapshot of every household created so far — see
@@ -608,10 +620,10 @@ export type HouseholdRegistry = {
 export function createHouseholdRegistry(initial?: Record<HouseholdId, HouseholdSnapshot>): HouseholdRegistry {
   const byId = new Map<HouseholdId, Household>()
   return {
-    getOrCreate(id, settlementId, homeId, starting) {
+    getOrCreate(id, settlementId, homeId, starting, explicitSnapshot) {
       const existing = byId.get(id)
       if (existing) return existing
-      const created = createHousehold(id, settlementId, homeId, initial?.[id], starting)
+      const created = createHousehold(id, settlementId, homeId, initial?.[id] ?? explicitSnapshot, starting)
       byId.set(id, created)
       return created
     },

@@ -12,6 +12,11 @@ import type { SettlementHuntingHooks } from '../fauna/huntingHooks'
 import type { PersistentOccupantSnapshot } from '../fauna/persistentOccupants'
 import type { PersistentOccupantDecl } from '../fauna/persistentOccupants'
 import type { Settlement } from '../settlement/createSettlement'
+import type { FoundedSettlementRegistrySnapshot } from '../settlement/foundedSettlement'
+import type {
+  BootstrapFoundedSettlementInput,
+  BootstrapFoundedSettlementResult,
+} from '../settlement/foundedSettlementBootstrap'
 import type { HouseholdId, HouseholdSnapshot } from '../settlement/household'
 import type { LivestockSaveRecord } from '../settlement/livestock'
 import type { NpcRelationshipEntry } from '../settlement/npcRelationships'
@@ -448,6 +453,16 @@ export type WorldBundle = {
     assignmentId: string,
     locationAt?: (locationId: string) => { x: number, z: number } | null,
   ) => DispatchReadyExpeditionResult
+  /**
+   * Reusable, idempotent expedition-arrival -> settlement transaction (plan
+   * settlements-003) — a quest/consumer resolves site readiness itself
+   * (e.g. via `querySiteInfrastructure`) and passes it in; this never
+   * chooses an expedition or drives travel. `placedTents` is supplied here
+   * (not baked into `SettlementsManager`) because this bundle owns it.
+   */
+  bootstrapFoundedSettlement: (
+    input: Omit<BootstrapFoundedSettlementInput, 'nowDays'>,
+  ) => BootstrapFoundedSettlementResult
   /** Extracted goods waiting at remote resource sites (plan settlements-npcs-021).
    *  World-owned, independent of streamed deposit instances; persists as
    *  `SaveData.resourceSiteInventories` and survives an in-session rebuild. */
@@ -633,6 +648,9 @@ function buildSettlementsManager(
   onSettlementAvailable?: (settlement: { id: string, x: number, z: number }) => void,
   npcWorldMovement?: import('../ai/npcMovementTarget').NpcWorldMovementQueries,
   onAnimalDeathSound?: (kind: AnimalKind, x: number, z: number) => void,
+  /** Plan settlements-003 — same carry/restore contract as `initialHouseholds`/
+   *  `initialNpcStates` above. */
+  initialFoundedSettlements?: FoundedSettlementRegistrySnapshot,
 ): Promise<SettlementsManager> {
   return createSettlementsManager(
     scene,
@@ -695,6 +713,7 @@ function buildSettlementsManager(
     npcWorldMovement,
     chunkManager.sampleBridgeDeck,
     onAnimalDeathSound,
+    initialFoundedSettlements,
   )
 }
 
@@ -1091,6 +1110,10 @@ type WorldSystemsSeed = {
    *  same "carried across rebuild, sourced from `SaveData` on a fresh boot"
    *  contract as `households`/`storageInfestation` above. */
   structureStates?: Record<string, import('../settlement/structureCondition').SettlementStructureState>
+  /** Plan settlements-003 — seeds the manager-lifetime `FoundedSettlementRegistry`,
+   *  same "carried across rebuild, sourced from `SaveData` on a fresh boot"
+   *  contract as `households`/`structureStates` above. */
+  foundedSettlements?: FoundedSettlementRegistrySnapshot
   spawnerState?: ReadonlyMap<string, SavedSpawnPointState>
   persistentOccupants?: PersistentOccupantSnapshot
   resourceDepletion: ResourceDepletionState
@@ -1251,6 +1274,7 @@ async function buildWorldSystems(
     storageInfestation: initialStorageInfestation,
     seedHomeStorageInfestation,
     structureStates: initialStructureStates,
+    foundedSettlements: initialFoundedSettlements,
     spawnerState: initialSpawnerState,
     persistentOccupants: initialPersistentOccupants,
     resourceDepletion,
@@ -1581,7 +1605,7 @@ async function buildWorldSystems(
   // background, not awaited here (world-003 §3) — see
   // `SettlementsManager.homeReady`.
   bootMark('buildSettlementsManager')
-  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, herbalGather, hunting, destinationThreat, initialHouseholds, initialNpcStates, helperDelivery, initialNpcRelationships, initialLivestock, initialRemovedLivestockIds, initialRats, initialRemovedRatIds, initialStorageInfestation, seedHomeStorageInfestation, workContracts, transportOrders, resourceSiteInventories, resolveResourceSitePosition, playerWells, droppedItems, grassForage, playerTroughs, terrainPreparations, palisades, standingTorches, residentialBuildings, npcGraves, initialStructureStates, getWorldDays, onSettlementAvailable, npcWorldMovement, onAnimalDeathSound)
+  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, herbalGather, hunting, destinationThreat, initialHouseholds, initialNpcStates, helperDelivery, initialNpcRelationships, initialLivestock, initialRemovedLivestockIds, initialRats, initialRemovedRatIds, initialStorageInfestation, seedHomeStorageInfestation, workContracts, transportOrders, resourceSiteInventories, resolveResourceSitePosition, playerWells, droppedItems, grassForage, playerTroughs, terrainPreparations, palisades, standingTorches, residentialBuildings, npcGraves, initialStructureStates, getWorldDays, onSettlementAvailable, npcWorldMovement, onAnimalDeathSound, initialFoundedSettlements)
   bootMarkEnd('buildSettlementsManager')
   const homeDef = settlementsManager.getHomeDef()
   const riverWaterQuality = createRiverWaterQualityResolver(chunkManager.riverWaterContext, settlementsManager.peekDef)
@@ -2079,6 +2103,12 @@ async function buildWorldSystems(
       }
       return settlementsManager.dispatchReadyExpedition(assignment, destination, getWorldDays())
     },
+    bootstrapFoundedSettlement(input) {
+      return settlementsManager.bootstrapFoundedSettlement(
+        { ...input, nowDays: getWorldDays() },
+        placedTents,
+      )
+    },
     resourceSiteInventories,
     grassForage,
     riverWaterQuality,
@@ -2362,6 +2392,10 @@ export async function createWorldBundle(
   consumedWorldPickupIds: ReadonlySet<string> = new Set(),
   onAnimalDeathSound?: (kind: AnimalKind, x: number, z: number) => void,
   onStartupLoadingStage?: WorldStartupLoadingStageListener,
+  /** Plan settlements-003 — founded-settlement records + NPC residency
+   *  overrides, sourced from `SaveData.foundedSettlements` on a fresh boot;
+   *  same carry/restore contract as `initialStructureStates` above. */
+  initialFoundedSettlements?: FoundedSettlementRegistrySnapshot,
 ): Promise<BuiltWorldSystems> {
   return buildWorldSystems({
     scene, config, collectedItemIds, renewableWorldItems, consumedWorldPickupIds, removedCropIds, plantedTrees, plantedCrops, modifications, playAt,
@@ -2404,6 +2438,7 @@ export async function createWorldBundle(
     storageInfestation: initialStorageInfestation,
     seedHomeStorageInfestation,
     structureStates: initialStructureStates,
+    foundedSettlements: initialFoundedSettlements,
     spawnerState: initialSpawnerState,
     persistentOccupants: initialPersistentOccupants,
     resourceDepletion,
@@ -2593,6 +2628,7 @@ export async function rebuildWorldBundle(
   const carriedRats = resetCollectedItems ? undefined : bundle.settlementsManager.snapshotRats()
   const carriedStorageInfestation = resetCollectedItems ? undefined : bundle.settlementsManager.snapshotStorageInfestation()
   const carriedStructureStates = resetCollectedItems ? undefined : bundle.settlementsManager.snapshotStructureStates()
+  const carriedFoundedSettlements = resetCollectedItems ? undefined : bundle.settlementsManager.snapshotFoundedSettlements()
   bundle.caves.dispose()
   bundle.resourceDeposits.dispose()
   bundle.grassForage.dispose()
@@ -2649,6 +2685,7 @@ export async function rebuildWorldBundle(
     storageInfestation: carriedStorageInfestation,
     seedHomeStorageInfestation: false,
     structureStates: carriedStructureStates,
+    foundedSettlements: carriedFoundedSettlements,
     spawnerState: carriedSpawnerState,
     persistentOccupants: carriedPersistentOccupants,
     resourceDepletion,

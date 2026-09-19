@@ -4,6 +4,68 @@
 **Reviewed:** 2026-09-16  
 **Codebase:** `main`
 
+## Implementation log — 2026-09-19
+
+Stages 1 and 3 implemented:
+
+- `src/settlement/foundedSettlement.ts` — `FoundedSettlementRecord`,
+  deterministic `foundedSettlementId`/`foundedHouseholdId`/`foundedTentId`,
+  and `FoundedSettlementRegistry` (records + `NpcId -> settlementId`
+  residency override), owned by `SettlementsManager` the same
+  `initial*`/`serialize()` idiom as `households`/`npcStates`.
+- `src/settlement/foundedSettlementBootstrap.ts` — `bootstrapFoundedSettlement(...)`:
+  preflights every member (authoritative state exists + alive, `travel.purpose`
+  matches this assignment, `arrival === 'reached'`, not `blocked`, a real
+  `tent` instance or an already-placed stable tent) before any mutation, then
+  commits: founded record, `EconomyRegistry.getOrCreate` with a minimal
+  `OUTPOST`/`foraging` seed, one household + one physical `PlacedTents` tent
+  per founder, and `observeNpcTravelArrival` to clear travel exactly once.
+  Idempotent: a second call for the same `siteId` returns `existing` and only
+  repairs derived bindings, never re-consumes a tent instance.
+- `HouseholdRegistry.getOrCreate` gained an optional trailing
+  `explicitSnapshot` param (`src/settlement/household.ts`) so a genuinely new
+  founding household can opt out of the usual jittered starting food/wood/
+  water instead of silently minting free supplies — the "explicit founded-
+  household initial-state path" these notes called for.
+- `SettlementsManager` exposes `bootstrapFoundedSettlement`,
+  `listFoundedSettlements`/`getFoundedSettlement`/`getFoundedSettlementBySiteId`,
+  `residencySettlementId`, `snapshotFoundedSettlements`. `placedTents` is a
+  call-time argument (from `WorldBundle`), not a constructor dependency —
+  `SettlementsManager` never owned `PlacedTents` and this avoids reordering
+  its already-large constructor.
+- Persistence threaded exactly like `households`/`structureStates`:
+  `SaveData.foundedSettlements` (optional/sparse, no version bump —
+  `docs/state/persistence.md`'s "new optional field" case, not a semantic
+  change to an existing one), `saveState.ts`'s `buildSaveData()`,
+  `WorldSystemsSeed.foundedSettlements` in `worldBundle.ts` threaded through
+  both `createWorldBundle` (from `SaveData`) and `rebuildWorldBundle` (carried
+  snapshot), `createApp.ts`'s load call site.
+- Tests: `foundedSettlement.test.ts` (ids, registry, collision, serialize
+  round-trip), `foundedSettlementBootstrap.test.ts` (every not-ready path
+  without mutation, created-once commit, no free household supplies,
+  idempotent repeat), plus two regression tests in `household.test.ts` for
+  the new `explicitSnapshot` param.
+
+**Not implemented — Stages 2 and 4 (live resident materialization + streaming).**
+`createSettlement()`'s per-member `NpcAgent.create()` call requires a fully-
+populated `SettlementLandmarks` (well/market/notice-board/houses/land-plots/
+household storages/…, almost entirely non-optional fields) that a founded
+colony — deliberately using only real Player-built site infrastructure, per
+this plan's own "no synthetic `SettlementDef`/`VillagePlan`" guardrail — has
+no procedural source for. Making a founded resident behave like an ordinary
+profession-working resident therefore needs either (a) a real founded-
+specific `SettlementLandmarks`-shaped adapter over real tent/well/cultivation
+anchors, or (b) auditing every `NpcAgent`/`Settlement` consumer of
+`landmarks` for a degrade-gracefully path — both substantial, high-risk
+pieces of work in their own right, confirming (and going beyond) this
+document's own "Stage 2 is the highest-risk stage and should be isolated
+from bootstrap side effects" call. `SettlementsManager`'s procedural-grid
+streaming (`recheck`/`ensureLoaded`) also does not yet check founded records
+by world position. Left as open follow-up on this same plan; the founded
+settlement's economy/household/NPC/residency state is real today and ready
+for `quests-progression-010` to drive, it just has no on-screen live
+presence yet.
+
 ## Recon refresh — 2026-09-18
 
 - `createSettlement.ts` / `SettlementsManager` gained travelling visitor, vendor, pasture/water and voice integrations after the original review. Do not widen Stage 2 into a general constructor rewrite; extract only nonprocedural resident/materialization inputs.

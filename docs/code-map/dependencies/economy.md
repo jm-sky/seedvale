@@ -340,6 +340,8 @@ Generated from TypeScript imports.
 - `economy/index.ts`
 - `economy/registry.test.ts`
 - `settlement/SettlementsManager.ts`
+- `settlement/foundedSettlementBootstrap.test.ts`
+- `settlement/foundedSettlementBootstrap.ts`
 
 ## `economy/settlementEconomy.test.ts`
 
