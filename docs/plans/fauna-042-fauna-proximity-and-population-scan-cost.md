@@ -13,7 +13,7 @@ See [implementation notes](./implementation-notes/fauna-042-fauna-proximity-and-
 
 ## Implementation status (2026-09-19)
 
-**Implemented + technically verified.** Browser/gameplay/performance comparison is User-owned.
+**Implemented; baseline technical checks passed; correctness hardening remains before closing verification.** Browser/gameplay/performance comparison is User-owned.
 
 - `src/fauna/faunaProximity.ts` — fauna-owned runtime spatial hash (16 m cells, extra neighbour covering). Rebuilt once per `Fauna.update()` from the wild `agents` array. Not a second registry, not persisted.
 - `AnimalAgent` sensing/targeting (`nearest`, prey commitment membership, rabid search, carcass search, prey-alert copy, scare-herd, rotting-corpse neighbours) visits covering cells when `AnimalUpdateContext.proximity` is supplied; tests and livestock ticks without it keep the original full-`others` scan.
@@ -71,6 +71,13 @@ Existing consumers must retain:
 
 A query may inspect extra neighboring cells but must apply the original radius predicate before selection.
 
+Local discovery and global membership are distinct contracts:
+
+- proximity queries narrow candidates for local sensing/discovery only;
+- committed wild-target existence must use wild-pool membership, not presence in the current local query;
+- live distance/liveness/business predicates remain authoritative after candidate prefiltering;
+- a snapshot-built index may defer discovery of an animal that only becomes newly-near after its bucket was assigned until the next fauna pass.
+
 ### 3. Reuse population membership from fauna-041
 
 After fauna-041, do not reconstruct managed-spawner occupancy by allocating a full `filter().map()` positional snapshot every frame.
@@ -119,7 +126,12 @@ Add tests proving candidate narrowing preserves:
 5. carcass selection/claims;
 6. livestock remains supplied through the explicit encounter set rather than silently merged into wild buckets;
 7. same behavior for a target on a spatial-cell boundary;
-8. off-screen/distant animals continue normal lifecycle updates.
+8. off-screen/distant animals continue normal lifecycle updates;
+9. a committed wild target remains valid when it is globally present but absent from the local candidate slice, until ordinary death/range/membership rules invalidate it;
+10. rebuild → movement without rebuild cannot make a moved-away target pass the live radius predicate;
+11. snapshot lifecycle ordering is covered: all wild-agent updates run before removal, and spawner respawns occur only after the sensing pass;
+12. deterministic brute-force equivalence of static spatial queries vs. a full scan across cell boundaries, negative coordinates and radii below/equal/above cell size;
+13. spatial cell keys are collision-free throughout the documented supported world-coordinate range.
 
 ## Performance verification
 
