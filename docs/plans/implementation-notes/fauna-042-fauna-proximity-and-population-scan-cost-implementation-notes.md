@@ -1,161 +1,323 @@
 # Implementation notes: fauna-042 — fauna proximity and population scan cost
 
-**Plan:** [fauna-042](../fauna-042-fauna-proximity-and-population-scan-cost.md)
-**Recon baseline:** current `main` on 2026-09-19 (fauna-041 already landed)
-**Implemented:** 2026-09-19
+**Plan:** [fauna-042](../fauna-042-fauna-proximity-and-population-scan-cost.md)  
+**Recon baseline:** current `main` on 2026-09-19, after commit `d44328b`  
+**Current state:** implementation landed; remaining work is verification/hardening, not a second spatial-system implementation
 
-## Current-code baseline
+## Current-code reality
 
-Dependency `fauna-041` is implemented. Managed-spawner occupancy is logical membership:
+`fauna-042` is already implemented on `main`.
 
-- alive ordinary managed animals;
-- grouped by `spawnPointId`;
-- persistent occupants excluded;
-- respawn callback returns explicit success/failure.
+The implementation introduced:
 
-Do not reintroduce positional population counting. The remaining cost was inter-animal discovery plus the per-frame `filter().map()` used to build the managed-membership snapshot.
+- `src/fauna/faunaProximity.ts::createFaunaProximityIndex()`;
+- one fauna-owned `FaunaProximityIndex` instance in `createFauna()`;
+- one `proximity.rebuild(agents)` before the wild-agent update loop;
+- proximity-aware reads in `AnimalAgent`;
+- reusable managed-spawner occupancy counts in `createFauna()`;
+- proximity/spawner diagnostics in `agentCpuDiag`.
 
-`createFauna()` passed the complete wild `agents` array as `others` to every `AnimalAgent.update()`. Full-rate sensing/targeting scanned that array for predator/prey nearest, rabid discovery, carcass food, prey-alert copies, and scare-herd proximity.
+Do not recreate the plan from scratch or introduce another registry/grid.
 
-## Implementation
+The remaining implementation work, if any, should be limited to defects or hardening findings from the checks below.
 
-### Runtime spatial hash
+## Ownership and lifecycle boundaries
 
-`src/fauna/faunaProximity.ts` is a fauna-owned, runtime-only coarse hash (16 m cells). `createFauna()` constructs one index and rebuilds it once per `Fauna.update()` from the wild `agents` array (O(N), reused bucket arrays after warmup).
+### Wild fauna authority
 
-Cell covering includes one extra neighbouring cell so a target on a cell boundary, or a same-frame step, is still visited. Callers still apply the original radius / role / dead / self predicates. Dead agents stay in the view so carcass search can see them.
+`src/fauna/createFauna.ts` remains authoritative for the live wild `agents` array.
 
-`huntableLivestock` is never inserted. Membership for committed-target validation uses `proximity.has()` (the rebuilt wild set), not a radius check and not “present in the local query slice”.
+`FaunaProximityIndex` is only a derived runtime accelerator:
 
-### AnimalAgent consumers
+- rebuilt from `agents`;
+- not persisted;
+- not an entity owner;
+- not a second fauna registry;
+- not shared with livestock/NPCs.
 
-When `AnimalUpdateContext.proximity` is present:
+Keep this ownership boundary.
 
-- `nearest()` / prey-alert / scare-herd iterate covering cells;
-- rabid search and carcass search receive a reused covering-cell scratch array;
-- rotting-corpse neighbour influence uses the same scratch;
-- livestock ticks and tests that omit `proximity` keep the original full-`others` scan.
+### AnimalAgent
 
-The single `AnimalAgent.update()` path is unchanged. Cadence, camera, and off-screen lifecycle rules are unchanged. Equal-distance nearest ties still use first-seen `d < bestD` within covering-cell visit order (rebuild insertion follows `agents` order).
+`AnimalAgent` remains the single simulation entity and owns:
 
-### Spawner occupancy
+- target commitment;
+- behaviour/decision state;
+- corpse state;
+- movement/lifecycle.
 
-`updateSpawners()` keeps fauna-041 membership semantics (`spawnPointId` + `kind`, boolean `onRespawn`). Occupancy is queried only for spawners that can respawn this pass. Production fills a reusable `Map<spawnPointId, count>` in one O(N) pass when `dayDelta > 0` — no per-frame `filter().map()`, no spatial `SPAWNER_RADIUS` cap counting. Recovery still uses nearby same-kind population.
+It may consume the read-only proximity contract, but must not know about hash buckets or cell keys.
 
-### Diagnostics
+### Livestock
 
-`agentCpuDiag` adds:
+`AnimalUpdateContext.huntableLivestock` remains a separate caller-composed encounter set.
 
-- `faunaProximityRebuildMs`
-- `faunaSpawnerBookkeepingMs`
-- `faunaProximityQueries` / `faunaProximityCandidatesVisited`
+Do not insert livestock into the wild proximity index. Wild-pool membership and livestock encounter membership have different ownership/lifecycle semantics.
 
-Existing nearest-scan candidate counts remain the comparison for target discovery.
+### Managed spawners
 
-## Tests
+After `fauna-041`, managed capacity is logical membership by `spawnPointId`, not distance from the spawner.
 
-- `faunaProximity.test.ts` — membership, cell boundary, distant exclusion, dead carcass presence, occupancy predicate.
-- `AnimalAgent.test.ts` — nearest prey/threat, dead/self exclusion, commitment invalidation, carcass claim, livestock encounter set, cell boundary, off-screen lifecycle, rabid discovery.
-- `AnimalSpawner.test.ts` — occupancy callback is not invoked when it cannot affect a spawner; fauna-041 membership tests remain.
+Current production ownership is correct:
 
-## Out of scope (left as-is)
+- `createFauna()` fills reusable `boundOccupancyCounts: Map<spawnPointId,count>`;
+- `AnimalSpawner.updateSpawners()` consumes a `SpawnerBoundCount` callback;
+- persistent occupants stay excluded from ordinary occupancy and are represented separately through reserved slots.
 
-- Herd-leader / mother scans over `currentOthers`.
-- NPC `destinationThreatHooks` fauna scans.
-- Browser/FPS verification.
+Do not reintroduce positional occupancy counting for respawn capacity.
 
-## Post-implementation hardening review
+## Exact implementation seams
 
-Before treating `fauna-042` as fully verified, review the implementation against these additional checks. These are correctness/performance guardrails, not a request to redesign the architecture.
+### `src/fauna/faunaProximity.ts`
 
-### 1. Cell covering cost
+Relevant symbols:
 
-`faunaProximity.ts::coveringCellRange()` currently expands every query by one full cell:
+- `FAUNA_PROXIMITY_CELL_SIZE`
+- `FaunaProximityIndex`
+- `createFaunaProximityIndex()`
+- `cellCoord()`
+- `cellKey()`
+- `coveringCellRange()`
+- `forEachNear()`
+- `countNear()`
+- `has()`
+
+The index currently uses 16 m cells and reuses bucket arrays through `idleBuckets`.
+
+`has(agent)` is global wild-pool membership for the current rebuild. It is not a proximity query.
+
+### `src/fauna/createFauna.ts`
+
+The index is rebuilt once before the wild-agent loop:
+
+```
+proximity.rebuild(agents)
+for (const a of agents) {
+  a.update({ ..., others: agents, proximity, ... })
+}
+```
+
+Keep this one-rebuild-per-pass shape unless profiling proves it insufficient.
+
+Spawner occupancy is rebuilt only when `dayDelta > 0`; successful respawns increment the same reusable count map immediately so a large time skip cannot overfill capacity in one pass.
+
+### `src/fauna/AnimalAgent.ts`
+
+Relevant symbols/fields:
+
+- `AnimalUpdateContext.proximity`
+- `tickProximity`
+- `forEachNearby()`
+- `nearbyOthers()`
+- `isWildPoolMember()`
+- `nearest()`
+- `resolvePreyTarget()`
+- module-level `nearbyAgentScratch`
+- `currentOthers` / `pickFollowTarget()`
+
+Important distinction:
+
+- local candidate discovery uses proximity queries;
+- committed-target existence uses global membership (`proximity.has()` when present);
+- `currentOthers` still intentionally serves herd/mother semantics.
+
+Do not make “present in local query result” mean “still exists in fauna”.
+
+### `src/fauna/animalForaging.ts`
+
+`FOOD_SEARCH_RADIUS` is exported so `AnimalAgent` can bound carcass candidate collection before calling the existing food-selection logic.
+
+The proximity layer must only narrow the candidate set. It must not replace carcass eligibility, value/score, claim or revalidation logic.
+
+### `src/fauna/AnimalSpawner.ts`
+
+`updateSpawners()` supports both the old snapshot form and `SpawnerBoundCount`.
+
+Production uses the count callback. Keep the array form only for compatibility/tests unless a separate cleanup plan removes it.
+
+## Resolved architectural decisions
+
+### Keep the grid fauna-local
+
+Do not extract a generic `world/spatialGrid.ts` in this plan.
+
+There is still only one real consumer. Extract a shared primitive only when another domain (for example NPC proximity) has a concrete, measured need and the contracts genuinely align.
+
+### Snapshot semantics are intentional
+
+The spatial index is rebuilt once at the start of the wild-fauna pass.
+
+Animals may move after their bucket was assigned. Do not incrementally mutate buckets during each `AnimalAgent.update()`.
+
+Consequences accepted by design:
+
+- exact distance checks use the live position, so stale bucket membership may produce extra candidates but should not create an out-of-range target;
+- a newly-near agent can become discoverable on the next rebuild;
+- a respawn created after the rebuild enters the index on the next fauna pass;
+- dead agents remain indexed because carcass discovery needs them.
+
+This bounded one-pass lag is preferred over mutation-during-iteration complexity.
+
+### Candidate ordering is not a required contract
+
+User explicitly accepts minimal behavioural differences such as equal-distance deer being visited in a different order.
+
+Do not sort candidates or reconstruct original `agents` order solely for tie preservation.
+
+The required contract is semantic eligibility/range correctness, not exact legacy iteration order.
+
+### No cadence/camera changes
+
+Do not combine this optimization with:
+
+- camera culling;
+- off-screen freezing;
+- worker migration;
+- sensing cadence changes;
+- species rebalance.
+
+Those belong to separate plans.
+
+## Hardening checks before closing verification
+
+### 1. Covering-range overfetch
+
+Current `coveringCellRange()` uses:
 
 ```ts
 const cover = radius + FAUNA_PROXIMITY_CELL_SIZE
 ```
 
-With `FAUNA_PROXIMITY_CELL_SIZE = 16`, this is intentionally conservative but can substantially increase the number of buckets visited for common 10–20 m queries.
+This is safe but may visit substantially more cells than necessary.
 
-Verify with diagnostics whether the extra-cell margin materially weakens candidate reduction. If so, prefer the smallest safe covering rule:
-- exact cells intersecting `x/z ± radius`; or
-- only a bounded movement margin justified by maximum same-pass displacement.
+Use existing diagnostics to determine whether the extra full-cell margin weakens the optimization materially.
 
-A one-tick difference in which otherwise-equivalent animal is discovered first is acceptable. Do not add sorting or stable-order reconstruction solely to preserve old equal-distance ordering.
+If it does, prefer the smallest correct rule:
+
+- cells intersecting `x/z ± radius`; or
+- a small explicit movement margin justified by same-pass displacement.
+
+Do not optimize this by assumption; compare candidate counts first.
 
 ### 2. Brute-force equivalence test
 
-Add a deterministic property-style test for `FaunaProximityIndex`:
+Add a deterministic property-style test in `src/fauna/faunaProximity.test.ts`.
 
-- generate a few hundred deterministic agent positions;
-- include negative coordinates and points exactly on/around cell boundaries;
-- query many centers/radii;
-- compare the exact-radius-filtered spatial result against a brute-force scan of the same wild pool.
+Build a few hundred deterministic agents/positions and compare:
 
-The invariant is set equivalence for candidates geometrically inside the requested radius. Result ordering is explicitly not part of the contract.
+```
+spatial query
++ exact distance predicate
+```
 
-This test should cover radii below, equal to, and above the 16 m cell size.
+against:
 
-### 3. Numeric cell-key safety
+```
+full agents scan
++ the same exact distance predicate
+```
 
-`cellKey(cx, cz)` packs two signed coordinates into one number using `CELL_KEY_STRIDE`.
+Test multiple centers/radii including:
 
-Add focused tests proving no collisions for the real supported world-coordinate range, including:
+- radius below 16 m;
+- radius exactly 16 m;
+- radius above 16 m;
+- negative coordinates;
+- points on both sides of a cell boundary;
+- points exactly on/just inside/just outside the requested radius.
+
+Compare candidate sets, not result order.
+
+### 3. Numeric cell-key uniqueness
+
+`cellKey(cx, cz)` uses numeric packing with `CELL_KEY_STRIDE = 1 << 20`.
+
+Add focused tests for the supported world range:
+
 - negative X/Z;
 - cells around zero;
-- large positive/negative coordinates near the intended playable-world bound;
-- neighbouring cells differing only on one axis.
+- neighbouring cells on either axis;
+- large positive/negative cell coordinates inside the intended playable bound.
 
-If the supported world range cannot be expressed as a clear invariant, prefer an unambiguous key representation rather than relying on an undocumented numeric range assumption.
+If the intended coordinate bound cannot be stated confidently, replace the packed numeric key with an unambiguous representation instead of relying on an undocumented range assumption.
 
-### 4. Snapshot semantics
+### 4. Scratch-buffer reentrancy
 
-The index is rebuilt once before the wild-agent update loop. Agent movement during that pass does not update bucket membership until the next fauna pass.
+`nearbyAgentScratch` is module-level and reused by `nearbyOthers()`.
 
-Keep this behaviour deliberately; do not incrementally mutate the grid during each `AnimalAgent.update()` unless profiling proves it necessary.
+Current call sites are synchronous and sequential, but verify that no consumer:
 
-Add/retain a test or explicit invariant showing that:
-- a moved agent may be discovered from its previous bucket for the remainder of the current pass;
-- exact distance checks still reject it when no longer in range;
-- new proximity becomes visible on the next rebuild.
+- retains the returned array;
+- calls another `nearbyOthers()` before finishing its own iteration;
+- passes the array into code that may synchronously re-enter the same helper.
 
-This bounded one-pass lag is accepted for discovery and is preferable to mutation-during-iteration complexity.
+If a nested call exists or is introduced, move to caller-owned/reentrant scratch storage rather than copying arrays per query.
 
-### 5. Spawn/death membership timing
+### 5. Remaining `currentOthers` scans
 
-A respawn inserted after the proximity rebuild is expected to enter the proximity index on the next fauna pass. Death does not remove an agent from the current index because carcass queries need dead agents.
+Inventory remaining reads of `currentOthers`.
 
-Document/test both behaviours so future cleanup code does not accidentally remove corpses from the index or force mid-pass rebuilds.
+Current known intentional cases:
 
-### 6. Scratch-buffer reentrancy
+- juvenile mother lookup via `currentOthers.find(...motherId...)`;
+- herd leader selection via `pickHerdLeader(this.currentOthers, herdId)`.
 
-`AnimalAgent.nearbyOthers()` uses shared scratch storage for narrowed candidate arrays.
+Do not mechanically spatialize these.
 
-Verify every consumer of that returned array before future reuse:
-- no consumer retains it beyond the immediate synchronous operation;
-- no nested call can invoke `nearbyOthers()` and overwrite the same scratch while the outer consumer is still iterating;
-- tests should cover nested-query behaviour if such a call chain exists.
+Mother lookup is identity/membership-oriented, and herd leadership is defined over the herd rather than “nearest local herd member”. Only change them if a separate profiling result shows material cost and a semantic-preserving data structure is clear.
 
-If this invariant cannot be made obvious from current call sites, use caller-owned/reentrant scratch storage rather than relying on one shared mutable array.
+## Diagnostics to reuse
 
-### 7. Remaining full-pool scans
+Do not add another profiler.
 
-`currentOthers` remains intentionally available for herd/mother behaviour. Before closing verification, inventory its remaining read sites and classify them as:
-- global-membership semantics that must remain full-pool;
-- bounded proximity queries that should use the index;
-- low-frequency work intentionally left out of scope.
+Use existing `agentCpuDiag` fields:
 
-Do not mechanically migrate `pickHerdLeader()` if leadership is defined over the whole herd rather than nearby animals.
+- `nearestCandidatesChecked`;
+- `faunaProximityRebuildMs`;
+- `faunaSpawnerBookkeepingMs`;
+- `faunaProximityQueries`;
+- `faunaProximityCandidatesVisited`;
+- overall fauna agent update timing.
 
-### Review success criteria
+The useful scaling signal is candidate reduction, not just raw query-call count.
 
-The implementation is ready to remain as-is when:
-- brute-force equivalence proves no in-radius wild candidate is lost;
-- cell-key uniqueness is covered for the supported map range;
-- no scratch-buffer reentrancy hazard exists;
-- snapshot/spawn/death timing is explicit and tested;
-- diagnostics show proximity queries inspect materially fewer candidates than the full wild pool in a high-fauna scenario.
+## Implementation order for remaining hardening
 
-Browser/performance verification remains User-owned.
+1. Add brute-force equivalence coverage for `FaunaProximityIndex`.
+2. Add numeric cell-key boundary/uniqueness tests.
+3. Audit `nearbyAgentScratch` consumers for reentrancy/retention.
+4. Run targeted tests and technical checks.
+5. Compare proximity candidate counts in the existing high-fauna diagnostic scenario.
+6. Only if diagnostics justify it, tighten `coveringCellRange()`.
+7. Re-run equivalence tests after any covering-range change.
 
+Do not refactor `AnimalAgent`, spawner ownership or NPC proximity while doing this.
+
+## Verification
+
+Technical verification belongs to the implementation agent:
+
+- focused `faunaProximity` tests;
+- focused `AnimalAgent` targeting/carcass/rabid tests;
+- `AnimalSpawner` tests;
+- typecheck/lint/build/full tests according to the repository's normal implementation workflow.
+
+Manual browser/performance verification remains User-owned.
+
+Browser verification should confirm:
+
+- nearest predator/prey behaviour still looks normal;
+- carcass discovery still works;
+- livestock hunting still goes through the explicit encounter set;
+- distant/off-screen fauna still lives and decides;
+- high-fauna diagnostics show fewer candidate visits than a full-pool scan.
+
+Do not claim an FPS improvement without that browser comparison.
+
+## Model assessment
+
+Keep source-plan metadata as:
+
+`**Model:** Grok, Composer`
+
+The main implementation touched shared `AnimalAgent` targeting semantics and membership/ownership boundaries, so Grok remains the safer primary model. Composer is a reasonable lower-risk fallback now that the architecture and hardening seams are explicit.
