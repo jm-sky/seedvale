@@ -117,6 +117,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `quests-progression-071-generated-opportunity-retention-semantics.md`       | 🟡 | S      | ~~quests-progression-031~~                                                                                                                                                                                                                                                                 | -                                         |
 | ◼️ `quests-progression-072-invalidated-quest-restore-metadata-continuity.md`   | 🟡 | XS     | -                                                                                                                                                                                                                                                                                          | -                                         |
 | 💡 `items-player-049-poisoned-meat-predator-bait.md`                           | 🟡 | S      | ~~items-player-002~~, ~~settlements-npcs-007~~, ~~fauna-023~~                                                                                                                                                                                                                              | -                                         |
+| ◼️ `fauna-044-stag-antler-drop-chance-survival-influence.md`                   | 🟡 | XS     | -                                                                                                                                                                                                                                                                                          | -                                         |
 
 ---
 
@@ -241,7 +242,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 ## Next plan IDs
 
 - ai: `005`
-- fauna: `044`
+- fauna: `045`
 - items-player: `050`
 - npc: `061`
 - persistence: `006`
