@@ -1,7 +1,7 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-19 06:47:51  
+> Date: 2026-09-19 07:02:12  
 
 ## PLANS
 
@@ -14,6 +14,7 @@
 - `quests-progression-069-quest-offer-pacing-and-conservative-settlement-gating.md`
 - `settlements-npcs-049-merchant-wealth-tiers-and-travel-party-profile.md`
 - `tools-005-seedvale-character-preparation-panel.md`
+- `tools-017-custom-ubc-npc-model-source-and-build-pipeline.md`
 - `world-terrain-042-medicinal-herb-meadow-patches.md`
 
 --------------------------------
@@ -344,6 +345,43 @@ Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną
 Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
 
 Po ukończeniu implementation notes zaktualizuj też `docs/plans/tools-005-seedvale-character-preparation-panel.md` i dodaj/ustaw metadata:
+`**Model:** <best>, <cheaper-safe-fallback>`
+Wybierz dokładnie dwa modele spośród: Composer, Grok, Sonnet, Opus.
+Pierwszy ma być najlepszym wyborem do implementacji, drugi tańszym wariantem o minimalnym dodatkowym ryzyku.
+Dobierz modele na podstawie wykonanego reconu i implementation notes, zgodnie z `docs/plans/PLANNING.md`.
+
+Pliki dodaj na branch `main` w repozytorium.
+```
+
+### `tools-017-custom-ubc-npc-model-source-and-build-pipeline.md`
+
+Prompt:
+
+```
+Zrób review planu `tools-017-custom-ubc-npc-model-source-and-build-pipeline.md`
+
+Wczytaj:
+- `docs/STATE.md`
+- `docs/plans/PLANNING.md` (Implementation Notes section),
+- `docs/plans/tools-017-custom-ubc-npc-model-source-and-build-pipeline.md`
+- aktualny codebase,
+- potrzebne zależności i powiązane implementacje.
+
+Na podstawie review utwórz w repo plik:
+`docs/plans/implementation-notes/tools-017-custom-ubc-npc-model-source-and-build-pipeline-implementation-notes.md`
+
+Umieść w nim:
+- sugestie dotyczące implementacji,
+- istotne detale techniczne,
+- decyzje architektoniczne,
+- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
+- potencjalne problemy, zależności i pułapki,
+- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
+
+Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
+
+Po ukończeniu implementation notes zaktualizuj też `docs/plans/tools-017-custom-ubc-npc-model-source-and-build-pipeline.md` i dodaj/ustaw metadata:
 `**Model:** <best>, <cheaper-safe-fallback>`
 Wybierz dokładnie dwa modele spośród: Composer, Grok, Sonnet, Opus.
 Pierwszy ma być najlepszym wyborem do implementacji, drugi tańszym wariantem o minimalnym dodatkowym ryzyku.

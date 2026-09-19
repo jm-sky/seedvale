@@ -97,6 +97,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `world-terrain-042-medicinal-herb-meadow-patches.md`                        | 🟡 | M      | -                                                                                                                                                                                                                                                                                          | -                                         |
 | 💡 `quests-progression-070-boar-at-the-medicinal-meadow-systemic-settlement-problem.md` | 🟡 | L      | ~~npc-057~~, world-terrain-042                                                                                                                                                                                                                                                             | -                                         |
 | 💡 `npc-032-expedition-needs-and-survival.md`                                  | 🔴 | L      | ~~npc-029~~, ~~npc-017~~, ~~npc-025~~, ~~settlements-npcs-028~~, items-player-028, items-player-032                                                                                                                                                                                        | companions                                |
+| ◼️ `tools-017-custom-ubc-npc-model-source-and-build-pipeline.md`               | 🔴 | M      | ~~npc-039~~, ~~npc-040~~                                                                                                                                                                                                                                                                   | -                                         |
 
 ---
 
@@ -228,7 +229,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - quests-progression: `071`
 - settlements: `020`
 - settlements-npcs: `051`
-- tools: `017`
+- tools: `018`
 - ui-input: `025`
 - world: `033`
 - world-terrain: `043`
