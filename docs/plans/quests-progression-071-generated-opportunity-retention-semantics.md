@@ -9,6 +9,7 @@
 **Subdomains:** `quests` `progression`
 **Tags:** `opportunities` `persistence` `lifecycle`
 **Roadmap:** -
+**Model:** Composer, Sonnet
 
 ## Goal
 
@@ -54,6 +55,8 @@ A pristine default entry must not retain an opportunity:
 ```text
 state = not_offered
 stageIndex = 0
+no resolvedOutcomeId
+no stageCount / stageSlotProgress
 no suppression
 no journal
 no worldKnowledge
@@ -67,14 +70,17 @@ Retention must include lifecycle/progress that cannot safely be discarded, at mi
 - `offered`, `active`, `ready_to_report`;
 - terminal/history states that existing consumers intentionally preserve;
 - `not_offered` with active decline suppression;
-- any other non-default persisted quest metadata that requires the same generated definition to interpret it correctly.
+- any other non-default persisted quest metadata or stage/outcome progress that requires the same generated definition to interpret it correctly.
 
 Do not change authored quest persistence semantics.
+
+Do not change `QuestManager.exportProgress()`; derive the narrower generated-definition retention set at composition. Ordinary in-session `WorldBundle` rebuild does not reselect generated definitions because the app-level `QuestManager` and its materialized definitions survive that rebuild.
 
 ## Relevant files
 
 - `src/app/createApp.ts`
 - `src/quests/QuestManager.ts`
+- `src/quests/quests.ts`
 - `src/quests/opportunities/settlementQuestSelection.ts`
 - `src/quests/opportunities/rpgQuestMatrices.ts`
 - `src/quests/opportunities/settlementQuestOpportunities.ts`
@@ -91,7 +97,8 @@ Automated tests should prove:
 3. `offered`, `active`, terminal and otherwise retention-worthy generated quests rematerialize with the same ID;
 4. declined generated offers retain suppression rather than rotating to a new source to bypass decline;
 5. world-driven per-source definitions with live deterministic identities still reconstruct normally;
-6. no second opportunity persistence store is introduced.
+6. non-default stage/outcome/metadata progress remains retention-worthy;
+7. no second opportunity persistence store is introduced.
 
 Browser verification remains the user's responsibility.
 
