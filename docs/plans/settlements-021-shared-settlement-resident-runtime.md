@@ -42,28 +42,74 @@ Nie rozwiązywać tego przez synthetic `SettlementDef`, synthetic `VillagePlan` 
 - founded residency override już istnieje w `FoundedSettlementRegistry`, ale procedural resident creation nie konsultuje go;
 - `workplaceFor()`, `NpcAgent`, `npcProfessionWork.ts`, `npcLogistics.ts` i storage helpers są głównymi konsumentami settlement anchors.
 
-## Stage A — central live resident ownership
+## Stage A — deterministic presentation ownership
 
-Wprowadzić jeden manager/runtime-level decision seam określający, czy `NpcId` może być live residentem danego settlementu.
+Wprowadzić jeden pure/runtime decision seam określający, gdzie dany `NpcId` może mieć live presentation.
+
+Preferowany model:
+
+```text
+merchant journey:
+  visiting          → destination settlement
+  outbound/returning → brak lokalnego settlement resident presentation
+
+otherwise:
+  explicit residency override → current/founded settlement
+  no override                 → procedural source settlement
+```
 
 Semantycznie:
 
 ```text
-authoritative current residency
-+ temporary travel/visitor presentation ownership
-→ exactly one live settlement owner for NpcId
+identity origin
++ authoritative current residency
++ temporary journey/presentation state
+→ current presentation owner | none
+```
+
+Preferować pure helper/predicate, np. konceptualnie:
+
+```ts
+resolveNpcPresentationOwner(...)
+shouldMaterializeNpcAt(npcId, settlementId)
 ```
 
 Wymagania:
 
 - founder po residency switch nie może ponownie materializować się w sponsor settlement;
-- travelling merchant nadal ma dokładnie jednego live agent w destination i nie jest materializowany w home;
+- travelling merchant nadal ma dokładnie jednego live agent w destination i nie jest materializowany w home podczas outbound/returning;
 - procedural resident bez override zachowuje dotychczasowe zachowanie;
-- gate ma być używany przed stworzeniem `NpcAgent`, nie po fakcie;
-- runtime ownership bookkeeping, jeżeli potrzebny, może być manager-owned `Map<NpcId, owner>`, ale nie jest persistent state;
+- gate ma być używany przed live presentation creation, nie po fakcie;
+- persistent source of truth pozostaje w existing authoritative state (`FoundedSettlementRegistry` residency + `NpcAuthoritativeState.merchantJourney`/travel), nie w nowym runtime registry;
+- runtime `Map<NpcId, owner>` może istnieć tylko jako debug/assertion albo późniejsze async-race guard w `settlements-022`, nie jako drugi owner stanu;
 - duplicate live ownership ma być wykrywalny w testach/debug assertion.
 
 Nie implementować osobnych founded/visitor/procedural duplicate guards, które mogą się rozjechać.
+
+## Identity origin vs current residency
+
+Shared resident materialization musi jawnie rozdzielić trzy różne pojęcia:
+
+```text
+identity origin
+current residency
+current household/home
+```
+
+Dla foundera po bootstrapie:
+
+```text
+identity/profile/role/family descriptor → sponsor procedural SettlementDef
+current residency                      → founded settlement
+current Household                      → founded household
+current home                            → founded semantic home
+```
+
+Nie kopiować identity/profile data do `FoundedSettlementRecord` tylko dlatego, że current residency się zmieniła.
+
+`resolveSettlementNpcHomeDescriptor(...)` / sponsor `SettlementDef` może pozostać źródłem immutable authored identity/profile inputs, ale materializer nie może automatycznie traktować sponsor household/home jako current household/home.
+
+Travelling-visitor precedent pokazuje reuse stable `NpcId` + authoritative state, ale visitor zachowuje home ownership; founded resident nie może dziedziczyć tej semantyki przez przypadek.
 
 ## Stage B — narrow resident runtime capabilities
 
@@ -75,26 +121,24 @@ Przeprowadzić audit realnych odczytów `SettlementLandmarks` przez:
 - `npcLogistics.ts`;
 - storage/workplace helpers używane podczas resident materialization/runtime.
 
-Na tej podstawie wydzielić najmniejszy contract potrzebny live NPC.
+Na tej podstawie wydzielić tylko te zależności, które realnie blokują nonprocedural resident materialization.
 
-Preferować capability/resolver semantics, np.:
+Nie stawiać celu „usunąć `SettlementLandmarks` z całego `NpcAgent`”. Jeżeli konkretna część proceduralnego runtime uczciwie nadal potrzebuje proceduralnych landmarks, może je zachować.
 
-```text
-home
-water access
-cultivation
-storage/deposit
-profession workplace/targets
-social place
-```
+Preferować reuse już istniejących narrow hooks/contracts zamiast tworzenia jednego dużego `SettlementNpcCapabilities`, m.in.:
 
-zamiast kopiowania struktury:
+- `CultivationAnchor`;
+- `SettlementMiningHooks`;
+- `SettlementFoodSourceHooks`;
+- `SettlementHerbalGatherHooks`;
+- `ShepherdFlockHooks`;
+- `SettlementDestinationThreatHooks`;
+- pre-resolved `Place` home/work/social;
+- narrow storage/patrol destinations.
 
-```text
-well + market[] + dock + stockpile + trees[] + houses[] + ...
-```
+Nowe abstraction tylko tam, gdzie current code naprawdę nadal czyta full landmarks.
 
-Nie tworzyć drugiego dużego `SettlementLandmarks`.
+Nie tworzyć drugiego dużego `SettlementLandmarks` pod inną nazwą.
 
 `SettlementLandmarks` pozostaje procedural/presentation/layout contractem tam, gdzie faktycznie nim jest.
 
@@ -118,20 +162,49 @@ Audit ma rozróżnić:
 2. neutralny fallback/idle anchor;
 3. rzeczywistą fizyczną infrastrukturę.
 
-Brak capability ma degradować się do poprawnego idle/other pressures, nie crasha i nie fikcyjnego world state.
+Procedural adapter musi odtwarzać obecne zachowanie dokładnie, łącznie z jego current fallbacks. Nonprocedural adapter ma expose wyłącznie capabilities backed by real infrastructure/state.
+
+Brak capability w nonprocedural context ma degradować się do poprawnego idle/other pressures, nie crasha i nie fikcyjnego world state.
+
+### Storage destination contract
+
+Current logistics/profession paths nadal korzystają z proceduralnych storage anchors, np. wood deposit przez `landmarks.stockpile`.
+
+Wydzielić narrow pre-resolved storage destination/resolver tylko tam, gdzie potrzebne.
+
+Guardrails:
+
+- founded/nonprocedural resident bez real storage destination nie dostaje fake stockpile;
+- nie używać settlement center albo home jako ukrytego substytutu shared stockpile;
+- procedural adapter zwraca dokładnie te same storage destinations co dziś;
+- authoritative quantities nadal pozostają w `Household`/`SettlementEconomy`; destination jest wyłącznie physical routing targetem.
+
+### Guard patrol/duty contract
+
+Current `planGuardPatrol()` zakłada trzy istniejące punkty:
+
+```text
+home → well → market
+```
+
+Dla shared runtime wydzielić generic patrol points/duty area input.
+
+Procedural adapter ma reprodukować current `home/well/market` patrol bez zmiany zachowania.
+
+Founded/nonprocedural adapter w późniejszym `022` poda realne local anchors, np. home/tent + usable well + site/center/duty point. Nie tworzyć fake well/market tylko dla Guard planner.
 
 ## Stage D — shared resident descriptor/materializer
 
-Wydzielić najmniejszy procedural-independent input dla materializacji jednego residenta.
+Wydzielić najmniejszy procedural-independent resident-materialization pipeline, nie tylko wrapper wokół `NpcAgent.create()`.
 
 Powinien przyjmować jawnie co najmniej:
 
 - existing/stable `NpcId`;
-- identity/profile inputs (`FamilyMember`, family refs/odpowiednik);
+- immutable identity/profile inputs (`FamilyMember`, family refs/odpowiednik) niezależne od current residency;
 - authoritative `NpcAuthoritativeState`;
-- właściwy `Household`;
-- real `Place` home;
-- settlement resident runtime capabilities;
+- current `Household`;
+- current real `Place` home;
+- current settlement-scoped work/social/storage/patrol inputs;
 - physical seed;
 - settlement-scoped hooks wymagane przez normalny `NpcAgent` lifecycle.
 
@@ -145,7 +218,37 @@ Nie może:
 
 Procedural `createSettlement()` przygotowuje adapter/descriptors i używa tego samego materializera.
 
-Founded runtime z `settlements-022` użyje go później z existing founder identities.
+Materializer/pipeline musi zachować istniejącą kolejność ważnych kroków otaczających `NpcAgent.create()`, m.in. tam gdzie dotyczy:
+
+- stable physical seed/profile resolution;
+- `NpcStateRegistry.getOrCreate`;
+- death/postDeath cleanup/presentation guards;
+- merchant/profile/stock wiring;
+- household/family descriptor binding;
+- home/work/social bindings;
+- settlement-scoped hooks;
+- final `NpcAgent` create + scene registration.
+
+Nie wyciągać wyłącznie samego `NpcAgent.create()` i nie zostawiać divergent side-effect ordering po obu ścieżkach.
+
+Founded runtime z `settlements-022` użyje tego pipeline'u później z existing founder identities oraz current founded household/home.
+
+## Presentation gate ordering and death state
+
+Residency/presentation suppression nie może przypadkiem wyłączyć authoritative NPC maintenance.
+
+Implementation notes mają zweryfikować dokładną kolejność current `createSettlement()`, ale guardrail jest:
+
+```text
+resolve authoritative NPC state
+→ perform required authoritative/postDeath maintenance
+→ resolve current presentation owner
+→ materialize live/corpse presentation only when this settlement owns it
+```
+
+Nie wolno dopuścić, aby founder po śmierci wrócił jako corpse/live presentation do sponsor settlement tylko dlatego, że corpse path omija residency gate.
+
+Jednocześnie residency gate nie może blokować cleanupu authoritative corpse state, inventory handoff ani innych manager-owned lifecycle facts, które muszą zajść niezależnie od live presentation.
 
 ## Procedural behavior preservation
 
@@ -172,7 +275,7 @@ Guardrails:
 - żadnych nowych world scans per NPC;
 - runtime capabilities mają być przygotowane per settlement/resident i przekazywane jawnie, nie dynamicznie wyszukiwane globalnie co frame;
 - nie kopiować dużych landmark arrays per frame;
-- central one-live-agent ownership lookup powinien być O(1);
+- presentation-owner resolution powinien być O(1) lub bounded direct lookup w existing authoritative maps; nie dodawać global scan;
 - nie dodawać Web Workera;
 - procedural path nie może zwiększyć liczby `NpcAgent.update()`, pathfinding calls ani render entities.
 
@@ -198,10 +301,11 @@ Dokładny capability shape ma wynikać z aktualnego call graph podczas implement
 
 In scope:
 
-- central residency/live-owner gate;
-- procedural-independent resident runtime capability contract;
+- deterministic presentation-owner policy;
+- explicit separation identity origin vs current residency/household;
+- narrow procedural-independent work/logistics/place contracts tylko tam, gdzie potrzebne;
 - graceful missing-infrastructure behavior;
-- shared existing-`NpcId` resident materializer;
+- shared existing-`NpcId` resident-materialization pipeline;
 - procedural adapter zachowujący behavior.
 
 ## Non-goals
@@ -223,10 +327,29 @@ Automated minimum:
 - ordinary procedural resident nadal materializuje się jak wcześniej;
 - travelling merchant nadal istnieje live dokładnie raz;
 - deliberate duplicate materialization tego samego `NpcId` jest blokowana/wykrywana;
+- identity/profile foundera nadal resolve'uje się ze sponsor source, ale current household/home należą do founded settlement;
 - procedural residents zachowują ids, household/home/workplace semantics;
 - brak optional infrastructure nie powoduje crasha ani synthetic targetu;
-- role-specific planners zachowują proceduralne zachowanie przy pełnym capability set;
-- materializer używa istniejącego `NpcAuthoritativeState`, nie kopii.
+- procedural role planners zachowują obecne fallbacks przy pełnym procedural adapterze;
+- founded/nonprocedural storage absence nie tworzy fake stockpile;
+- Guard procedural patrol nadal używa obecnego home/well/market patternu po adapterze;
+- materializer używa istniejącego `NpcAuthoritativeState`, nie kopii;
+- authoritative death/postDeath maintenance nadal działa mimo presentation suppression.
+
+### One-live-agent matrix
+
+Dodać focused matrix co najmniej:
+
+| NPC state | Sponsor/source loaded | Current/founded/destination loaded | Expected live presentation |
+|---|---:|---:|---|
+| procedural, no override | yes | n/a | source settlement |
+| founded residency | yes | no | none |
+| founded residency | yes | yes | founded settlement only |
+| merchant outbound | yes | destination yes/no | none |
+| merchant visiting B | home yes | B yes | B only |
+| merchant returning | home yes | destination yes/no | none |
+
+Macierz ma testować public/pure presentation-owner policy niezależnie od pełnego async streamingu z `022`.
 
 Run focused tests, typecheck i build. Player wykonuje browser/gameplay verification; AI nie uruchamia browser verification.
 
