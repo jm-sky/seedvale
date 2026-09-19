@@ -9,6 +9,7 @@
 **Subdomains:** `population` `development`
 **Tags:** `npc-runtime` `residency` `anchors` `colony` `authored-site`
 **Roadmap:** `quests-abandoned-gold-mine-colony.md`
+**Model:** Opus, Sonnet
 
 ## Goal
 
