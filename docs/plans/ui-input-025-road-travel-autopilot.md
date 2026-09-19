@@ -4,7 +4,7 @@
 **Status:** `planned` 📋
 **Type:** feature
 **Priority:** high · **Effort:** L
-**Depends on:** ~~fauna-003~~, ~~npc-006~~
+**Depends on:** world-035, ~~fauna-003~~, ~~npc-006~~
 **Domain:** `ui-input`
 **Subdomains:** `input` `interaction` `feedback`
 **Tags:** `autopilot` `travel` `roads` `riding` `notifications`
@@ -124,64 +124,30 @@ Nie wolno skracać podróży „na przełaj” tylko dlatego, że straight-line 
 
 Jeżeli destination nie ma sensownego połączenia z road/path network, autopilot powinien odmówić startu lub zatrzymać się z czytelnym feedbackiem zamiast samodzielnie projektować trasę przez wilderness.
 
-## Regional road itinerary
+## Shared regional road itinerary
 
-### Missing seam confirmed by recon
+Regional itinerary ownership zostaje wydzielony do `world-035-regional-road-travel-itinerary-and-adaptive-traveller-execution.md`.
 
-`roadNetwork.ts` potrafi rozwiązać geometrię pojedynczych połączeń, ale obecnie nie ma publicznego kontraktu w rodzaju:
+Autopilot jest pierwszym player consumerem, nie ownerem grafu regionalnej podróży.
 
-```text
-routeBetweenKnownLocations(from, to)
-→ ordered road/path legs across multiple settlement edges
-```
-
-To jest główny nowy reusable element tego planu.
-
-### Required responsibility
-
-Dodać mały, data-only resolver regionalnego itinerary bazujący na istniejącym road graph i istniejących cached `RoadRoute`.
-
-Przykład:
+Reuse:
 
 ```text
-player connector
-→ road A→B
-→ road B→C
-→ path C→destination
-→ destination connector
+world-035 RegionalTravelItinerary
+→ ordered canonical road/path legs
+→ player-specific connector + movement execution
 ```
 
-Resolver:
+Nie implementować tutaj:
 
-- nie tworzy nowego road graph;
-- używa istniejących settlement identities / `neighborsFor()` / canonical route resolution;
-- nie przelicza world terrain na własną rękę;
-- nie kopiuje crossing semantics;
-- nie mutuje road cache;
-- zwraca ordered route legs/waypoints jako plain data;
-- ma deterministic wynik dla tego samego świata i endpoints;
-- jest entity-neutral, mimo że pierwszym consumerem jest player autopilot.
+- drugiego graph search;
+- player-only route-leg types;
+- ponownego liczenia road/river/crossing geometry;
+- osobnego cache itinerary.
 
-Preferować najmniejszy wspólny moduł przy `roadNetwork.ts` / world-terrain ownership zamiast implementowania graph walk w `ui-input`.
+Jeżeli `world-035` nie potrafi rozwiązać wspieranej trasy, Autopilot kończy start czytelnym błędem zamiast wykonywać własny fallback cross-country.
 
-### Graph-level search
-
-Jeżeli destination wymaga wielu road edges, użyć bounded graph search po istniejących realnych road connections.
-
-Cost V1:
-
-- suma długości canonical `RoadRoute` / edge distance;
-- failed/nonexistent route = edge niedostępny.
-
-Nie dodawać jeszcze:
-
-- danger weighting,
-- weather weighting,
-- road-quality weighting,
-- economy/trade cost,
-- dynamic safe-route scoring.
-
-Te czynniki mogą później rozszerzyć ten sam resolver.
+Performance ownership również pozostaje wspólny: itinerary resolve tylko przy start/replan, nigdy per-frame.
 
 ## Walking execution
 
@@ -511,11 +477,11 @@ Implementation notes mają zweryfikować dokładne current call-sites po zamkni�
 
 ## Suggested stages
 
-### Stage 1 — Regional itinerary contract
+### Stage 1 — Shared itinerary integration
 
-- entity-neutral multi-edge itinerary po istniejących road/path routes;
-- known destination endpoint resolution;
-- pure tests.
+- consume `world-035` entity-neutral multi-edge itinerary;
+- resolve player-known destination into shared endpoint contract;
+- no duplicate graph/cache.
 
 ### Stage 2 — Walking autopilot
 
