@@ -111,6 +111,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `world-035-regional-road-travel-itinerary-and-adaptive-traveller-execution.md` | 🔴 | L      | -                                                                                                                                                                                                                                                                                          | quests-travelling-merchant-journeys       |
 | ◼️ `settlements-npcs-052-persistent-economic-work-cargo-and-local-transfer-conservation.md` | 🔴 | M      | ~~settlements-npcs-019~~, ~~settlements-npcs-034~~                                                                                                                                                                                                                                         | -                                         |
 | ◼️ `settlements-npcs-053-active-transport-order-registry-lifecycle.md`         | 🟡 | S      | ~~settlements-npcs-018~~, ~~settlements-npcs-019~~, ~~settlements-npcs-020~~                                                                                                                                                                                                               | -                                         |
+| ◼️ `npc-059-need-action-result-revalidation-and-atomic-relief.md`              | 🔴 | S      | -                                                                                                                                                                                                                                                                                          | -                                         |
 
 ---
 
@@ -237,7 +238,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - ai: `005`
 - fauna: `041`
 - items-player: `048`
-- npc: `059`
+- npc: `060`
 - persistence: `006`
 - quests-progression: `071`
 - settlements: `023`
