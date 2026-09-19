@@ -9,6 +9,7 @@
 **Subdomains:** `relationships` `behavior`
 **Tags:** `social` `performance` `allocation`
 **Roadmap:** -
+**Model:** Composer, Grok
 
 ## Goal
 
