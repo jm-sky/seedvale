@@ -43,6 +43,31 @@ Readiness powinno obejmować co najmniej:
 
 Detailed overnight camp/rest remains outside this plan.
 
+### Threat readiness boundary
+
+Readiness nie może tworzyć własnego route-risk ani fauna scan loop.
+
+Ten plan ma przygotować realne inputs używane przy późniejszym departure/road-leg commitment:
+
+- current Merchant HP;
+- usable melee/ranged capability;
+- escort count + ich realna availability/readiness;
+- transport/pack-animal readiness;
+- current provisions.
+
+`settlements-npcs-051` jest ownerem użycia `npc-057` przy **konkretnym bounded destination/road-leg decision**. Nie oceniaj tutaj dalekiego settlement endpointu przez lokalny threat snapshot — to dawałoby fałszywe bezpieczeństwo/ryzyko.
+
+Docelowy podział:
+
+```text
+050: czy realna party jest przygotowana?
+051: czy teraz bezpiecznie rozpocząć / wznowić konkretny detailed road leg?
+npc-057: pure accept/reject dla jednego konkretnego destination point
+npc-048: immediate/local assistance po pojawieniu się realnego zagrożenia
+```
+
+Final departure może zostać opóźniony przez downstream danger gate, ale preparation state nie powinien wtedy restartować wykonanych transferów.
+
 ---
 
 ## 2. Existing systems to reuse
@@ -234,7 +259,9 @@ Nie implementować:
 - route encounters;
 - merchant death evidence;
 - Missing Merchant quest;
-- dynamic route-risk model;
+- dynamic/history-based route-risk model;
+- detailed road itinerary / waypoint execution (`world-035` / `settlements-npcs-051`);
+- continuous/per-frame destination threat assessment;
 - shopping AI/economic procurement market;
 - magic merchant restock;
 - new inventory type.
