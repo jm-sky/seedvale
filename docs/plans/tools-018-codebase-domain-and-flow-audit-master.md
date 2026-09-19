@@ -141,7 +141,7 @@ Status vocabulary:
 
 | # | Review area | Primary scope | Status | Review | Follow-up plans |
 |---|---|---|---|---|---|
-| 01 | Runtime architecture & WorldBundle | composition root, `WorldBundle`, init/rebuild/dispose, background init, ownership boundaries | ⬜ not reviewed | - | - |
+| 01 | Runtime architecture & WorldBundle | composition root, `WorldBundle`, init/rebuild/dispose, background init, ownership boundaries | ⚠️ reviewed with unresolved high/critical findings | [review](../reviews/codebase-domain-audit/2026-09-19--01--runtime-architecture-and-worldbundle.md) | [world-003](./world-003-faster-application-startup.md), [world-033](./world-033-worldbundle-rebuild-transaction-and-lifecycle-safety.md) |
 | 02 | Simulation, time & deterministic state | simulation clocks/ticks, update rates, RNG, time-skip, off-screen semantics | ⬜ not reviewed | - | - |
 | 03 | Persistence & lifecycle continuity | save/load, serialization, migrations, rebuild continuity, persistent identity | ⬜ not reviewed | - | - |
 | 04 | Terrain, chunks & ground queries | chunk streaming/rebuild, height/ground authority, terrain modifications and surface queries | ⬜ not reviewed | - | - |
