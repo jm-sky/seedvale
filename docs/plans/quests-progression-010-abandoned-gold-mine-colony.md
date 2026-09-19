@@ -3,10 +3,11 @@
 **Created:** 2026-09-07
 **Status:** `planned` 📋
 **Priority:** high · **Effort:** M
-**Depends on:** world-terrain-017, world-018, ~~world-019~~, ~~settlements-npcs-026~~, ~~settlements-npcs-027~~, ~~settlements-npcs-028~~, settlements-003, settlements-004, ~~quests-progression-002~~
+**Depends on:** ~~world-terrain-017~~, ~~world-018~~, ~~world-019~~, ~~settlements-npcs-026~~, ~~settlements-npcs-027~~, ~~settlements-npcs-028~~, settlements-003, ~~settlements-004~~, ~~quests-progression-002~~
 **Domain:** `quests-progression`  
 **Type:** `feature`  
 **Roadmap:** `quests-abandoned-gold-mine-colony`
+**Model:** Opus, Sonnet
 
 ## Goal
 
@@ -32,15 +33,18 @@ Plan jest wyłącznie warstwą integracyjną. Nie implementuje wewnątrz questa 
 
 Zweryfikowane od czasu draftu:
 
+- `world-terrain-017` i `world-018` są zaimplementowane: istnieje stable abandoned-mine `WorldLocation`, finite gold deposits oraz wspólny `economicSourceId` dla depositów tej kopalni.
 - `world-019` jest zaimplementowane i `WorldBundle.querySiteInfrastructure(...)` zwraca completed terrain preparations, usable Player wells oraz cultivation areas.
 - `settlements-npcs-026` daje persistent `NpcAuthoritativeState.personalInventory`.
 - `settlements-npcs-027` ma gotowy assignment/provisioning contract (`formExpeditionAssignment`, `provisionExpeditionAssignment`, `markExpeditionAssignmentReady`); pozostała manual verification.
 - `settlements-npcs-028` ma gotowy persistent generic travel (`NpcAuthoritativeState.travel`) oraz `SettlementsManager.dispatchReadyExpedition(...)`; pozostała manual verification.
+- `settlements-004` jest zaimplementowane: `SettlementEconomy` ma source attribution, exact-once realization, deterministic `establishEntitlement(...)` i claim boundary.
+- `settlements-003` jest nadal `in progress`: bootstrap/persistence founded settlement działa, ale pełny live streaming/materialization founded colony pozostaje otwarty.
 - `quests-progression-002` i późniejsze quest improvements dostarczyły normalny outcome/reward/consequence path, multi-stage objectives oraz `talk_to_npc_choice`; nie projektować osobnego reward engine.
 - `QuestManager` pozostaje ownerem authored quest progress; world facts mają być obserwowane przez resolver/polling seams zamiast kopiowane do quest state.
 - `LocationKnowledge` / `WorldLocation` są nadal właściwym ownerem odkrycia miejsca.
 
-Plan jest implementation-ready po zakończeniu jego nadal aktywnych dependencies: `world-terrain-017`, `world-018`, `settlements-003`, `settlements-004`.
+Jedyną nadal aktywną zależnością jest `settlements-003`. Quest może już użyć idempotentnego bootstrapu i founded-settlement state, ale nie powinien uzależniać completion od brakującego jeszcze live streamingu kolonii.
 
 ## Architectural invariant
 
