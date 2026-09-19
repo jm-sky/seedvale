@@ -7,6 +7,7 @@
 **Domain:** `fauna`
 **Type:** `bug`
 **Roadmap:** -
+**Model:** Composer, Grok
 
 ## Goal
 
