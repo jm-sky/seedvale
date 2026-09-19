@@ -374,7 +374,15 @@ const DEER_STAG_DIET: AnimalDietConfig = {
  *  this bait item attractive to this species" for trap lures without a
  *  second trapping-only bait table. */
 const MEAT_DIET: AnimalDietConfig = {
-  items: { raw_meat: 0.8, deer_meat: 0.8, wolf_meat: 0.8, boar_meat: 0.8, rabbit_meat: 0.6, beef: 0.8 },
+  items: {
+    raw_meat: 0.8,
+    deer_meat: 0.8,
+    wolf_meat: 0.8,
+    boar_meat: 0.8,
+    rabbit_meat: 0.6,
+    beef: 0.8,
+    poisoned_meat: 0.8,
+  },
 }
 
 /** Bear omnivore diet (plan fauna-023 §3a) — composes existing `MEAT_DIET`

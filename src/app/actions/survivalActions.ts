@@ -23,6 +23,7 @@ import {
   isFoodBatchSpoiled,
   sourceSpeciesForMeatKind,
 } from '../../items/foodFreshness'
+import { canPoisonMeat, poisonMeat } from '../../items/poisonedMeat'
 import { resolveRawMeatSafetyRisk } from '../../items/foodSafety'
 import { type Inventory, inventoryFullToastText } from '../../items/Inventory'
 import { CAPABILITY_NEED_LABEL, hasItemCapability, ITEM_CATALOG } from '../../items/itemCatalog'
@@ -117,6 +118,8 @@ export type SurvivalActions = {
   startMilkAnimal: (animal: AnimalAgent) => ActionResult
   /** Shears a wool-ready sheep into carried inventory (busy channel, plan fauna-004). */
   startShearAnimal: (animal: AnimalAgent) => ActionResult
+  /** Instant transform: poisonous herb + raw meat → poisoned meat (plan items-player-049). */
+  poisonMeat: () => ActionResult
 }
 
 /** Real-time seconds per litre of milk drawn — the shared rate behind
@@ -232,7 +235,9 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
     animal.holdCorpse()
     busy.start(HARVEST_MEAT_DURATION_SEC, 'Wycinanie mięsa…', () => {
       try {
-        const result = harvestAnimalIntoInventory(animal, inventory, dayNight.elapsedDays)
+        const result = harvestAnimalIntoInventory(animal, inventory, dayNight.elapsedDays, {
+          survivalValue: player.skills.survival.value,
+        })
         if (!result) return
         let message = `+1 ${ITEM_DEFS[result.meatKind].label}`
         if (result.hide) message += ', +1 skóra'
@@ -737,6 +742,28 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
     return { ok: true }
   }
 
+  const poisonMeatAction = (): ActionResult => {
+    if (isActionBlocked(ctx)) return { ok: false, missing: [] }
+    if (!canPoisonMeat(inventory)) {
+      if (!inventory.has('poisonous_herb', 1)) {
+        toast.show('Potrzebujesz trującego ziela.', 'error')
+        return toResult([itemRequirement(false, 'poisonous_herb')])
+      }
+      if (!inventory.canAdd('poisoned_meat', 1)) {
+        toast.show(inventoryFullToastText(inventory, 'poisoned_meat', 1), 'error')
+        return toResult([targetRequirement(false, 'inventoryFull')])
+      }
+      toast.show('Potrzebujesz surowego mięsa.', 'error')
+      return toResult([itemRequirement(false, 'raw_meat')])
+    }
+    const result = poisonMeat(inventory, dayNight.elapsedDays)
+    if (!result.ok) return { ok: false, missing: [] }
+    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+    ctx.onInventoryChanged()
+    toast.show('Przygotowano zatrute mięso.', 'pickup')
+    return { ok: true }
+  }
+
   return {
     startBuryCorpse,
     startHarvestMeat,
@@ -749,5 +776,6 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
     consumeItem,
     startMilkAnimal,
     startShearAnimal,
+    poisonMeat: poisonMeatAction,
   }
 }

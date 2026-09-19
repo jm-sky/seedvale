@@ -5,7 +5,7 @@ import { DRY_WATER_SAMPLE } from '../terrain/waterSample'
 import { AnimalAgent, type AnimalAgentDeps } from './AnimalAgent'
 import { ANIMAL_DEFS } from './animalDefs'
 import { harvestAnimalIntoInventory } from './animalHarvest'
-import { trophyLootKindsForHarvest } from './animalTrophyLoot'
+import { stagAntlerDropChance, trophyLootKindsForHarvest } from './animalTrophyLoot'
 
 function makeDeps(overrides: Partial<AnimalAgentDeps> = {}): AnimalAgentDeps {
   return {
@@ -39,6 +39,20 @@ function findStagId(expectAntler: boolean): string {
   throw new Error('could not find stag id for antler expectation')
 }
 
+describe('stagAntlerDropChance (plan fauna-044)', () => {
+  it('maps Survival input to the agreed balance curve', () => {
+    expect(stagAntlerDropChance()).toBe(0.75)
+    expect(stagAntlerDropChance(undefined)).toBe(0.75)
+    expect(stagAntlerDropChance(Number.NaN)).toBe(0.75)
+    expect(stagAntlerDropChance(0)).toBe(0.75)
+    expect(stagAntlerDropChance(0.2)).toBe(0.78)
+    expect(stagAntlerDropChance(0.5)).toBe(0.825)
+    expect(stagAntlerDropChance(1)).toBe(0.9)
+    expect(stagAntlerDropChance(-1)).toBe(0.75)
+    expect(stagAntlerDropChance(2)).toBe(0.9)
+  })
+})
+
 describe('harvestAnimalIntoInventory antler trophy (plan quests-progression-020)', () => {
   it('never drops antler from juvenile stag', () => {
     const inv = new Inventory({})
@@ -62,5 +76,32 @@ describe('harvestAnimalIntoInventory antler trophy (plan quests-progression-020)
     const inv = new Inventory({})
     expect(harvestAnimalIntoInventory(agent, inv, 1)?.lootKinds).toEqual(['antler'])
     expect(harvestAnimalIntoInventory(agent, inv, 1)).toBeNull()
+  })
+
+  it('uses the 75% actor-neutral baseline when Survival is omitted', () => {
+    let baselineDrop = 0
+    let baselineNoDrop = 0
+    for (let i = 0; i < 200; i++) {
+      const id = `stag-baseline-${i}`
+      if (trophyLootKindsForHarvest(deadStag(id)).includes('antler')) baselineDrop++
+      else baselineNoDrop++
+    }
+    expect(baselineDrop).toBeGreaterThan(baselineNoDrop)
+  })
+
+  it('forwards Survival to trophy resolution without rerolling the same corpse', () => {
+    for (let i = 0; i < 500; i++) {
+      const id = `stag-skill-${i}`
+      const agent = deadStag(id)
+      const roll = trophyLootKindsForHarvest(agent, { survivalValue: 0 })
+      const mastery = trophyLootKindsForHarvest(agent, { survivalValue: 1 })
+      if (roll.length === 0 && mastery.includes('antler')) {
+        const inv = new Inventory({})
+        expect(harvestAnimalIntoInventory(agent, inv, 1, { survivalValue: 1 })?.lootKinds).toEqual(['antler'])
+        expect(harvestAnimalIntoInventory(agent, inv, 1, { survivalValue: 1 })).toBeNull()
+        return
+      }
+    }
+    throw new Error('could not find borderline stag id for Survival influence')
   })
 })

@@ -61,6 +61,7 @@ Generated from TypeScript imports.
 - `fauna/livestockProduction.ts`
 - `fauna/ownedAnimalControl.ts`
 - `fauna/playerAwareness.ts`
+- `fauna/poisonedMeatBait.ts`
 - `fauna/predatorHumanDecision.ts`
 - `fauna/predatorIntentCommitment.ts`
 - `fauna/preyAlertPerception.ts`
@@ -1312,6 +1313,23 @@ Generated from TypeScript imports.
 - `fauna/AnimalAgent.ts`
 - `fauna/createFauna.ts`
 - `fauna/playerAwareness.test.ts`
+
+## `fauna/poisonedMeatBait.test.ts`
+
+**Imports**
+
+- `fauna/poisonedMeatBait.ts`
+
+## `fauna/poisonedMeatBait.ts`
+
+**Imports**
+
+- `world/parseSeed.ts`
+
+**Imported by**
+
+- `fauna/AnimalAgent.ts`
+- `fauna/poisonedMeatBait.test.ts`
 
 ## `fauna/predatorHumanDecision.test.ts`
 

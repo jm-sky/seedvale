@@ -53,8 +53,6 @@
    🔴 `L` · 🔒 blocked · unlocks 0/0
 2. `quests-progression-069` — **Quest offer pacing and conservative settlement gating**  
    🔴 `M` · ✅ ready · unlocks 0/0
-3. `fauna-044` — **Higher stag antler drop chance with light Survival influence**  
-   🟡 `XS` · ✅ ready · unlocks 0/0
 
 ---
 
@@ -163,143 +161,135 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `L` · **Score:**  56  
    → **unlocks:** 1/1
 
-20. `items-player-049` — **Poisoned meat predator bait**  
-  🟡 `S` · **Score:**  51  
-   → **unlocks:** 0/0
-
-21. `quests-progression-069` — **Quest offer pacing and conservative settlement gating**  
+20. `quests-progression-069` — **Quest offer pacing and conservative settlement gating**  
   🔴 `M` · **Score:**  51  
    → **unlocks:** 0/0
 
-22. `settlements-020` — **Founded settlement bootstrap integrity**  
+21. `settlements-020` — **Founded settlement bootstrap integrity**  
   🔴 `M` · **Score:**  51  
    → **unlocks:** 1/2
 
-23. `quests-progression-063` — **Healer — Injured Resident**  
+22. `quests-progression-063` — **Healer — Injured Resident**  
   🟡 `M` · **Score:**  49  
    → **unlocks:** 1/1
 
-24. `quests-progression-060` — **Builder — Finish the Local Well**  
+23. `quests-progression-060` — **Builder — Finish the Local Well**  
   🔴 `M` · **Score:**  47  
    → **unlocks:** 0/0
 
-25. `quests-progression-054` — **Hunters Brotherhood — exceptional animal finale**  
+24. `quests-progression-054` — **Hunters Brotherhood — exceptional animal finale**  
   🟡 `L` · **Score:**  44  
    → **unlocks:** 0/0
 
-26. `settlements-021` — **Shared settlement resident runtime**  
+25. `settlements-021` — **Shared settlement resident runtime**  
   🔴 `L` · **Score:**  40  
    → **unlocks:** 1/1
 
-27. `settlements-npcs-044` — **Authored Outpost Occupants & Construction Lifecycle**  
+26. `settlements-npcs-044` — **Authored Outpost Occupants & Construction Lifecycle**  
   🔴 `L` · **Score:**  40  
    → **unlocks:** 1/1
 
-28. `quests-progression-058` — **Injured dog discovery thread**  
+27. `quests-progression-058` — **Injured dog discovery thread**  
   🟡 `M` · **Score:**  37  
    → **unlocks:** 0/0
 
-29. `tools-017` — **Custom UBC NPC model source and build pipeline**  
+28. `tools-017` — **Custom UBC NPC model source and build pipeline**  
   🔴 `M` · **Score:**  37  
    → **unlocks:** 0/0
 
-30. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
+29. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
   🔴 `M` · **Score:**  35  
    → **unlocks:** 0/0
 
-31. `npc-055` — **Semantic profession and activity animation coverage**  
+30. `npc-055` — **Semantic profession and activity animation coverage**  
   🔴 `L` · **Score:**  32  
    → **unlocks:** 0/0
 
-32. `world-terrain-042` — **Medicinal herb meadow patches**  
+31. `world-terrain-042` — **Medicinal herb meadow patches**  
   🟡 `M` · **Score:**  31  
    → **unlocks:** 1/1
 
-33. `world-terrain-044` — **Runtime ground query authority and missing-chunk fallbacks**  
+32. `world-terrain-044` — **Runtime ground query authority and missing-chunk fallbacks**  
   🔴 `M` · **Score:**  31  
    → **unlocks:** 0/0
 
-34. `npc-054` — **NPC desired gifts, gift acceptance and relationship rewards**  
+33. `npc-054` — **NPC desired gifts, gift acceptance and relationship rewards**  
   🔴 `L` · **Score:**  30  
    → **unlocks:** 0/0
 
-35. `fauna-040` — **Settlement rat reconciliation checkpoint**  
+34. `fauna-040` — **Settlement rat reconciliation checkpoint**  
   🔴 `S` · **Score:**  29  
    → **unlocks:** 0/0
 
-36. `npc-059` — **NPC need action result revalidation and atomic relief**  
+35. `npc-059` — **NPC need action result revalidation and atomic relief**  
   🔴 `S` · **Score:**  29  
    → **unlocks:** 0/0
 
-37. `world-terrain-043` — **System terrain modification rebuild idempotency**  
+36. `world-terrain-043` — **System terrain modification rebuild idempotency**  
   🔴 `S` · **Score:**  29  
    → **unlocks:** 0/0
 
-38. `settlements-022` — **Founded settlement live runtime and streaming**  
+37. `settlements-022` — **Founded settlement live runtime and streaming**  
   🔴 `L` · **Score:**  28  
    → **unlocks:** 0/0
 
-39. `items-player-014` — **Rope-pullable resource transport**  
+38. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-40. `npc-058` — **NPC time-skip resource and interrupt parity**  
+39. `npc-058` — **NPC time-skip resource and interrupt parity**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-41. `tools-005` — **Seedvale Character Preparation Panel**  
+40. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-42. `world-033` — **WorldBundle rebuild transaction and lifecycle safety**  
+41. `world-033` — **WorldBundle rebuild transaction and lifecycle safety**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-43. `world-034` — **Time-skip clock exactness and catch-up coverage**  
+42. `world-034` — **Time-skip clock exactness and catch-up coverage**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-44. `world-terrain-039` — **N8AO / post-process cost budget**  
+43. `world-terrain-039` — **N8AO / post-process cost budget**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-45. `ui-input-025` — **Road travel autopilot for player and mounts**  
+44. `ui-input-025` — **Road travel autopilot for player and mounts**  
   🔴 `L` · **Score:**  26  
    → **unlocks:** 0/0
 
-46. `items-player-044` — **Shoulder and forearm equipment slots**  
+45. `items-player-044` — **Shoulder and forearm equipment slots**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-47. `quests-progression-071` — **Generated opportunity retention semantics**  
+46. `quests-progression-071` — **Generated opportunity retention semantics**  
   🟡 `S` · **Score:**  25  
    → **unlocks:** 0/0
 
-48. `world-terrain-041` — **Agent presentation render LOD**  
+47. `world-terrain-041` — **Agent presentation render LOD**  
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-49. `fauna-043` — **Frenzy source-target claim cleanup**  
+48. `fauna-043` — **Frenzy source-target claim cleanup**  
   🟡 `S` · **Score:**  23  
    → **unlocks:** 0/0
 
-50. `fauna-044` — **Higher stag antler drop chance with light Survival influence**  
+49. `quests-progression-072` — **Invalidated quest restore metadata continuity**  
   🟡 `XS` · **Score:**  20  
    → **unlocks:** 0/0
 
-51. `quests-progression-072` — **Invalidated quest restore metadata continuity**  
-  🟡 `XS` · **Score:**  20  
-   → **unlocks:** 0/0
-
-52. `tools-018` — **Codebase domain and flow audit master**  
+50. `tools-018` — **Codebase domain and flow audit master**  
   🔴 `XL` · **Score:**  20  
    → **unlocks:** 0/0
 
-53. `quests-progression-061` — **Builder — Complete an Unfinished Palisade Segment**  
+51. `quests-progression-061` — **Builder — Complete an Unfinished Palisade Segment**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-54. `quests-progression-070` — **Boar at the medicinal meadow — systemic settlement problem**  
+52. `quests-progression-070` — **Boar at the medicinal meadow — systemic settlement problem**  
   🟡 `L` · **Score:**  16  
    → **unlocks:** 0/0
 

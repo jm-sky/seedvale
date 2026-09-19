@@ -212,10 +212,23 @@ const terrainActions: Action[] = [
   { label: 'Przygotuj teren', cost: 'łopata', onClick: prepareTerrain },
 ]
 
-const survivalActions: Action[] = [
-  { label: 'Zjedz cokolwiek', cost: 'jedzenie', onClick: eatAnything },
-  { label: 'Ugotuj posiłek', cost: 'surowe mięso/ryba', onClick: cookMeal },
-]
+const poisonMeat = (): void => {
+  ui.quickActions.onPoisonMeat?.()
+}
+
+const survivalActions = computed<Action[]>(() => {
+  const list: Action[] = [
+    { label: 'Zjedz cokolwiek', cost: 'jedzenie', onClick: eatAnything },
+    { label: 'Ugotuj posiłek', cost: 'surowe mięso/ryba', onClick: cookMeal },
+  ]
+  list.push({
+    label: 'Zatruj mięso',
+    cost: '1× trujące ziele + surowe mięso',
+    onClick: poisonMeat,
+    disabled: !ui.quickActions.canPoisonMeat,
+  })
+  return list
+})
 
 // "Postaw skrzynię"/"Rozstaw namiot"/"Zbuduj ognisko"/"Zbuduj palenisko"/
 // "Zbuduj stos drewna" — the shared placement-preview actions grouped under

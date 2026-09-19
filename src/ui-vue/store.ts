@@ -362,6 +362,9 @@ type QuickActionsState = {
   onEatAnything: (() => { ok: boolean, toast: string, kind: 'info' | 'error' | 'pickup' }) | null
   onCookMeal: (() => void) | null
   onStartFullCamp: (() => void) | null
+  /** Plan items-player-049 — poisonous herb + raw meat in inventory and room for output. */
+  canPoisonMeat: boolean
+  onPoisonMeat: (() => { ok: boolean }) | null
 }
 /** Merchant-resolved sell pricing (plan settlements-006) — plain data and
  *  inventory-backed helpers built once per merchant session at the app layer. */
@@ -813,6 +816,7 @@ export const ui = reactive({
     onPlantTree: null, onPlantCrop: null,
     hasFishingRod: false, onEquipFishingRod: null,
     workContracts: [], onCancelWorkContract: null, onEatAnything: null, onCookMeal: null, onStartFullCamp: null,
+    canPoisonMeat: false, onPoisonMeat: null,
   } as QuickActionsState,
   timeSkip: { visible: false, label: '', fadeVisible: false, fadeStrength: 0, progress: 0, canCancelRest: false, canCancelTerrainPreparation: false } as TimeSkipState,
   lodgingWalk: { active: false } as LodgingWalkState,
@@ -1553,6 +1557,7 @@ export function setQuickActionsTraps(traps: QuickActionsTraps): void {
 export function setQuickActionsFireAvailability(availability: QuickActionsFireAvailability): void { ui.quickActions.fireAvailability = availability }
 export function setQuickActionsHasTreeSeed(hasTreeSeed: boolean): void { ui.quickActions.hasTreeSeed = hasTreeSeed }
 export function setQuickActionsHasFishingRod(hasFishingRod: boolean): void { ui.quickActions.hasFishingRod = hasFishingRod }
+export function setQuickActionsCanPoisonMeat(canPoisonMeat: boolean): void { ui.quickActions.canPoisonMeat = canPoisonMeat }
 export function setQuickActionsCropSeeds(cropSeeds: QuickActionsCropSeeds): void {
   const current = ui.quickActions.cropSeeds
   if (current.carrot === cropSeeds.carrot && current.potato === cropSeeds.potato && current.cabbage === cropSeeds.cabbage) return

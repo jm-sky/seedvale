@@ -5,6 +5,11 @@ import { sourceSpeciesForMeatKind } from '../items/foodFreshness'
 import { meatKindForAnimal } from './animalMeat'
 import { trophyLootKindsForHarvest } from './animalTrophyLoot'
 
+export type AnimalHarvestOptions = {
+  /** Player Survival skill value in `[0,1]` — forwarded to trophy resolution only. */
+  survivalValue?: number
+}
+
 export type AnimalHarvestResult = {
   meatKind: ItemKind
   /** Whether `hide` was also added — `false` only when there was no room
@@ -33,6 +38,7 @@ export function harvestAnimalIntoInventory(
   animal: AnimalAgent,
   inventory: Inventory,
   acquiredAtDays: number,
+  options?: AnimalHarvestOptions,
 ): AnimalHarvestResult | null {
   if (!animal.canHarvestMeat()) return null
   const meatKind = meatKindForAnimal(animal.def.kind)
@@ -41,7 +47,7 @@ export function harvestAnimalIntoInventory(
   inventory.add(meatKind, 1, acquiredAtDays, sourceSpeciesForMeatKind(meatKind))
   const hide = inventory.canAdd('hide', 1) && inventory.add('hide', 1)
   const lootKinds: ItemKind[] = []
-  for (const kind of trophyLootKindsForHarvest(animal)) {
+  for (const kind of trophyLootKindsForHarvest(animal, { survivalValue: options?.survivalValue })) {
     if (inventory.canAdd(kind, 1) && inventory.add(kind, 1)) lootKinds.push(kind)
   }
   return { meatKind, hide, lootKinds }

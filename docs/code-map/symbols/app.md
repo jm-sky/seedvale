@@ -202,12 +202,12 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/survivalActions.ts`
 
-- `createSurvivalActions` — function — line 169
-- `FeedableAnimal` — type — line 144
-- `feedAnimal` — function — line 158
-- `hasCarriedMilkContainer` — function — line 134
-- `SurvivalActionLifecycle` — type — line 92
-- `SurvivalActions` — type — line 102
+- `createSurvivalActions` — function — line 172
+- `FeedableAnimal` — type — line 147
+- `feedAnimal` — function — line 161
+- `hasCarriedMilkContainer` — function — line 137
+- `SurvivalActionLifecycle` — type — line 93
+- `SurvivalActions` — type — line 103
 
 ## `app/actions/terrainPreparationActions.ts`
 
@@ -287,13 +287,13 @@ Generated from exported TypeScript symbols.
 
 ## `app/createApp.ts`
 
-- `createApp` — function — line 433
+- `createApp` — function — line 434
   - system: app-composition
   - role: Composition root: builds every long-lived system, threads their dependencies and owns app-level lifecycle (boot, rebuild, dispose).
   - owns: WorldBundle, GameLoop, AppRenderLoop
   - lifecycle: boot
   - integration: Wires world, player, UI, persistence and audio systems together.
-- `NewAppOptions` — type — line 402
+- `NewAppOptions` — type — line 403
 
 ## `app/faunaEncounterComposition.ts`
 

@@ -1,7 +1,7 @@
 # Plan: Poisoned meat predator bait
 
 **Created:** 2026-09-19
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** medium · **Effort:** S
 **Depends on:** ~~items-player-002~~, ~~settlements-npcs-007~~, fauna-023

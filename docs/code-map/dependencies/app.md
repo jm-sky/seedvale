@@ -753,6 +753,7 @@ Generated from TypeScript imports.
 - `items/itemInstances.ts`
 - `items/items.ts`
 - `items/liquidContainer.ts`
+- `items/poisonedMeat.ts`
 - `player/PlayerNeeds.ts`
 - `player/PlayerSkills.ts`
 - `player/medicinalTreatmentEffectiveness.ts`
@@ -1009,6 +1010,7 @@ Generated from TypeScript imports.
 - `items/itemInstances.ts`
 - `items/items.ts`
 - `items/liquidContainer.ts`
+- `items/poisonedMeat.ts`
 - `items/primaryWeapons.ts`
 - `items/trade.ts`
 - `items/tradeGrievance.ts`

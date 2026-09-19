@@ -3542,6 +3542,7 @@ Generated from TypeScript imports.
 - `fauna/animalTrophyLoot.ts`
 - `fauna/createFauna.ts`
 - `fauna/huntingHooks.ts`
+- `fauna/poisonedMeatBait.ts`
 - `items/createItemSpawners.ts`
 - `items/treasureGameplay.ts`
 - `items/villageTools.test.ts`

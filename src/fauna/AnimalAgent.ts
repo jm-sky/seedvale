@@ -75,6 +75,12 @@ import {
   resolveAttractionTarget,
 } from './animalAttraction'
 import {
+  POISONED_MEAT_DAMAGE_HP,
+  POISONED_MEAT_REJECT_IGNORE_SEC,
+  poisonedMeatDetected,
+  poisonedMeatDetectionRoll,
+} from './poisonedMeatBait'
+import {
   advanceCaveRoute,
   ANIMAL_CAPSULE_RADIUS_SCALE,
   type AnimalCaveContext,
@@ -1132,6 +1138,8 @@ export type AnimalUpdateContext = {
     spawnPointId?: string
     itemKind: ItemKind
   }) => void
+  /** World seed for deterministic dropped-food rolls (plan items-player-049). */
+  worldSeed?: number
   /** This settlement's own live rats (plan fauna-016 §9) — only meaningful
    *  for an owned `dog`'s idle pest-chase (`pursuePest`); every other kind
    *  never reads this. Caller-bounded the same way as `nearbySettlementNpcs`
@@ -1634,6 +1642,7 @@ export class AnimalAgent {
   /** Narrow peek callback captured for this tick from update context. */
   private attractionPeekFood: AnimalUpdateContext['peekAttractedFood'] = undefined
   private onAttractedFoodConsumedHook: AnimalUpdateContext['onAttractedFoodConsumed'] = undefined
+  private tickWorldSeed: number | undefined = undefined
   /** Set once by `markDangerous()` — a visibly/gameplay-distinct individual
    *  bound to a `kill_target_animal { dangerous: true }` quest stage
    *  (plan 110), not a separate animal type. Composes with `variant` via
@@ -3327,6 +3336,7 @@ export class AnimalAgent {
       consumeAttractedFood,
       peekAttractedFood,
       onAttractedFoodConsumed,
+      worldSeed,
       nearbyRats = [],
       playerObservation = DEFAULT_PLAYER_OBSERVATION,
       playerControlPos,
@@ -3339,6 +3349,7 @@ export class AnimalAgent {
     this.attractionConsumeFood = consumeAttractedFood
     this.attractionPeekFood = peekAttractedFood
     this.onAttractedFoodConsumedHook = onAttractedFoodConsumed
+    this.tickWorldSeed = worldSeed
     this.attractionClockSec += dt
     pruneAttractionIgnored(this.attractionIgnoreUntil, this.attractionClockSec)
     this.tickNowDays = nowDays
@@ -4814,11 +4825,32 @@ export class AnimalAgent {
           this.attractionPhase = null
           return true
         }
+        if (
+          live.kind === 'poisoned_meat'
+          && this.tickWorldSeed != null
+          && poisonedMeatDetected(poisonedMeatDetectionRoll({
+            worldSeed: this.tickWorldSeed,
+            animalId: this.animalId,
+            droppedItemId: droppedId,
+          }))
+        ) {
+          markAttractionIgnored(
+            this.attractionIgnoreUntil,
+            target.id,
+            this.attractionClockSec + POISONED_MEAT_REJECT_IGNORE_SEC,
+          )
+          this.attractionTarget = null
+          this.attractionPhase = null
+          return true
+        }
         const consumed = this.attractionConsumeFood?.(droppedId) ?? null
         if (consumed) {
           const relief = dietItemReliefScale(this.def.diet, consumed.kind)
           if (relief != null) {
             consumeFood(this.life, relief)
+            if (consumed.kind === 'poisoned_meat') {
+              this.takeDamage(POISONED_MEAT_DAMAGE_HP)
+            }
             this.onAttractedFoodConsumedHook?.({
               animalId: this.animalId,
               animalKind: this.def.kind,

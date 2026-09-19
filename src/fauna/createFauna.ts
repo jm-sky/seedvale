@@ -176,6 +176,8 @@ export type Fauna = {
       spawnPointId?: string
       itemKind: import('../items/items').ItemKind
     }) => void,
+    /** World seed for deterministic dropped-food rolls (plan items-player-049). */
+    worldSeed?: number,
     /** Player-as-observer presentation inputs (npc-023) — forwarded to each
      *  wild `AnimalAgent.update()`. */
     playerObservation?: import('../simulation/observation').PlayerObservationInput,
@@ -1380,6 +1382,7 @@ export async function createFauna(
       consumeAttractedFood,
       peekAttractedFood,
       onAttractedFoodConsumed,
+      worldSeed,
       playerObservation,
     ) {
       const dayFactor = skyParamsFromTime(timeOfDay).dayFactor
@@ -1450,6 +1453,7 @@ export async function createFauna(
           consumeAttractedFood,
           peekAttractedFood,
           onAttractedFoodConsumed,
+          worldSeed,
           playerObservation,
         })
       }

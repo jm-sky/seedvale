@@ -335,36 +335,36 @@ Generated from exported TypeScript symbols.
 ## `items/itemCatalog.ts`
 
 - `ArmorConfig` — type — line 56
-- `ARROW_DAMAGE_BONUS` — const — line 1786
+- `ARROW_DAMAGE_BONUS` — const — line 1796
 - `BookTier` — type — line 179
-- `CAPABILITY_KINDS` — const — line 1829
+- `CAPABILITY_KINDS` — const — line 1839
 - `CAPABILITY_LABEL` — const — line 155
 - `CAPABILITY_NEED_LABEL` — const — line 139
-- `CONSUMABLE_KINDS_BY_NEED` — const — line 1869
+- `CONSUMABLE_KINDS_BY_NEED` — const — line 1879
 - `ConsumableNeed` — type — line 170
 - `consumeNeedNoun` — function — line 288
 - `consumeVerbLabel` — function — line 279
 - `DefenseConfig` — type — line 42
-- `hasItemCapability` — function — line 1854
-- `HOLDABLE_KINDS` — const — line 1820
-- `INJURY_TREATMENT_KINDS` — const — line 1891
-- `isArmorCatalogKind` — function — line 1807
-- `isBodyArmorKind` — function — line 1813
-- `isMeleeToolKind` — function — line 1801
-- `isRangedTool` — function — line 1793
+- `hasItemCapability` — function — line 1864
+- `HOLDABLE_KINDS` — const — line 1830
+- `INJURY_TREATMENT_KINDS` — const — line 1901
+- `isArmorCatalogKind` — function — line 1817
+- `isBodyArmorKind` — function — line 1823
+- `isMeleeToolKind` — function — line 1811
+- `isRangedTool` — function — line 1803
 - `ITEM_CATALOG` — const — line 302
   - domain: items-player
   - system: item-catalog
   - role: Single source of truth for per-`ItemKind` gameplay flags and tool-capability gates.
   - owns: ItemCatalogEntry
-- `ITEM_SYSTEM_ROADMAP` — const — line 1912
+- `ITEM_SYSTEM_ROADMAP` — const — line 1922
 - `ItemCapability` — type — line 112
 - `ItemCatalogEntry` — type — line 181
-- `itemIsResilient` — function — line 1859
+- `itemIsResilient` — function — line 1869
 - `ItemSpawnKind` — type — line 14
-- `itemTreatsPhysicalInjury` — function — line 1904
+- `itemTreatsPhysicalInjury` — function — line 1914
 - `MeleeConfig` — type — line 25
-- `NON_ITEM_PROPS` — const — line 1918
+- `NON_ITEM_PROPS` — const — line 1928
 - `RangedConfig` — type — line 76
 
 ## `items/itemDisplay.ts`
@@ -434,23 +434,23 @@ Generated from exported TypeScript symbols.
 
 ## `items/items.ts`
 
-- `canCancelRestNow` — function — line 268
-- `canCancelRestProgress` — function — line 239
-- `createItemMesh` — function — line 1589
-- `hasItemCategory` — function — line 216
-- `hasItemKindCategory` — function — line 220
-- `ITEM_DEFS` — const — line 272
-- `ITEM_SIZE_UNITS` — const — line 189
-- `ItemCategory` — type — line 180
-- `ItemDef` — type — line 202
+- `canCancelRestNow` — function — line 270
+- `canCancelRestProgress` — function — line 241
+- `createItemMesh` — function — line 1600
+- `hasItemCategory` — function — line 218
+- `hasItemKindCategory` — function — line 222
+- `ITEM_DEFS` — const — line 274
+- `ITEM_SIZE_UNITS` — const — line 191
+- `ItemCategory` — type — line 182
+- `ItemDef` — type — line 204
 - `ItemKind` — type — line 6
-- `ItemSize` — type — line 185
-- `itemSizeUnits` — function — line 198
-- `primaryItemCategory` — function — line 229
-- `REST_CANCEL_PROGRESS_THRESHOLD` — const — line 237
-- `REST_CANCEL_VIGOR_THRESHOLD` — const — line 249
-- `restCancelAllowedByStartVigor` — function — line 256
-- `tintBucketGlb` — function — line 1613
+- `ItemSize` — type — line 187
+- `itemSizeUnits` — function — line 200
+- `primaryItemCategory` — function — line 231
+- `REST_CANCEL_PROGRESS_THRESHOLD` — const — line 239
+- `REST_CANCEL_VIGOR_THRESHOLD` — const — line 251
+- `restCancelAllowedByStartVigor` — function — line 258
+- `tintBucketGlb` — function — line 1624
 
 ## `items/ItemSpawner.ts`
 
@@ -479,6 +479,18 @@ Generated from exported TypeScript symbols.
 - `liquidContainerCapacity` — function — line 27
 - `migrateLegacyWaterskinsToInstances` — function — line 143
 - `pourLiquidFromContainer` — function — line 117
+
+## `items/poisonedMeat.ts`
+
+- `canPoisonMeat` — function — line 32
+- `isPoisonMeatInputKind` — function — line 19
+- `poisonMeat` — function — line 44
+  - domain: items-player
+- `PoisonMeatFailure` — type — line 12
+  - domain: items-player
+  - role: Player-side poisoned-meat transform (plan items-player-049) — one `poisonous_herb` plus one eligible raw meat → one `poisoned_meat`, preserving the source `FoodBatch` via freshness-aware inventory APIs.
+- `PoisonMeatResult` — type — line 14
+- `selectPoisonMeatInputKind` — function — line 24
 
 ## `items/primaryWeapons.ts`
 

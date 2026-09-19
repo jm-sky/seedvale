@@ -41,6 +41,13 @@ describe('dietAcceptsItem (plan fauna-014 §2 / fauna-023)', () => {
     expect(dietAcceptsItem(ANIMAL_DEFS.boar.diet, 'raw_meat')).toBe(false)
   })
 
+  it('accepts poisoned_meat for meat-diet predators (plan items-player-049)', () => {
+    expect(dietAcceptsItem(ANIMAL_DEFS.bear.diet, 'poisoned_meat')).toBe(true)
+    expect(dietAcceptsItem(ANIMAL_DEFS.wolf.diet, 'poisoned_meat')).toBe(true)
+    expect(dietAcceptsItem(ANIMAL_DEFS.fox.diet, 'poisoned_meat')).toBe(true)
+    expect(dietAcceptsItem(ANIMAL_DEFS.rabbit.diet, 'poisoned_meat')).toBe(false)
+  })
+
   it('bear diet accepts raw meat and omnivore plant/fish foods, not grass', () => {
     expect(dietAcceptsItem(ANIMAL_DEFS.bear.diet, 'raw_meat')).toBe(true)
     expect(dietAcceptsItem(ANIMAL_DEFS.bear.diet, 'fish')).toBe(true)

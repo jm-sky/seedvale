@@ -173,6 +173,8 @@ Generated from TypeScript imports.
 - `items/itemUseView.ts`
 - `items/liquidContainer.test.ts`
 - `items/liquidContainer.ts`
+- `items/poisonedMeat.test.ts`
+- `items/poisonedMeat.ts`
 - `items/primaryWeapons.test.ts`
 - `items/primaryWeapons.ts`
 - `items/sensibleFood.test.ts`
@@ -651,6 +653,8 @@ Generated from TypeScript imports.
 - `items/inventoryTransfer.test.ts`
 - `items/inventoryView.ts`
 - `items/itemUseView.ts`
+- `items/poisonedMeat.test.ts`
+- `items/poisonedMeat.ts`
 - `items/sensibleFood.ts`
 - `items/timedProcess.ts`
 - `persistence/saveData.ts`
@@ -1242,6 +1246,8 @@ Generated from TypeScript imports.
 - `items/itemInstances.ts`
 - `items/itemModels.ts`
 - `items/itemUseView.ts`
+- `items/poisonedMeat.test.ts`
+- `items/poisonedMeat.ts`
 - `items/primaryWeapons.ts`
 - `items/sensibleFood.ts`
 - `items/tentProp.ts`
@@ -1357,6 +1363,29 @@ Generated from TypeScript imports.
 - `settlement/npcState.test.ts`
 - `world/expeditionProvisioning.test.ts`
 - `world/expeditionProvisioning.ts`
+
+## `items/poisonedMeat.test.ts`
+
+**Imports**
+
+- `items/Inventory.ts`
+- `items/foodFreshness.ts`
+- `items/items.ts`
+- `items/poisonedMeat.ts`
+
+## `items/poisonedMeat.ts`
+
+**Imports**
+
+- `items/Inventory.ts`
+- `items/foodFreshness.ts`
+- `items/items.ts`
+
+**Imported by**
+
+- `app/actions/survivalActions.ts`
+- `app/createApp.ts`
+- `items/poisonedMeat.test.ts`
 
 ## `items/primaryWeapons.test.ts`
 

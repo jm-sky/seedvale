@@ -1,7 +1,7 @@
 # Plan: Higher stag antler drop chance with light Survival influence
 
 **Created:** 2026-09-19
-**Status:** `planned` 📋
+**Status:** `done` ✅ (implemented 2026-09-19 — automated tests; browser verification by user)
 **Type:** polish
 **Priority:** medium · **Effort:** XS
 **Depends on:** none

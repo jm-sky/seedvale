@@ -33,6 +33,8 @@ export type ItemKind =
   | 'gold'
   | 'tomato'
   | 'raw_meat'
+  /** Plan items-player-049 — fauna bait; not a normal player consumable in V1. */
+  | 'poisoned_meat'
   | 'roasted_meat'
   | 'bread'
   /** Legacy plan-106 waterskin — no longer acquirable; kept only so an old
@@ -539,6 +541,15 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     size: 'SM',
     color: 0xa5453f,
     description: 'Świeżo pozyskane mięso. Lepiej upiec je przy ognisku, zanim się je zje.'
+  },
+  poisoned_meat: {
+    kind: 'poisoned_meat',
+    label: 'zatrute mięso',
+    categories: ['food'],
+    weight: 0.8,
+    size: 'SM',
+    color: 0x6a3a48,
+    description: 'Surowe mięso nasączone trującym zielem. Przynęta na drapieżniki — nie do jedzenia.'
   },
   roasted_meat: {
     kind: 'roasted_meat',
@@ -1932,7 +1943,7 @@ function buildProceduralItemMesh(kind: ItemKind): THREE.Object3D {
     return mesh
   }
   if (
-    kind === 'raw_meat' || kind === 'roasted_meat' ||
+    kind === 'raw_meat' || kind === 'poisoned_meat' || kind === 'roasted_meat' ||
     kind === 'deer_meat' || kind === 'wolf_meat' || kind === 'boar_meat' ||
     kind === 'rabbit_meat' || kind === 'beef'
   ) {

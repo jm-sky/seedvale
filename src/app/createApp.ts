@@ -58,6 +58,7 @@ import {
 } from '../items/foreignProperty'
 import { createHeldTool } from '../items/HeldTool'
 import { DEFAULT_MAX_SIZE, Inventory, toSaveItemInstance } from '../items/Inventory'
+import { canPoisonMeat } from '../items/poisonedMeat'
 import { buildInventoryGroups, inventoryCountsForUi } from '../items/inventoryView'
 import { CAPABILITY_NEED_LABEL, hasItemCapability, ITEM_CATALOG } from '../items/itemCatalog'
 import { isWeaponMaintenanceKind } from '../items/itemInstances'
@@ -1053,6 +1054,7 @@ export async function createApp(
       cabbage: inventory.has('seed_cabbage', 1),
     })
     vueUi.setQuickActionsHasFishingRod(inventory.has('fishing_rod', 1))
+    vueUi.setQuickActionsCanPoisonMeat(canPoisonMeat(inventory))
     vueUi.setQuickActionsWorkContracts(contracts.quickActionsList())
   }
 
@@ -3174,6 +3176,7 @@ export async function createApp(
       cookMealIntent.cancel()
       fullCampIntent.startFullCamp()
     },
+    onPoisonMeat: () => survival.poisonMeat(),
   })
   syncQuickActionAvailability()
   syncNearTownQuickActions()

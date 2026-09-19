@@ -2825,6 +2825,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             (event) => {
               questManager.onHabitatAnimalFed(event)
             },
+            getSeed(),
             playerObservation,
           )
         })

@@ -621,6 +621,16 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     consumable: { need: 'hunger', relief: 15 },
     food: { freshness: { freshDurationDays: 1, mediumDurationDays: 1 }, bait: 'meat' },
   },
+  poisoned_meat: {
+    kind: 'poisoned_meat',
+    label: 'zatrute mięso',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan items-player-049 — `poisonMeat()` transform from `poisonous_herb` + raw meat bait. Fauna dropped-food bait only; no player `consumeItem` path in V1.',
+    food: { freshness: { freshDurationDays: 1, mediumDurationDays: 1 }, bait: 'meat' },
+  },
   roasted_meat: {
     kind: 'roasted_meat',
     label: 'pieczone mięso',
