@@ -118,6 +118,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `fauna-043-frenzy-source-target-claim-cleanup.md`                           | 🟡 | S      | ~~fauna-036~~, ~~fauna-017~~                                                                                                                                                                                                                                                               | -                                         |
 | ◼️ `quests-progression-071-generated-opportunity-retention-semantics.md`       | 🟡 | S      | ~~quests-progression-031~~                                                                                                                                                                                                                                                                 | -                                         |
 | ◼️ `quests-progression-072-invalidated-quest-restore-metadata-continuity.md`   | 🟡 | XS     | -                                                                                                                                                                                                                                                                                          | -                                         |
+| ◼️ `items-player-049-poisoned-meat-predator-bait.md`                           | 🟡 | S      | ~~items-player-002~~, ~~settlements-npcs-007~~, ~~fauna-023~~                                                                                                                                                                                                                              | -                                         |
 
 ---
 
@@ -243,7 +244,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 
 - ai: `005`
 - fauna: `044`
-- items-player: `049`
+- items-player: `050`
 - npc: `061`
 - persistence: `006`
 - quests-progression: `073`
