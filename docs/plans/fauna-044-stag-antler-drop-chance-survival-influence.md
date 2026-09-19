@@ -9,6 +9,7 @@
 **Subdomains:** `lifecycle`
 **Tags:** `harvest` `antler` `survival`
 **Roadmap:** -
+**Model:** Composer, Sonnet
 
 ## Goal
 
@@ -29,7 +30,7 @@ Because `PlayerSkills` currently has a minimum derived skill value of `0.2`, nor
 - `src/fauna/animalTrophyLoot.ts::trophyLootKindsForHarvest()` owns trophy generation.
 - Adult `stag` currently uses a deterministic seeded roll with a fixed **50%** threshold.
 - Juvenile stags never drop an antler.
-- `src/fauna/animalHarvest.ts::harvestAnimalIntoInventory()` is the shared authoritative harvest operation used by both player and NPC hunter flows.
+- `src/fauna/animalHarvest.ts::harvestAnimalIntoInventory()` is the shared authoritative harvest operation used by both player and NPC hunter flows; NPC hunters reach it through `src/fauna/huntingHooks.ts::createHuntingHooks().harvest()`.
 - `src/player/PlayerSkills.ts` already owns the authoritative `survival.value` in `[0,1]`; do not create a second Survival/proficiency state.
 - Existing tests in `src/fauna/animalHarvest.test.ts` verify juvenile exclusion, deterministic per-corpse loot, and no reroll after harvest.
 
@@ -93,7 +94,8 @@ Player integration:
 - locate the current player `harvestAnimalIntoInventory()` call under `src/app/actions/survivalActions.ts` and pass `skills.survival.value` through its existing dependencies/state access.
 
 NPC regression:
-- `src/ai/NpcAgent.ts` — verify its shared harvest call remains actor-independent and receives/defaults to baseline rather than player skill.
+- `src/fauna/huntingHooks.ts::createHuntingHooks().harvest()` — this is the actual NPC-side harvest seam. Keep it actor-independent and let it receive/default to the baseline rather than player skill.
+- `src/ai/NpcAgent.ts` only consumes the hunting hook abstraction; no direct harvest integration is needed there.
 
 Skill source of truth:
 - `src/player/PlayerSkills.ts`
