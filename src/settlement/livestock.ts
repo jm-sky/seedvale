@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js'
 import type { AnimalSaveState, NearbyNpcCandidate, VillageInfo } from '../fauna/AnimalAgent'
+import type { PackConfig } from '../fauna/animalDefs'
 import type { LivestockStrayCandidate } from '../fauna/animalStray'
 import type { DropLivestockProductHook } from '../fauna/livestockProduction'
 import type { OwnedAnimalControlMode } from '../fauna/ownedAnimalControl'
@@ -115,8 +116,15 @@ export function shouldSpawnDeterministicLivestockSlot(
   animalId: string,
   removed: ReadonlySet<string> | undefined,
   record: LivestockSaveRecord | undefined,
+  /** True when this `animalId` already has an authoritative live agent
+   *  somewhere else right now — the detached/travelling collection (plan
+   *  fauna-020, generalized to household animals mid merchant-journey by
+   *  plan settlements-npcs-048). Recreating a deterministic slot for it here
+   *  would duplicate that live individual. Defaults to `false` so every
+   *  existing caller/test keeps prior behaviour. */
+  isLiveElsewhere = false,
 ): boolean {
-  return !removed?.has(animalId) && !(record && isPlayerOwnedLivestockRecord(record))
+  return !isLiveElsewhere && !removed?.has(animalId) && !(record && isPlayerOwnedLivestockRecord(record))
 }
 
 export function livestockRecordMatchesHouseholdSlot(
@@ -274,6 +282,7 @@ function createGuaranteedSheep(
   onAnimalDeathSound: ((kind: AnimalKind, x: number, z: number) => void) | undefined,
   removed: ReadonlySet<string> | undefined,
   saved: ReadonlyMap<string, LivestockSaveRecord> | undefined,
+  isLiveElsewhere?: (animalId: string) => boolean,
 ): AnimalAgent | null {
   const homeIndex = 0
   const home = homes[homeIndex]!
@@ -294,7 +303,7 @@ function createGuaranteedSheep(
 
   const animalId = `sheep-home${homeIndex}-guaranteed`
   const savedRecord = saved?.get(animalId)
-  if (!shouldSpawnDeterministicLivestockSlot(animalId, removed, savedRecord)) return null
+  if (!shouldSpawnDeterministicLivestockSlot(animalId, removed, savedRecord, isLiveElsewhere?.(animalId))) return null
 
   const { visual, animations } = visualFor('sheep', animalId)
 
@@ -661,6 +670,14 @@ export async function spawnLivestock(
     horseSlots: readonly { x: number, z: number }[]
     household?: Household
   },
+  /** True when `animalId` already has an authoritative live agent elsewhere
+   *  right now (plan settlements-npcs-048) — currently only meaningful for a
+   *  household-owned animal reserved by an active `MerchantJourneyState
+   *  .packAnimalId`, generalizing the same "never duplicate a live detached
+   *  individual" gate `shouldSpawnDeterministicLivestockSlot` already
+   *  applies to player-owned records. `undefined` for every caller without a
+   *  merchant-journey seam (tests, isolated builds). */
+  isLiveElsewhere?: (animalId: string) => boolean,
 ): Promise<AnimalAgent[]> {
   if (!isSystemEnabled('animals')) return []
   await ensureLivestockTemplates()
@@ -696,7 +713,7 @@ export async function spawnLivestock(
       const { x, z } = findSpotNearHouse(home, sampleHeight, waterLevel, random)
       const animalId = `${kind}-house${i}-${houseAnimalIndex++}`
       const record = saved?.get(animalId)
-      if (!shouldSpawnDeterministicLivestockSlot(animalId, removed, record)) continue
+      if (!shouldSpawnDeterministicLivestockSlot(animalId, removed, record, isLiveElsewhere?.(animalId))) continue
       const { visual, animations } = visualFor(kind, animalId)
       const agent = new AnimalAgent({
         def: ANIMAL_DEFS[kind],
@@ -744,7 +761,8 @@ export async function spawnLivestock(
       onAnimalDeath,
       onAnimalDeathSound,
       removed,
-      saved
+      saved,
+      isLiveElsewhere,
     )
     if (sheep) {
       scene.add(sheep.mesh)
@@ -755,7 +773,7 @@ export async function spawnLivestock(
   if (merchantHorseSpawn) {
     const animalId = `merchant-horse-${settlementId}`
     const record = saved?.get(animalId)
-    if (shouldSpawnDeterministicLivestockSlot(animalId, removed, record)) {
+    if (shouldSpawnDeterministicLivestockSlot(animalId, removed, record, isLiveElsewhere?.(animalId))) {
       const { visual, animations } = visualFor('horse', animalId)
       const agent = new AnimalAgent({
         def: ANIMAL_DEFS.horse,
@@ -787,7 +805,7 @@ export async function spawnLivestock(
       const slot = paddock.horseSlots[slotIndex]!
       const animalId = vendorHorseAnimalId(settlementId, slotIndex)
       const record = saved?.get(animalId)
-      if (!shouldSpawnDeterministicLivestockSlot(animalId, removed, record)) continue
+      if (!shouldSpawnDeterministicLivestockSlot(animalId, removed, record, isLiveElsewhere?.(animalId))) continue
       const stay: HorsePaddockStay = {
         settlementId,
         slotIndex,
@@ -872,6 +890,19 @@ export function resolveLivePersistentAnimal(
   return null
 }
 
+/** Moves a live individual into the shared detached/travelling collection —
+ *  the tail both `transferAnimalOwnership` (player transfer, plan fauna-020)
+ *  and `detachMerchantPackAnimal` (merchant journey, plan
+ *  settlements-npcs-048) share. Ownership itself is never touched here. */
+function attachToDetached(ctx: PersistentLivestockContext, originSettlementId: string, animal: AnimalAgent): void {
+  if (!ctx.detachedById.has(animal.animalId)) {
+    ctx.detached.push(animal)
+    ctx.detachedById.set(animal.animalId, animal)
+  }
+  ctx.detachedOriginById.set(animal.animalId, originSettlementId)
+  ctx.registry.upsert(originSettlementId, animal)
+}
+
 export function transferAnimalOwnership(
   ctx: PersistentLivestockContext,
   animalId: string,
@@ -888,12 +919,91 @@ export function transferAnimalOwnership(
     if (idx >= 0) list.splice(idx, 1)
   }
 
-  if (!ctx.detachedById.has(animalId)) {
-    ctx.detached.push(resolved.animal)
-    ctx.detachedById.set(animalId, resolved.animal)
+  attachToDetached(ctx, resolved.originSettlementId, resolved.animal)
+  return true
+}
+
+/** One resolved, unreserved pack-animal option for a merchant journey (plan
+ *  settlements-npcs-048). */
+export type PackAnimalCandidate = { animalId: string, pack: PackConfig }
+
+/** `SettlementsManager`-owned seam for merchant pack-animal assignment (plan
+ *  settlements-npcs-048), injected into `NpcWorkContext` the same way as
+ *  `InterSettlementTransportHooks` — narrow enough that the trader-work
+ *  planner never scans livestock itself. */
+export type PackAnimalJourneyHooks = {
+  resolveCandidate: (homeSettlementId: string, homeId: string) => PackAnimalCandidate | null
+  commitReservation: (homeSettlementId: string, animalId: string) => void
+}
+
+/**
+ * Deterministic pack-animal candidate for a merchant journey's own home
+ * settlement/household — highest `AnimalDef.pack.cargoCapacityKg`, then
+ * stable `animalId` tie-break (plan settlements-npcs-048 §5). Scoped to
+ * `settlementLivestock`, this settlement's own currently-live roster: an
+ * animal already committed to another active journey was already spliced
+ * out of that array at commit time (`detachMerchantPackAnimal`), so it can
+ * never be offered twice without a second reservation registry. Read-only —
+ * never mutates anything.
+ *
+ * @domain settlements-npcs
+ */
+export function resolveMerchantPackAnimalCandidate(
+  settlementLivestock: readonly AnimalAgent[],
+  homeId: string,
+  /** True when `animalId`'s bare id is safe to detach — i.e. not already the
+   *  shared detached collection's key for a *different* origin settlement's
+   *  individual (plan settlements-npcs-048: `animalId` alone is not globally
+   *  unique across settlements, so two settlements' own deterministic house
+   *  rolls can coincide, e.g. both producing `horse-house0-0`). Defaults to
+   *  "always available" for callers with no detached collection to check
+   *  (tests, isolated builds). A rejected candidate is simply skipped, never
+   *  an error — the caller falls back to the next-best candidate or, if
+   *  none remain, to no assignment (plan §3). */
+  isBareIdAvailable: (animalId: string) => boolean = () => true,
+): PackAnimalCandidate | null {
+  let best: { animal: AnimalAgent, pack: PackConfig } | null = null
+  for (const animal of settlementLivestock) {
+    if (animal.ownerHouseId !== homeId) continue
+    if (animal.isDead() || animal.isPlayerOwned() || animal.isMounted() || animal.isLeadAttached()) continue
+    if (!isBareIdAvailable(animal.animalId)) continue
+    const pack = animal.def.pack
+    if (!pack) continue
+    if (
+      !best
+      || pack.cargoCapacityKg > best.pack.cargoCapacityKg
+      || (pack.cargoCapacityKg === best.pack.cargoCapacityKg && animal.animalId < best.animal.animalId)
+    ) {
+      best = { animal, pack }
+    }
   }
-  ctx.detachedOriginById.set(animalId, resolved.originSettlementId)
-  ctx.registry.upsert(resolved.originSettlementId, resolved.animal)
+  return best ? { animalId: best.animal.animalId, pack: best.pack } : null
+}
+
+/**
+ * Commits a resolved candidate at journey start (plan settlements-npcs-048
+ * §3/§26) — moves the live animal out of its home settlement's own roster
+ * into the shared detached/travelling collection, the same lifecycle
+ * `transferAnimalOwnership` already uses for player-owned animals, so the
+ * one-live-animal invariant holds across home/destination streaming without
+ * a second registry. Household ownership is untouched. Returns `false`
+ * (no-op) if `animalId` is no longer in `settlementLivestock` — nothing else
+ * can race this within one synchronous planning tick, so this only guards
+ * against a stale candidate.
+ *
+ * @domain settlements-npcs
+ */
+export function detachMerchantPackAnimal(
+  ctx: PersistentLivestockContext,
+  homeSettlementId: string,
+  settlementLivestock: AnimalAgent[],
+  animalId: string,
+): boolean {
+  const idx = settlementLivestock.findIndex((a) => a.animalId === animalId)
+  if (idx < 0) return false
+  const animal = settlementLivestock[idx]!
+  settlementLivestock.splice(idx, 1)
+  attachToDetached(ctx, homeSettlementId, animal)
   return true
 }
 
@@ -924,6 +1034,33 @@ export async function restoreDetachedPlayerOwnedLivestock(
     detached.push(agent)
     detachedById.set(record.animalId, agent)
     detachedOriginById.set(record.animalId, record.settlementId)
+  }
+}
+
+/** Restores merchant pack-animal saved records that are mid-journey (a save
+ *  taken during outbound/visiting/returning) as detached live agents — the
+ *  same reuse of the detached lifecycle as `restoreDetachedPlayerOwnedLivestock`,
+ *  keyed by an explicit origin/id list (every currently-active
+ *  `MerchantJourneyState.packAnimalId`) instead of "every player-owned
+ *  record" (plan settlements-npcs-048). Never touches an id already
+ *  restored/detached for another reason. */
+export async function restoreDetachedMerchantPackAnimals(
+  deps: SpawnAnimalFromRecordDeps,
+  registry: LivestockRegistry,
+  detached: AnimalAgent[],
+  detachedById: Map<string, AnimalAgent>,
+  detachedOriginById: Map<string, string>,
+  activePackAnimals: readonly { originSettlementId: string, animalId: string }[],
+): Promise<void> {
+  for (const { originSettlementId, animalId } of activePackAnimals) {
+    if (detachedById.has(animalId)) continue
+    if (registry.getRemoved(originSettlementId)?.has(animalId)) continue
+    const record = registry.getSaved(originSettlementId)?.get(animalId)
+    if (!record) continue
+    const agent = await spawnAnimalFromRecord(deps, record)
+    detached.push(agent)
+    detachedById.set(animalId, agent)
+    detachedOriginById.set(animalId, originSettlementId)
   }
 }
 

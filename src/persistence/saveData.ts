@@ -2106,6 +2106,7 @@ function isMerchantJourneyState(value: unknown): boolean {
   if (j.transportOrderId !== undefined && typeof j.transportOrderId !== 'string') return false
   if (j.visitStartedAtDays !== undefined && typeof j.visitStartedAtDays !== 'number') return false
   if (j.visitEndsAtDays !== undefined && typeof j.visitEndsAtDays !== 'number') return false
+  if (j.packAnimalId !== undefined && typeof j.packAnimalId !== 'string') return false
   return true
 }
 

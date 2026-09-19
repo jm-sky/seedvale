@@ -71,7 +71,13 @@ import { buildAssemblyCollidersWorld, type HouseAssembly } from './houseBuilder'
 import { createHouseDoorController } from './houseDoors'
 import { type Household, householdIdFor, type HouseholdRegistry } from './household'
 import { createHouseholdExchangeHooks, type HouseholdSurplusCandidate } from './householdExchange'
-import { disposeLivestock, type LivestockPersistence, spawnLivestock, tickSettlementLivestock } from './livestock'
+import {
+  disposeLivestock,
+  type LivestockPersistence,
+  type PackAnimalJourneyHooks,
+  spawnLivestock,
+  tickSettlementLivestock,
+} from './livestock'
 import { isNpcAwayOnMerchantJourney } from './merchantJourney'
 import {
   generateMerchantAssortment,
@@ -468,6 +474,18 @@ export type CreateSettlementDeps = {
    *  object. `SettlementsManager`-owned; absent/empty for every settlement
    *  with no current visitor. */
   resolveTravellingVisitors?: (destinationSettlementId: string) => readonly TravellingVisitorSpawn[]
+  /** Merchant pack-animal assignment seam (plan settlements-npcs-048) —
+   *  `SettlementsManager`-owned, forwarded into every `NpcAgent.create` call
+   *  the same way as `interSettlement`. */
+  packAnimalJourney?: PackAnimalJourneyHooks
+  /** True when `(settlementId, animalId)` already has an authoritative live
+   *  agent detached elsewhere right now (plan settlements-npcs-048) —
+   *  forwarded into `spawnLivestock` so a household animal reserved by an
+   *  active merchant journey (or any other detached individual) is never
+   *  recreated as a deterministic slot. `animalId` alone is not globally
+   *  unique across settlements, so this always checks the specific origin
+   *  too, never just "is this id detached anywhere". */
+  isLivestockDetachedElsewhere?: (settlementId: string, animalId: string) => boolean
 }
 
 function paddockWaterHousehold(
@@ -538,6 +556,8 @@ export async function createSettlement(
     residentialBuildings,
     npcGraves,
     resolveTravellingVisitors,
+    packAnimalJourney,
+    isLivestockDetachedElsewhere,
   } = deps
 
   // Bridge-aware ground/water composed once, used only where NPC/livestock
@@ -819,6 +839,7 @@ export async function createSettlement(
           household: paddockWaterHousehold(def.families, householdByHomeId, def.id),
         }
         : undefined,
+      isLivestockDetachedElsewhere ? (animalId) => isLivestockDetachedElsewhere(def.id, animalId) : undefined,
     )
   } finally {
     bootMarkEnd('spawnLivestock')
@@ -1161,6 +1182,7 @@ export async function createSettlement(
         resourceSiteInventories,
         resolveResourceSitePosition,
         interSettlement,
+        packAnimalJourney,
         playerWells,
         droppedItems,
         terrainPreparations,

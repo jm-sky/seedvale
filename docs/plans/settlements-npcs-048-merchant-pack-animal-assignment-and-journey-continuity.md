@@ -1,7 +1,7 @@
 # Plan: Merchant pack-animal assignment and journey continuity
 
 **Created:** 2026-09-18
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** medium · **Effort:** L
 **Depends on:** settlements-npcs-047, settlements-npcs-038, fauna-007, fauna-020
 **Domain:** `settlements-npcs`

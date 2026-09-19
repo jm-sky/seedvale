@@ -770,6 +770,90 @@ describe('AnimalAgent', () => {
     })
   })
 
+  describe('merchant pack-animal follow (plan settlements-npcs-048)', () => {
+    const farObserver = new THREE.Vector3(1000, 0, 1000)
+
+    it('follows the set merchant target once past the start distance, using the same lead hysteresis band', () => {
+      const donkey = new AnimalAgent(makeDeps({ animalId: 'pack-follow' }))
+      donkey.life.hunger = 0
+      donkey.life.thirst = 0
+      const merchantFar = { x: LEAD_START_DISTANCE + 8, z: 0 }
+      donkey.setMerchantFollowTarget(merchantFar)
+      donkey.update({
+        dt: 1,
+        others: [],
+        observerPos: farObserver,
+        dayFactor: 1,
+        forestFactor: 0,
+        litFires: [],
+      })
+      expect(donkey.mesh.position.x).toBeGreaterThan(0)
+    })
+
+    it('yields to elevated needs, then resumes following on its own once they clear', () => {
+      const donkey = new AnimalAgent(makeDeps({ animalId: 'pack-follow-needs' }))
+      donkey.life.hunger = 0
+      donkey.life.thirst = 0
+      donkey.setMerchantFollowTarget({ x: LEAD_START_DISTANCE + 8, z: 0 })
+      for (let i = 0; i < 10; i++) {
+        donkey.update({ dt: 1, others: [], observerPos: farObserver, dayFactor: 1, forestFactor: 0, litFires: [] })
+      }
+      const followedX = donkey.mesh.position.x
+      expect(followedX).toBeGreaterThan(0)
+
+      donkey.life.hunger = NEED_ELEVATED_THRESHOLD + 0.2
+      const grassForage: GrassForageService = {
+        queryNear: () => [{ id: 'patch:test', x: -20, z: 0 }],
+        isAvailable: () => true,
+        consume: () => true,
+        tickVisuals: () => {},
+        serialize: () => ({}),
+        dispose: () => {},
+      }
+      for (let i = 0; i < 10; i++) {
+        donkey.update({ dt: 1, others: [], observerPos: farObserver, dayFactor: 1, forestFactor: 0, litFires: [], grassForage })
+      }
+      expect(donkey.mesh.position.x).toBeLessThan(followedX)
+
+      donkey.life.hunger = 0
+      const beforeResume = donkey.mesh.position.x
+      for (let i = 0; i < 10; i++) {
+        donkey.update({ dt: 1, others: [], observerPos: farObserver, dayFactor: 1, forestFactor: 0, litFires: [] })
+      }
+      expect(donkey.mesh.position.x).toBeGreaterThan(beforeResume)
+    })
+
+    it('stops following once the target is cleared, without teleporting', () => {
+      const donkey = new AnimalAgent(makeDeps({ animalId: 'pack-follow-clear' }))
+      donkey.life.hunger = 0
+      donkey.life.thirst = 0
+      donkey.setMerchantFollowTarget({ x: LEAD_START_DISTANCE + 8, z: 0 })
+      donkey.update({ dt: 1, others: [], observerPos: farObserver, dayFactor: 1, forestFactor: 0, litFires: [] })
+      const followedX = donkey.mesh.position.x
+      expect(followedX).toBeGreaterThan(0)
+
+      donkey.setMerchantFollowTarget(null)
+      donkey.update({ dt: 1, others: [], observerPos: farObserver, dayFactor: 1, forestFactor: 0, litFires: [] })
+      // No target: normal wander, never a jump back toward origin.
+      expect(Math.abs(donkey.mesh.position.x - followedX)).toBeLessThan(2)
+    })
+
+    it('never follows while dead or mounted', () => {
+      const dead = new AnimalAgent(makeDeps({ animalId: 'pack-follow-dead' }))
+      dead.setMerchantFollowTarget({ x: 50, z: 0 })
+      dead.takeDamage(9999)
+      expect(dead.isDead()).toBe(true)
+      dead.update({ dt: 1, others: [], observerPos: farObserver, dayFactor: 1, forestFactor: 0, litFires: [] })
+      expect(dead.mesh.position.x).toBe(0)
+
+      const mounted = new AnimalAgent(makeDeps({ animalId: 'pack-follow-mounted' }))
+      mounted.setMerchantFollowTarget({ x: 50, z: 0 })
+      mounted.setMounted(true)
+      mounted.update({ dt: 1, others: [], observerPos: farObserver, dayFactor: 1, forestFactor: 0, litFires: [] })
+      expect(mounted.mesh.position.x).toBe(0)
+    })
+  })
+
   describe('thunder scare (plan world-026)', () => {
     const farObserver = new THREE.Vector3(1000, 0, 1000)
 

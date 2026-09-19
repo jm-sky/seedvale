@@ -4,11 +4,13 @@ import type { AnimalAgent, AnimalSaveState } from '../fauna/AnimalAgent'
 import { ownerFromHouseId } from '../fauna/animalOwnership'
 import {
   createLivestockRegistry,
+  detachMerchantPackAnimal,
   fillShepherdFlockKinds,
   isPlayerOwnedLivestockRecord,
   livestockRecordMatchesHouseholdSlot,
   type LivestockSaveRecord,
   resolveLivePersistentAnimal,
+  resolveMerchantPackAnimalCandidate,
   setOwnedAnimalControl,
   shouldSpawnDeterministicLivestockSlot,
   tickSettlementLivestock,
@@ -17,10 +19,11 @@ import {
 
 function fakeAnimal(
   animalId: string,
-  kind: 'chicken' | 'horse',
+  kind: 'chicken' | 'horse' | 'donkey',
   ownerHouseId?: string,
   owner = ownerFromHouseId(ownerHouseId),
   control?: AnimalSaveState['control'],
+  opts: { dead?: boolean, mounted?: boolean, leadAttached?: boolean, pack?: { cargoCapacityKg: number } } = {},
 ): AnimalAgent {
   const state: AnimalSaveState = {
     x: 1, z: 2, yaw: 0.3,
@@ -37,12 +40,14 @@ function fakeAnimal(
     ownerHouseId,
     getOwner: () => owner,
     isPlayerOwned: () => owner?.kind === 'player',
-    isDead: () => false,
+    isDead: () => opts.dead ?? false,
+    isMounted: () => opts.mounted ?? false,
+    isLeadAttached: () => opts.leadAttached ?? false,
     setOwnedControlMode: vi.fn(),
     transferOwnershipToPlayer: vi.fn(function (this: AnimalAgent) {
       (this as { getOwner: () => unknown }).getOwner = () => ({ kind: 'player' })
     }),
-    def: { kind },
+    def: { kind, pack: opts.pack },
     snapshot: () => state,
   } as unknown as AnimalAgent
 }
@@ -273,6 +278,115 @@ describe('persistent livestock operations', () => {
       },
     }
     expect(shouldSpawnDeterministicLivestockSlot(animalId, undefined, playerOwned)).toBe(false)
+  })
+
+  it('suppresses a deterministic slot for a household record currently live elsewhere (plan settlements-npcs-048)', () => {
+    const animalId = 'horse-house0-0'
+    const householdOwned: LivestockSaveRecord = {
+      settlementId: 'home',
+      animalId,
+      kind: 'horse',
+      owner: { kind: 'household', houseId: 'home:home:0' },
+      ownerHouseId: 'home:home:0',
+      x: 0, z: 0, yaw: 0,
+      health: { current: 10, max: 10, dead: false },
+      life: { hunger: 0, thirst: 0, stamina: 1 },
+      productionReadyAtDays: null,
+      eggPending: false,
+      corpse: null,
+    }
+    expect(shouldSpawnDeterministicLivestockSlot(animalId, undefined, householdOwned, false)).toBe(true)
+    expect(shouldSpawnDeterministicLivestockSlot(animalId, undefined, householdOwned, true)).toBe(false)
+  })
+})
+
+describe('resolveMerchantPackAnimalCandidate (plan settlements-npcs-048)', () => {
+  const homeId = 'home:home:0'
+
+  it('picks the higher-capacity pack-capable household animal', () => {
+    const donkey = fakeAnimal('donkey-house0-0', 'donkey', homeId, undefined, undefined, { pack: { cargoCapacityKg: 40 } })
+    const horse = fakeAnimal('horse-house0-1', 'horse', homeId, undefined, undefined, { pack: { cargoCapacityKg: 50 } })
+    expect(resolveMerchantPackAnimalCandidate([donkey, horse], homeId)).toEqual({
+      animalId: 'horse-house0-1',
+      pack: { cargoCapacityKg: 50 },
+    })
+  })
+
+  it('breaks a capacity tie by stable animalId', () => {
+    const a = fakeAnimal('horse-house0-1', 'horse', homeId, undefined, undefined, { pack: { cargoCapacityKg: 50 } })
+    const b = fakeAnimal('horse-house0-0', 'horse', homeId, undefined, undefined, { pack: { cargoCapacityKg: 50 } })
+    expect(resolveMerchantPackAnimalCandidate([a, b], homeId)?.animalId).toBe('horse-house0-0')
+  })
+
+  it('rejects a dead, player-owned, mounted, lead-attached, non-pack, or other-household animal', () => {
+    const pack = { cargoCapacityKg: 50 }
+    const dead = fakeAnimal('horse-1', 'horse', homeId, undefined, undefined, { pack, dead: true })
+    const playerOwned = fakeAnimal('horse-2', 'horse', homeId, { kind: 'player' }, undefined, { pack })
+    const mounted = fakeAnimal('horse-3', 'horse', homeId, undefined, undefined, { pack, mounted: true })
+    const led = fakeAnimal('horse-4', 'horse', homeId, undefined, undefined, { pack, leadAttached: true })
+    const noPack = fakeAnimal('cow-1', 'horse', homeId)
+    const otherHousehold = fakeAnimal('horse-5', 'horse', 'home:home:1', undefined, undefined, { pack })
+    expect(resolveMerchantPackAnimalCandidate(
+      [dead, playerOwned, mounted, led, noPack, otherHousehold],
+      homeId,
+    )).toBeNull()
+  })
+
+  it('returns null with no eligible candidate', () => {
+    expect(resolveMerchantPackAnimalCandidate([], homeId)).toBeNull()
+  })
+
+  it('skips a candidate whose bare animalId collides with a different origin already detached elsewhere', () => {
+    // `animalId` is not globally unique across settlements (two villages can
+    // both roll a "horse-house0-0") — a caller reports that id unavailable
+    // when it is already the detached collection's key for another origin.
+    const collidingId = 'horse-house0-0'
+    const colliding = fakeAnimal(collidingId, 'horse', homeId, undefined, undefined, { pack: { cargoCapacityKg: 50 } })
+    const donkey = fakeAnimal('donkey-house0-0', 'donkey', homeId, undefined, undefined, { pack: { cargoCapacityKg: 40 } })
+    const isBareIdAvailable = (animalId: string) => animalId !== collidingId
+    expect(resolveMerchantPackAnimalCandidate([colliding, donkey], homeId, isBareIdAvailable)).toEqual({
+      animalId: 'donkey-house0-0',
+      pack: { cargoCapacityKg: 40 },
+    })
+  })
+})
+
+describe('detachMerchantPackAnimal (plan settlements-npcs-048)', () => {
+  it('splices the animal out of the settlement roster into the shared detached collection', () => {
+    const registry = createLivestockRegistry()
+    const animal = fakeAnimal('horse-house0-0', 'horse', 'home:home:0', undefined, undefined, { pack: { cargoCapacityKg: 50 } })
+    const settlementLivestock = [animal]
+    const detached: AnimalAgent[] = []
+    const detachedById = new Map<string, AnimalAgent>()
+    const detachedOriginById = new Map<string, string>()
+    const ctx = {
+      getLoadedSettlements: () => [{ id: 'home', livestock: settlementLivestock }],
+      detached,
+      detachedById,
+      detachedOriginById,
+      registry,
+    }
+
+    expect(detachMerchantPackAnimal(ctx, 'home', settlementLivestock, 'horse-house0-0')).toBe(true)
+    expect(settlementLivestock).toHaveLength(0)
+    expect(detached).toEqual([animal])
+    expect(detachedById.get('horse-house0-0')).toBe(animal)
+    expect(detachedOriginById.get('horse-house0-0')).toBe('home')
+    // Ownership is untouched — this is a travel relation, not a transfer.
+    expect(animal.isPlayerOwned()).toBe(false)
+  })
+
+  it('is a no-op for an animalId no longer present in the given roster', () => {
+    const registry = createLivestockRegistry()
+    const settlementLivestock: AnimalAgent[] = []
+    const ctx = {
+      getLoadedSettlements: () => [],
+      detached: [],
+      detachedById: new Map(),
+      detachedOriginById: new Map(),
+      registry,
+    }
+    expect(detachMerchantPackAnimal(ctx, 'home', settlementLivestock, 'missing')).toBe(false)
   })
 })
 

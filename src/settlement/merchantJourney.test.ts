@@ -62,6 +62,16 @@ describe('advanceMerchantJourneyToVisiting', () => {
     expect(host.merchantJourney).toBeNull()
   })
 
+  it('preserves an assigned packAnimalId across the transition', () => {
+    const host = makeHost({
+      merchantJourney: {
+        homeSettlementId: 'a', destinationSettlementId: 'b', phase: 'outbound', transportOrderId: 'order:1', packAnimalId: 'horse-house0-0',
+      },
+    })
+    advanceMerchantJourneyToVisiting(host, 'order:1', 10)
+    expect(host.merchantJourney?.packAnimalId).toBe('horse-house0-0')
+  })
+
   it('ignores an order id that does not match the journey', () => {
     const host = makeHost({
       merchantJourney: {
@@ -103,6 +113,12 @@ describe('tryBeginMerchantReturn', () => {
     expect(host.merchantJourney).toMatchObject({ phase: 'returning' })
     expect(host.travel?.purpose).toEqual({ kind: 'merchant-return', homeSettlementId: 'a' })
     expect(host.travel?.execution).toBeDefined()
+  })
+
+  it('preserves an assigned packAnimalId into the returning phase', () => {
+    const host = makeHost({ merchantJourney: { ...visiting(), packAnimalId: 'horse-house0-0' } })
+    tryBeginMerchantReturn(host, 7, 480, () => ({ origin: { x: 0, z: 0 }, homeTarget: { x: 100, z: 0 }, live: false }))
+    expect(host.merchantJourney?.packAnimalId).toBe('horse-house0-0')
   })
 
   it('sets a live (no-execution) return commitment when a live agent still exists at the destination', () => {

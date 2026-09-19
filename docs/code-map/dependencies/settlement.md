@@ -97,6 +97,7 @@ Generated from TypeScript imports.
 - `world/pointLightBudget.ts`
 - `world/resourceSiteInventory.ts`
 - `world/settlementForestHooks.ts`
+- `world/transportCapacity.ts`
 - `world/transportOffscreen.ts`
 - `world/transportOrder.ts`
 - `world/transportTravelArrival.ts`
@@ -925,6 +926,7 @@ Generated from TypeScript imports.
 - `assets/loadGltf.ts`
 - `debug/debugMode.ts`
 - `fauna/AnimalAgent.ts`
+- `fauna/animalDefs.ts`
 - `fauna/animalOwnership.ts`
 - `fauna/animalStray.ts`
 - `fauna/horseTraining.ts`
@@ -944,6 +946,8 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `ai/NpcAgent.ts`
+- `ai/npcProfessionWork.ts`
 - `app/createApp.ts`
 - `app/worldBundle.ts`
 - `assets/assetIndex.ts`

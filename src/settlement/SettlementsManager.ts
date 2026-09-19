@@ -43,6 +43,7 @@ import { getAgentCpuDiag } from '../perf/agentCpuDiag'
 import { type ChunkCoord, chunksNear } from '../terrain/chunkGrid'
 import { DRY_WATER_SAMPLE } from '../terrain/waterSample'
 import { createNullPointLightBudget, type PointLightBudget } from '../world/pointLightBudget'
+import { BASE_TRANSPORT_CARGO_MAX_WEIGHT_KG, resolveNpcTransportCargoCapacity } from '../world/transportCapacity'
 import {
   estimateOffscreenTravelDays,
   type OffscreenTransportLookup,
@@ -67,9 +68,13 @@ import {
 import { createHouseholdRegistry, type Household, type HouseholdId, householdIdFor, type HouseholdSnapshot } from './household'
 import {
   createLivestockRegistry,
+  detachMerchantPackAnimal,
   type LivestockSaveRecord,
+  type PackAnimalJourneyHooks,
   type PersistentLivestockContext,
   resolveLivePersistentAnimal,
+  resolveMerchantPackAnimalCandidate,
+  restoreDetachedMerchantPackAnimals,
   restoreDetachedPlayerOwnedLivestock,
   setOwnedAnimalControl,
   spawnAnimalFromRecord,
@@ -682,6 +687,93 @@ export async function createSettlementsManager(
     detachedOriginById,
   )
 
+  // A save taken mid merchant-journey (plan settlements-npcs-048) — restore
+  // the still-travelling pack animal as a detached live agent too, from its
+  // own origin settlement's saved record, the same way as a player-owned
+  // detached individual above. `npcStates` already reflects the restored
+  // save at this point (constructed above).
+  const activePackAnimals: { originSettlementId: string, animalId: string }[] = []
+  npcStates.forEach((state) => {
+    const packAnimalId = state.merchantJourney?.packAnimalId
+    if (packAnimalId) activePackAnimals.push({ originSettlementId: state.merchantJourney!.homeSettlementId, animalId: packAnimalId })
+  })
+  if (activePackAnimals.length > 0) {
+    await restoreDetachedMerchantPackAnimals(
+      spawnAnimalDeps,
+      livestock,
+      detachedLivestock,
+      detachedById,
+      detachedOriginById,
+      activePackAnimals,
+    )
+  }
+
+  /** Whether any currently-active `MerchantJourneyState.packAnimalId` still
+   *  points at `animalId` (plan settlements-npcs-048) — the assignment
+   *  authority is the live journey set itself, never a second persisted
+   *  reservation registry. */
+  function isPackAnimalReserved(animalId: string): boolean {
+    let reserved = false
+    npcStates.forEach((state) => {
+      if (state.merchantJourney?.packAnimalId === animalId) reserved = true
+    })
+    return reserved
+  }
+
+  /** Moves every one of `settlementId`'s own detached household animals back
+   *  into its freshly (re)built live roster once nothing still needs it
+   *  detached (plan settlements-npcs-048) — the inverse of
+   *  `detachMerchantPackAnimal`. Called whenever this settlement (re)builds
+   *  and right after a genuine merchant-return arrival while home happens to
+   *  be currently loaded, so a pack animal whose journey ended while home
+   *  was unloaded still gets reclaimed the next time home streams back in.
+   *  A corpse (its own removal lifecycle owns it) or a still-actively-
+   *  reserved animal is left detached. Player-owned individuals never reach
+   *  here — they stay detached forever by design
+   *  (`restoreDetachedPlayerOwnedLivestock`). */
+  function reclaimDetachedHouseholdLivestock(settlementId: string, settlement: Settlement): void {
+    for (const [animalId, origin] of detachedOriginById) {
+      if (origin !== settlementId) continue
+      const animal = detachedById.get(animalId)
+      if (!animal || animal.isDead() || animal.isPlayerOwned()) continue
+      if (isPackAnimalReserved(animalId)) continue
+      const idx = detachedLivestock.indexOf(animal)
+      if (idx >= 0) detachedLivestock.splice(idx, 1)
+      detachedById.delete(animalId)
+      detachedOriginById.delete(animalId)
+      ;(settlement.livestock as AnimalAgent[]).push(animal)
+      livestock.upsert(settlementId, animal)
+    }
+  }
+
+  // Merchant pack-animal assignment seam (plan settlements-npcs-048) —
+  // injected into `NpcWorkContext` the same way as `interSettlement` below,
+  // so trader-work planning never scans livestock itself. Candidate
+  // resolution reads the home settlement's own currently-live roster only
+  // (an animal already committed elsewhere was already spliced out of it at
+  // commit time, so it can never be offered twice without a second
+  // reservation registry).
+  const packAnimalJourneyHooks: PackAnimalJourneyHooks = {
+    resolveCandidate: (homeSettlementId, homeId) => {
+      const settlement = entries.get(homeSettlementId)?.settlement
+      if (!settlement) return null
+      return resolveMerchantPackAnimalCandidate(
+        settlement.livestock,
+        homeId,
+        // `animalId` alone is not globally unique across settlements — never
+        // offer a candidate whose bare id is already the shared detached
+        // collection's key for a *different* origin (see the shared
+        // bare-id-keyed `detachedById`/`detachedOriginById` maps' doc).
+        (animalId) => !detachedById.has(animalId) || detachedOriginById.get(animalId) === homeSettlementId,
+      )
+    },
+    commitReservation: (homeSettlementId, animalId) => {
+      const settlement = entries.get(homeSettlementId)?.settlement
+      if (!settlement) return
+      detachMerchantPackAnimal(persistentLivestockCtx, homeSettlementId, settlement.livestock as AnimalAgent[], animalId)
+    },
+  }
+
   const rats = createRatRegistry({
     entries: initialRats ?? [],
     removedIds: initialRemovedRatIds ?? [],
@@ -816,6 +908,14 @@ export async function createSettlementsManager(
       },
     } satisfies InterSettlementTransportHooks,
     resolveTravellingVisitors,
+    packAnimalJourney: packAnimalJourneyHooks,
+    // `animalId` alone is not globally unique across settlements (two
+    // different villages' own household rolls can both produce
+    // `horse-house0-0`) — comparing against the recorded *origin* settlement
+    // for the currently-detached entry with this id, rather than mere
+    // presence in `detachedById`, keeps this settlement's own unrelated
+    // same-named individual spawning normally (plan settlements-npcs-048).
+    isLivestockDetachedElsewhere: (settlementId, animalId) => detachedOriginById.get(animalId) === settlementId,
   }
 
   // Remembered so a settlement that streams in later (or finishes its async
@@ -863,6 +963,7 @@ export async function createSettlementsManager(
     const entry = entries.get(homeDef.id)
     if (entry) entry.settlement = settlement
     else entries.set(homeDef.id, { def: homeDef, settlement, pendingPromise: null })
+    reclaimDetachedHouseholdLivestock(homeDef.id, settlement)
     settlement.setDayNight(lastDayNight)
     syncMidpoints()
     onSettlementAvailable?.({ id: homeDef.id, x: homeDef.x, z: homeDef.z })
@@ -953,6 +1054,7 @@ export async function createSettlementsManager(
           return
         }
         cur.settlement = settlement
+        reclaimDetachedHouseholdLivestock(def.id, settlement)
         settlement.setDayNight(lastDayNight)
         // Off-screen → detailed handoff (plan settlements-npcs-019) — a live
         // `NpcAgent` now exists for any carrier this settlement just
@@ -1093,12 +1195,28 @@ export async function createSettlementsManager(
     return settlementDeps.interSettlement?.resolveStorageTarget(settlementId) ?? null
   }
 
+  /** Reconciles one journey's effective transport-cargo capacity from
+   *  current world truth (plan settlements-npcs-048 §6/§22) — `packAnimalId`
+   *  is never itself proof of capacity; a missing/dead/no-longer-detached
+   *  animal falls back to baseline. Never persists the derived weight, and
+   *  `setBaseMaxWeight` deliberately preserves any existing (possibly now
+   *  overweight) cargo rather than dropping it. */
+  function reconcileMerchantPackCapacity(state: NpcAuthoritativeState, journey: { packAnimalId?: string }): void {
+    const animal = journey.packAnimalId ? detachedById.get(journey.packAnimalId) : undefined
+    const pack = animal && !animal.isDead() ? animal.def.pack : undefined
+    state.transportCargo.setBaseMaxWeight(resolveNpcTransportCargoCapacity(pack))
+  }
+
   /**
-   * Bounded merchant-journey checkpoint (plan settlements-npcs-038 §8/§12) —
-   * `visiting` → `returning` once the absolute visit window elapses,
-   * `returning` → journey cleared on genuine home arrival. Same
-   * `npcStates.forEach` envelope as `resolveTravelAndTransportCheckpoints`,
-   * never a world-global per-frame scan.
+   * Bounded merchant-journey checkpoint (plan settlements-npcs-038 §8/§12,
+   * extended settlements-npcs-048) — `visiting` → `returning` once the
+   * absolute visit window elapses, `returning` → journey cleared on genuine
+   * home arrival, with the assigned pack animal's effective capacity kept in
+   * sync every checkpoint (covers death/loss detection without a per-frame
+   * tick) and reclaimed back into normal household life on a successful
+   * return. Same `npcStates.forEach` envelope as
+   * `resolveTravelAndTransportCheckpoints`, never a world-global per-frame
+   * scan.
    *
    * @domain settlements-npcs
    */
@@ -1106,6 +1224,7 @@ export async function createSettlementsManager(
     npcStates.forEach((state, id) => {
       const journey = state.merchantJourney
       if (!journey) return
+      reconcileMerchantPackCapacity(state, journey)
       if (journey.phase === 'visiting') {
         tryBeginMerchantReturn(state, nowDays, dayLengthSec, () => {
           const homeTarget = settlementAnchorPoint(journey.homeSettlementId)
@@ -1118,7 +1237,12 @@ export async function createSettlementsManager(
           return { origin, homeTarget, live: !!liveNpc }
         })
       } else if (journey.phase === 'returning') {
-        resolveMerchantReturnArrival(state)
+        const { homeSettlementId } = journey
+        if (resolveMerchantReturnArrival(state)) {
+          state.transportCargo.setBaseMaxWeight(BASE_TRANSPORT_CARGO_MAX_WEIGHT_KG)
+          const homeSettlement = entries.get(homeSettlementId)?.settlement
+          if (homeSettlement) reclaimDetachedHouseholdLivestock(homeSettlementId, homeSettlement)
+        }
       }
     })
   }
@@ -1200,6 +1324,30 @@ export async function createSettlementsManager(
       if (detachedLivestock.length > 0) {
         agentCpu.beginNpcLivestock()
         agentCpu.beginNpcLivestockDetached()
+        // Actor-neutral merchant follow-target sync (plan
+        // settlements-npcs-048 §12) — only costs anything once at least one
+        // active journey has a `packAnimalId`; a merchant not currently a
+        // live `NpcAgent` anywhere loaded (off-screen) simply yields no
+        // target, so its pack animal falls back to normal autonomy instead
+        // of a separate off-screen tick.
+        const merchantByPackAnimal = new Map<string, string>()
+        npcStates.forEach((state, npcId) => {
+          const packAnimalId = state.merchantJourney?.packAnimalId
+          if (packAnimalId) merchantByPackAnimal.set(packAnimalId, npcId)
+        })
+        if (merchantByPackAnimal.size > 0) {
+          const livePosByNpcId = new Map<string, { x: number, z: number }>()
+          for (const entry of entries.values()) {
+            if (!entry.settlement) continue
+            for (const npc of entry.settlement.npcs) {
+              livePosByNpcId.set(npc.id, { x: npc.mesh.position.x, z: npc.mesh.position.z })
+            }
+          }
+          for (const animal of detachedLivestock) {
+            const npcId = merchantByPackAnimal.get(animal.animalId)
+            animal.setMerchantFollowTarget(npcId ? livePosByNpcId.get(npcId) ?? null : null)
+          }
+        }
         tickSettlementLivestock(detachedLivestock, {
           dt,
           settlementId: 'detached',

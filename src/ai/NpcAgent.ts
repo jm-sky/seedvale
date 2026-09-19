@@ -14,6 +14,7 @@ import type { SettlementCorpseCleanupHooks } from '../settlement/animalCorpseSan
 import type { FamilyMember, FamilyMemberRef, FamilyRelation } from '../settlement/families'
 import type { Household, HouseholdResourceKind } from '../settlement/household'
 import type { HouseholdExchangeHooks } from '../settlement/householdExchange'
+import type { PackAnimalJourneyHooks } from '../settlement/livestock'
 import type { NpcAuthoritativeState } from '../settlement/npcState'
 import type { SettlementLandmarks } from '../settlement/props'
 import type { NpcStructureRepairHooks } from '../settlement/structureRepairCandidates'
@@ -1096,6 +1097,8 @@ export type NpcAgentDeps = {
   resolveResourceSitePosition?: (resourceId: string) => { x: number, z: number } | null
   /** Bounded inter-settlement food matching/execution (plan settlements-npcs-037). */
   interSettlement?: InterSettlementTransportHooks | null
+  /** Merchant pack-animal assignment seam (plan settlements-npcs-048). */
+  packAnimalJourney?: PackAnimalJourneyHooks | null
   playerWells?: PlayerWells | null
   /** Active terrain-preparation work sites (plan npc-018) — the second Work
    *  Contract target kind, alongside `playerWells`. */
@@ -1517,6 +1520,7 @@ export class NpcAgent {
   private readonly resourceSiteInventories: ResourceSiteInventories | null
   private readonly resolveResourceSitePosition: ((resourceId: string) => { x: number, z: number } | null) | null
   private readonly interSettlement: InterSettlementTransportHooks | null
+  private readonly packAnimalJourney: PackAnimalJourneyHooks | null
   /** Last player/observer XZ this tick — local reaction data only, never a
    *  global chase target (plan npc-016 §11). */
   private lastObserverX = 0
@@ -1659,6 +1663,7 @@ export class NpcAgent {
       resourceSiteInventories,
       resolveResourceSitePosition,
       interSettlement,
+      packAnimalJourney,
       playerWells,
       terrainPreparations,
       palisades,
@@ -1712,6 +1717,7 @@ export class NpcAgent {
     this.resourceSiteInventories = resourceSiteInventories ?? null
     this.resolveResourceSitePosition = resolveResourceSitePosition ?? null
     this.interSettlement = interSettlement ?? null
+    this.packAnimalJourney = packAnimalJourney ?? null
     this.playerWells = playerWells ?? null
     this.terrainPreparations = terrainPreparations ?? null
     this.palisades = palisades ?? null
@@ -5028,6 +5034,7 @@ export class NpcAgent {
       resourceSiteInventories: this.resourceSiteInventories,
       resolveResourceSitePosition: this.resolveResourceSitePosition ?? undefined,
       interSettlement: this.interSettlement,
+      packAnimalJourney: this.packAnimalJourney,
       bindTransportTravel: (orderId, destination) => {
         const existing = this.npcState.travel
         if (existing?.purpose?.kind === 'transport' && existing.purpose.orderId === orderId) return
@@ -5043,13 +5050,21 @@ export class NpcAgent {
           this.npcState.travel = null
         }
       },
-      beginMerchantJourney: (homeSettlementId, destinationSettlementId, orderId) => {
+      beginMerchantJourney: (homeSettlementId, destinationSettlementId, orderId, packAnimalId) => {
         if (this.npcState.merchantJourney) return
+        // Commit the already-resolved candidate (plan settlements-npcs-048)
+        // — moves the live animal into the shared detached/travelling
+        // collection. Must happen only once the journey is truly starting,
+        // never at mere candidate resolution (`peekPackAnimalCandidate`),
+        // so a planning attempt that doesn't end in an order never detaches
+        // anything.
+        if (packAnimalId) this.packAnimalJourney?.commitReservation(homeSettlementId, packAnimalId)
         this.npcState.merchantJourney = {
           homeSettlementId,
           destinationSettlementId,
           phase: 'outbound',
           transportOrderId: orderId,
+          packAnimalId,
         }
       },
       strength: this.effectiveMeleeStrength(),

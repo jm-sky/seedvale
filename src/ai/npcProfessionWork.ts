@@ -4,6 +4,7 @@ import type { ItemKind } from '../items/items'
 import type { HeightSampler } from '../player/PlayerController'
 import type { Household } from '../settlement/household'
 import type { HouseholdExchangeHooks } from '../settlement/householdExchange'
+import type { PackAnimalJourneyHooks } from '../settlement/livestock'
 import type { Place } from '../settlement/places'
 import type { SettlementLandmarks } from '../settlement/props'
 import type { SettlementMiningHooks } from '../terrain/resourceDeposits'
@@ -77,6 +78,7 @@ import { type CultivationAnchor, resolveCultivationAnchor } from '../world/culti
 import { FISHING_CAST_DURATION_SEC, fishingSpotId, rollFishingCatch } from '../world/fishing'
 import { HERBALIST_GATHER_KINDS } from '../world/herbalGathering'
 import { CROP_SEED_ITEM, FARM_SEED_PRIORITY } from '../world/plantedCrops'
+import { resolveNpcTransportCargoCapacity } from '../world/transportCapacity'
 import { executeTransportPickup, executeTransportUnload } from '../world/transportTransactions'
 import { assessDestinationThreat, DESTINATION_THREAT_INFLUENCE_RADIUS, HERBALIST_GATHER_RISK_PROFILE } from './npcDestinationThreat'
 import { depositCarriedItems, HOUSEHOLD_EXCHANGE_MAX_TRANSFER } from './npcLogistics'
@@ -209,14 +211,21 @@ export type NpcWorkContext = {
    * settlements-npcs-037). Absent in isolated fallbacks — export cannot run.
    */
   interSettlement?: InterSettlementTransportHooks | null
+  /** Merchant pack-animal assignment seam (plan settlements-npcs-048) —
+   *  `SettlementsManager`-owned; absent in isolated fallbacks (journey then
+   *  always runs at baseline capacity). */
+  packAnimalJourney?: PackAnimalJourneyHooks | null
   /** Bind generic NPC travel after a successful cross-settlement pickup. */
   bindTransportTravel?: (orderId: string, destination: { x: number, z: number }) => void
   /** Clear transport-purpose travel after a successful cargo handoff. */
   clearTransportTravel?: (orderId: string) => void
   /** Start a Travelling Merchant journey (plan settlements-npcs-038) once a
    *  new cross-settlement export order begins — idempotent (a no-op while a
-   *  journey is already active). Absent in isolated fallbacks. */
-  beginMerchantJourney?: (homeSettlementId: string, destinationSettlementId: string, orderId: string) => void
+   *  journey is already active). `packAnimalId` (plan settlements-npcs-048),
+   *  when given, is an already-resolved+committed candidate
+   *  (`packAnimalJourney.resolveCandidate` + `.commitReservation`, done by
+   *  the caller before the order was sized). Absent in isolated fallbacks. */
+  beginMerchantJourney?: (homeSettlementId: string, destinationSettlementId: string, orderId: string, packAnimalId?: string) => void
 }
 
 /**
@@ -883,6 +892,16 @@ function planTraderSourcedGoldCollection(ctx: NpcWorkContext, economy: Settlemen
  * settlement storage → destination settlement storage. Local uncovered
  * shortage collection and remote ore outrank this so export cannot starve
  * unresolved local needs.
+ *
+ * Pack-animal assignment (plan settlements-npcs-048) reconciles
+ * `ctx.transportCargo`'s effective capacity *before* `match` sizes the
+ * outbound quantity — `matchInterSettlementFoodOpportunity` already checks
+ * `carrier.canAdd(...)` against that capacity, so reconciling afterward
+ * would leave the very first pack-animal trip stuck at the 10 kg baseline.
+ * The candidate is only actually committed (detached from its home
+ * settlement roster) once an order genuinely results; any earlier return
+ * reverts capacity to baseline so no state persists without a valid
+ * relation (plan §26).
  */
 function planTraderInterSettlementExport(
   ctx: NpcWorkContext,
@@ -893,6 +912,10 @@ function planTraderInterSettlementExport(
   if (!hooks || !orders || !ctx.npcId) return null
   const existing = orders.findByCarrier(ctx.npcId)
   if (existing) return planTransportOrderExecution(ctx, economy, existing)
+  const packAnimal = ctx.household
+    ? ctx.packAnimalJourney?.resolveCandidate(economy.settlementId, ctx.household.homeId) ?? null
+    : null
+  ctx.transportCargo.setBaseMaxWeight(resolveNpcTransportCargoCapacity(packAnimal?.pack))
   const known = hooks.listKnownSettlements()
   const self = known.find((ref) => ref.settlementId === economy.settlementId)
   const match = matchInterSettlementFoodOpportunity({
@@ -906,7 +929,10 @@ function planTraderInterSettlementExport(
     getEconomy: (id) => hooks.getEconomy(id),
     maxTransfer: HOUSEHOLD_EXCHANGE_MAX_TRANSFER.food,
   })
-  if (!match) return null
+  if (!match) {
+    ctx.transportCargo.setBaseMaxWeight(resolveNpcTransportCargoCapacity(undefined))
+    return null
+  }
   const order = orders.create({
     source: { type: 'settlement-storage', settlementId: economy.settlementId },
     destination: { type: 'settlement-storage', settlementId: match.destinationSettlementId },
@@ -914,8 +940,11 @@ function planTraderInterSettlementExport(
     requestedQuantity: match.quantity,
     carrierNpcId: ctx.npcId,
   })
-  if (!order) return null
-  ctx.beginMerchantJourney?.(economy.settlementId, match.destinationSettlementId, order.id)
+  if (!order) {
+    ctx.transportCargo.setBaseMaxWeight(resolveNpcTransportCargoCapacity(undefined))
+    return null
+  }
+  ctx.beginMerchantJourney?.(economy.settlementId, match.destinationSettlementId, order.id, packAnimal?.animalId)
   return planTransportOrderExecution(ctx, economy, order)
 }
 

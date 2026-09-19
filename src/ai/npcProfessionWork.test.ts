@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { ShepherdFlockHooks } from '../fauna/shepherdFlock'
 import type { NpcWorkContext } from './npcProfessionWork'
 import { BLACKSMITH_IRON_ROD_PRODUCTION } from '../economy/production'
@@ -1202,6 +1202,65 @@ describe('planProfessionWork', () => {
       expect(order?.destination).toEqual({ type: 'settlement-storage', settlementId: 'b' })
       expect(order?.itemKind).toBe('carrot')
       expect(order?.state).toBe('assigned')
+    })
+
+    it('reconciles transport-cargo capacity to a resolved pack animal before sizing the export, then commits it via beginMerchantJourney (plan settlements-npcs-048)', () => {
+      const household = createHousehold('h', 'a', 'home:a:0')
+      const source = createSettlementEconomy('a', {}, [{ kind: 'food', target: 2 }])
+      source.depositFood('carrot', 8, 0)
+      const dest = createSettlementEconomy('b', {}, [{ kind: 'food', target: 6 }])
+      const transportOrders = createTransportOrders()
+      const transportCargo = new Inventory()
+      const beginMerchantJourney = vi.fn()
+      const resolveCandidate = vi.fn(() => ({ animalId: 'horse-house0-0', pack: { cargoCapacityKg: 50, cargoCapacityUnits: 32 } }))
+      const commitReservation = vi.fn()
+      planProfessionWork(baseCtx({
+        role: 'trader',
+        npcId: 'npc:trader',
+        household,
+        economy: source,
+        transportCargo,
+        workplace: { position: { x: 4, y: 0, z: 4 } } as unknown as NpcWorkContext['workplace'],
+        transportOrders,
+        interSettlement: interSettlementHooks(
+          { a: source, b: dest },
+          { a: { x: 0, z: 0 }, b: { x: 40, z: 0 } },
+        ),
+        packAnimalJourney: { resolveCandidate, commitReservation },
+        beginMerchantJourney,
+      }))
+      expect(resolveCandidate).toHaveBeenCalledWith('a', 'home:a:0')
+      // The order already exists by the time `beginMerchantJourney` fires — capacity
+      // must already reflect the pack animal *before* the order was sized, not after.
+      expect(transportCargo.maxWeight).toBe(50)
+      expect(beginMerchantJourney).toHaveBeenCalledWith('a', 'b', expect.any(String), 'horse-house0-0')
+      // `planTraderInterSettlementExport` itself never detaches the animal —
+      // that commit belongs to the caller's `beginMerchantJourney`, once the
+      // journey is genuinely starting.
+      expect(commitReservation).not.toHaveBeenCalled()
+    })
+
+    it('reverts transport-cargo capacity to baseline when no export opportunity results despite a resolved candidate', () => {
+      const household = createHousehold('h', 'a', 'home:a:0')
+      const source = createSettlementEconomy('a', {}, [{ kind: 'food', target: 2 }])
+      source.depositFood('carrot', 8, 0)
+      const transportOrders = createTransportOrders()
+      const transportCargo = new Inventory()
+      const resolveCandidate = vi.fn(() => ({ animalId: 'horse-house0-0', pack: { cargoCapacityKg: 50, cargoCapacityUnits: 32 } }))
+      planProfessionWork(baseCtx({
+        role: 'trader',
+        npcId: 'npc:trader',
+        household,
+        economy: source,
+        transportCargo,
+        workplace: { position: { x: 4, y: 0, z: 4 } } as unknown as NpcWorkContext['workplace'],
+        transportOrders,
+        // No other known settlement has an uncovered shortage — export never matches.
+        interSettlement: interSettlementHooks({ a: source }, { a: { x: 0, z: 0 } }),
+        packAnimalJourney: { resolveCandidate, commitReservation: vi.fn() },
+      }))
+      expect(transportOrders.list()).toEqual([])
+      expect(transportCargo.maxWeight).toBe(10)
     })
 
     it('does not create an A→A export', () => {

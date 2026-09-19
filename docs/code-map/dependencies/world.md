@@ -4234,6 +4234,8 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `ai/npcProfessionWork.ts`
+- `settlement/SettlementsManager.ts`
 - `settlement/npcState.ts`
 - `world/transportCapacity.test.ts`
 

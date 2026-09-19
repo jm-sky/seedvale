@@ -412,6 +412,7 @@ Generated from TypeScript imports.
 - `fauna/preyAlertPerception.ts`
 - `reputation/animalDeeds.ts`
 - `settlement/horseAcquisition.test.ts`
+- `settlement/livestock.ts`
 - `world/animalPackHandoff.test.ts`
 - `world/animalTraps.ts`
 - `world/cart.test.ts`

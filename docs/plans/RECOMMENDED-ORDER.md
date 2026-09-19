@@ -6,14 +6,14 @@
 
 1. `quests-progression-040` — **Lost Treasure Chronicles — dark-forest estate, alpha bear and treasure map**  
    🔴 `L` · ✅ ready · unlocks 2/6
-2. `settlements-npcs-048` — **Merchant pack-animal assignment and journey continuity**  
-   🟡 `L` · ✅ ready · unlocks 3/5
-3. `quests-progression-041` — **Lost Treasure Chronicles — dungeon binding and persistent collapsed access**  
+2. `quests-progression-041` — **Lost Treasure Chronicles — dungeon binding and persistent collapsed access**  
    🔴 `L` · 🔒 blocked · unlocks 3/5
-4. `settlements-npcs-049` — **Merchant wealth tiers and travel party profile**  
-   🔴 `L` · 🔒 blocked · unlocks 1/4
-5. `quests-progression-042` — **Lost Treasure Chronicles — expedition remains, journal and missing-key trail**  
+3. `settlements-npcs-049` — **Merchant wealth tiers and travel party profile**  
+   🔴 `L` · ✅ ready · unlocks 1/4
+4. `quests-progression-042` — **Lost Treasure Chronicles — expedition remains, journal and missing-key trail**  
    🔴 `L` · 🔒 blocked · unlocks 3/4
+5. `npc-032` — **Expedition needs and survival**  
+   🔴 `L` · 🔒 blocked · unlocks 3/3
 
 ---
 
@@ -21,14 +21,14 @@
 
 1. `quests-progression-040` — **Lost Treasure Chronicles — dark-forest estate, alpha bear and treasure map**  
    🔴 `L` · ✅ ready · unlocks 2/6 · roadmap: `quests-lost-something-chronicles`
-2. `settlements-npcs-048` — **Merchant pack-animal assignment and journey continuity**  
-   🟡 `L` · ✅ ready · unlocks 3/5 · roadmap: `quests-travelling-merchant-journeys`
-3. `quests-progression-041` — **Lost Treasure Chronicles — dungeon binding and persistent collapsed access**  
+2. `quests-progression-041` — **Lost Treasure Chronicles — dungeon binding and persistent collapsed access**  
    🔴 `L` · 🔒 blocked · unlocks 3/5 · roadmap: `quests-lost-something-chronicles`
-4. `settlements-npcs-049` — **Merchant wealth tiers and travel party profile**  
-   🔴 `L` · 🔒 blocked · unlocks 1/4 · roadmap: `quests-travelling-merchant-journeys`
-5. `quests-progression-042` — **Lost Treasure Chronicles — expedition remains, journal and missing-key trail**  
+3. `settlements-npcs-049` — **Merchant wealth tiers and travel party profile**  
+   🔴 `L` · ✅ ready · unlocks 1/4 · roadmap: `quests-travelling-merchant-journeys`
+4. `quests-progression-042` — **Lost Treasure Chronicles — expedition remains, journal and missing-key trail**  
    🔴 `L` · 🔒 blocked · unlocks 3/4 · roadmap: `quests-lost-something-chronicles`
+5. `npc-032` — **Expedition needs and survival**  
+   🔴 `L` · 🔒 blocked · unlocks 3/3 · roadmap: `companions`
 
 ---
 
@@ -52,8 +52,8 @@
 
 1. `quests-progression-040` — **Lost Treasure Chronicles — dark-forest estate, alpha bear and treasure map**  
    🔴 `L` · ✅ ready · unlocks 2/6
-2. `settlements-npcs-048` — **Merchant pack-animal assignment and journey continuity**  
-   🟡 `L` · ✅ ready · unlocks 3/5
+2. `settlements-npcs-049` — **Merchant wealth tiers and travel party profile**  
+   🔴 `L` · ✅ ready · unlocks 1/4
 3. `items-player-028` — **NPC player-storage access policies**  
    🔴 `M` · ✅ ready · unlocks 3/5
 4. `world-031` — **Authored Persistent World Consequences**  
@@ -81,135 +81,131 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `L` · **Score:** 122  
    → **unlocks:** 2/6
 
-2. `settlements-npcs-048` — **Merchant pack-animal assignment and journey continuity**  
-  🟡 `L` · **Score:** 120  
-   → **unlocks:** 3/5
-
-3. `quests-progression-041` — **Lost Treasure Chronicles — dungeon binding and persistent collapsed access**  
+2. `quests-progression-041` — **Lost Treasure Chronicles — dungeon binding and persistent collapsed access**  
   🔴 `L` · **Score:** 118  
    → **unlocks:** 3/5
 
-4. `settlements-npcs-049` — **Merchant wealth tiers and travel party profile**  
+3. `settlements-npcs-049` — **Merchant wealth tiers and travel party profile**  
   🔴 `L` · **Score:** 114  
    → **unlocks:** 1/4
 
-5. `quests-progression-042` — **Lost Treasure Chronicles — expedition remains, journal and missing-key trail**  
+4. `quests-progression-042` — **Lost Treasure Chronicles — expedition remains, journal and missing-key trail**  
   🔴 `L` · **Score:** 110  
    → **unlocks:** 3/4
 
-6. `quests-progression-043` — **Lost Treasure Chronicles — survivor site, missing key and final dungeon access**  
+5. `quests-progression-043` — **Lost Treasure Chronicles — survivor site, missing key and final dungeon access**  
   🔴 `L` · **Score:**  98  
    → **unlocks:** 2/3
 
-7. `items-player-028` — **NPC player-storage access policies**  
+6. `items-player-028` — **NPC player-storage access policies**  
   🔴 `M` · **Score:**  93  
    → **unlocks:** 3/5
 
-8. `quests-progression-044` — **Lost Treasure Chronicles — final treasure claims and resolution**  
+7. `quests-progression-044` — **Lost Treasure Chronicles — final treasure claims and resolution**  
   🔴 `L` · **Score:**  90  
    → **unlocks:** 2/2
 
-9. `quests-progression-045` — **Lost Treasure Chronicles — property grant deed and persistent land reward**  
+8. `quests-progression-045` — **Lost Treasure Chronicles — property grant deed and persistent land reward**  
   🔴 `L` · **Score:**  78  
    → **unlocks:** 1/1
 
-10. `world-031` — **Authored Persistent World Consequences**  
+9. `world-031` — **Authored Persistent World Consequences**  
   🔴 `M` · **Score:**  69  
    → **unlocks:** 3/3
 
-11. `quests-progression-046` — **Lost Treasure Chronicles — integration, legacy catch-up and superseded quest cleanup**  
+10. `quests-progression-046` — **Lost Treasure Chronicles — integration, legacy catch-up and superseded quest cleanup**  
   🔴 `L` · **Score:**  66  
    → **unlocks:** 0/0
 
-12. `items-player-032` — **NPC player-storage resource and context rules**  
+11. `items-player-032` — **NPC player-storage resource and context rules**  
   🟡 `L` · **Score:**  64  
    → **unlocks:** 1/4
 
-13. `npc-032` — **Expedition needs and survival**  
+12. `npc-032` — **Expedition needs and survival**  
   🔴 `L` · **Score:**  98  
    → **unlocks:** 3/3
 
-14. `settlements-npcs-022` — **Household help and age-based work participation**  
+13. `settlements-npcs-022` — **Household help and age-based work participation**  
   🔴 `M` · **Score:**  57  
    → **unlocks:** 1/1
 
-15. `quests-progression-053` — **Hunters Brotherhood — competing hunting strategies**  
+14. `quests-progression-053` — **Hunters Brotherhood — competing hunting strategies**  
   🟡 `L` · **Score:**  56  
    → **unlocks:** 1/1
 
-16. `settlements-npcs-043` — **Settlement Cultivation Hydration, Rain & Farmer Watering**  
+15. `settlements-npcs-043` — **Settlement Cultivation Hydration, Rain & Farmer Watering**  
   🔴 `L` · **Score:**  56  
    → **unlocks:** 1/1
 
-17. `quests-progression-069` — **Quest offer pacing and conservative settlement gating**  
+16. `quests-progression-069` — **Quest offer pacing and conservative settlement gating**  
   🔴 `M` · **Score:**  51  
    → **unlocks:** 0/0
 
-18. `quests-progression-063` — **Healer — Injured Resident**  
+17. `quests-progression-063` — **Healer — Injured Resident**  
   🟡 `M` · **Score:**  49  
    → **unlocks:** 1/1
 
-19. `quests-progression-060` — **Builder — Finish the Local Well**  
+18. `quests-progression-060` — **Builder — Finish the Local Well**  
   🔴 `M` · **Score:**  47  
    → **unlocks:** 0/0
 
-20. `quests-progression-054` — **Hunters Brotherhood — exceptional animal finale**  
+19. `quests-progression-054` — **Hunters Brotherhood — exceptional animal finale**  
   🟡 `L` · **Score:**  44  
    → **unlocks:** 0/0
 
-21. `settlements-npcs-044` — **Authored Outpost Occupants & Construction Lifecycle**  
+20. `settlements-npcs-044` — **Authored Outpost Occupants & Construction Lifecycle**  
   🔴 `L` · **Score:**  40  
    → **unlocks:** 1/1
 
-22. `quests-progression-058` — **Injured dog discovery thread**  
+21. `quests-progression-058` — **Injured dog discovery thread**  
   🟡 `M` · **Score:**  37  
    → **unlocks:** 0/0
 
-23. `tools-017` — **Custom UBC NPC model source and build pipeline**  
+22. `tools-017` — **Custom UBC NPC model source and build pipeline**  
   🔴 `M` · **Score:**  37  
    → **unlocks:** 0/0
 
-24. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
+23. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
   🔴 `M` · **Score:**  35  
    → **unlocks:** 0/0
 
-25. `npc-055` — **Semantic profession and activity animation coverage**  
+24. `npc-055` — **Semantic profession and activity animation coverage**  
   🔴 `L` · **Score:**  32  
    → **unlocks:** 0/0
 
-26. `world-terrain-042` — **Medicinal herb meadow patches**  
+25. `world-terrain-042` — **Medicinal herb meadow patches**  
   🟡 `M` · **Score:**  31  
    → **unlocks:** 1/1
 
-27. `npc-054` — **NPC desired gifts, gift acceptance and relationship rewards**  
+26. `npc-054` — **NPC desired gifts, gift acceptance and relationship rewards**  
   🔴 `L` · **Score:**  30  
    → **unlocks:** 0/0
 
-28. `items-player-014` — **Rope-pullable resource transport**  
+27. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-29. `tools-005` — **Seedvale Character Preparation Panel**  
+28. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-30. `world-terrain-039` — **N8AO / post-process cost budget**  
+29. `world-terrain-039` — **N8AO / post-process cost budget**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-31. `items-player-044` — **Shoulder and forearm equipment slots**  
+30. `items-player-044` — **Shoulder and forearm equipment slots**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-32. `world-terrain-041` — **Agent presentation render LOD**  
+31. `world-terrain-041` — **Agent presentation render LOD**  
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-33. `quests-progression-061` — **Builder — Complete an Unfinished Palisade Segment**  
+32. `quests-progression-061` — **Builder — Complete an Unfinished Palisade Segment**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-34. `quests-progression-070` — **Boar at the medicinal meadow — systemic settlement problem**  
+33. `quests-progression-070` — **Boar at the medicinal meadow — systemic settlement problem**  
   🟡 `L` · **Score:**  16  
    → **unlocks:** 0/0
 
@@ -267,9 +263,6 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
 - [`settlements-npcs-044-authored-outpost-occupants-and-construction-lifecycle.md`](settlements-npcs-044-authored-outpost-occupants-and-construction-lifecycle.md)  
   is blocked by:
   - [`world-031-authored-persistent-world-consequences.md`](world-031-authored-persistent-world-consequences.md)
-- [`settlements-npcs-049-merchant-wealth-tiers-and-travel-party-profile.md`](settlements-npcs-049-merchant-wealth-tiers-and-travel-party-profile.md)  
-  is blocked by:
-  - [`settlements-npcs-048-merchant-pack-animal-assignment-and-journey-continuity.md`](settlements-npcs-048-merchant-pack-animal-assignment-and-journey-continuity.md)
 
 ---
 
@@ -538,6 +531,9 @@ graph TD
   settlements_017["settlements-017 — Deterministically unique settlement names"]
   settlements_018["settlements-018 — Pasture and paddock fence road clearance and collision"]
   settlements_019["settlements-019 — Settlement render submission budget"]
+  settlements_020["settlements-020 — Founded settlement bootstrap integrity"]
+  settlements_021["settlements-021 — Shared settlement resident runtime"]
+  settlements_022["settlements-022 — Founded settlement live runtime and streaming"]
   settlements_npcs_001["settlements-npcs-001 — Cultivation Hydration & Watering"]
   settlements_npcs_002["settlements-npcs-002 — NPC professions — complete profession work integration"]
   settlements_npcs_003["settlements-npcs-003 — Hunter Arrow Production"]
@@ -1055,6 +1051,7 @@ graph TD
   quests_progression_063 --> quests_progression_064
   quests_progression_067 --> quests_progression_068
   settlements_003 --> quests_progression_010
+  settlements_003 --> settlements_020
   settlements_004 --> quests_progression_010
   settlements_005 --> items_player_022
   settlements_005 --> settlements_007
@@ -1075,6 +1072,8 @@ graph TD
   settlements_013 --> settlements_014
   settlements_013 --> settlements_018
   settlements_015 --> settlements_018
+  settlements_020 --> settlements_021
+  settlements_021 --> settlements_022
   settlements_npcs_001 --> settlements_npcs_043
   settlements_npcs_002 --> quests_progression_065
   settlements_npcs_002 --> settlements_npcs_005

@@ -131,6 +131,7 @@ Generated from TypeScript imports.
 - `settlement/household.ts`
 - `settlement/householdExchange.ts`
 - `settlement/householdWells.ts`
+- `settlement/livestock.ts`
 - `settlement/npcPhysicalProfile.ts`
 - `settlement/npcPostDeath.ts`
 - `settlement/npcState.ts`
@@ -1278,6 +1279,7 @@ Generated from TypeScript imports.
 - `player/physicalWorkStrength.ts`
 - `settlement/household.ts`
 - `settlement/householdExchange.ts`
+- `settlement/livestock.ts`
 - `settlement/places.ts`
 - `settlement/props.ts`
 - `settlement/storageDestinations.ts`
@@ -1291,6 +1293,7 @@ Generated from TypeScript imports.
 - `world/herbalGathering.ts`
 - `world/plantedCrops.ts`
 - `world/resourceSiteInventory.ts`
+- `world/transportCapacity.ts`
 - `world/transportOrder.ts`
 - `world/transportTransactions.ts`
 

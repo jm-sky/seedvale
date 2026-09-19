@@ -25,6 +25,12 @@ export type MerchantJourneyState = {
   transportOrderId?: string
   visitStartedAtDays?: number
   visitEndsAtDays?: number
+  /** Stable-commitment pack animal for this journey (plan
+   *  settlements-npcs-048) — resolved once at journey start and carried
+   *  unchanged through every phase transition below. `homeSettlementId` is
+   *  its persistent-livestock origin namespace; never reselected/replaced
+   *  mid-journey. Absent means the journey runs at baseline capacity. */
+  packAnimalId?: string
 }
 
 /** One configured visit duration in world days — deterministic, no RNG/timers. */
@@ -75,6 +81,7 @@ export function advanceMerchantJourneyToVisiting(
     phase: 'visiting',
     visitStartedAtDays: nowDays,
     visitEndsAtDays: nowDays + TRAVELLING_MERCHANT_VISIT_DAYS,
+    packAnimalId: journey.packAnimalId,
   }
 }
 
@@ -114,6 +121,7 @@ export function tryBeginMerchantReturn(
     homeSettlementId: journey.homeSettlementId,
     destinationSettlementId: journey.destinationSettlementId,
     phase: 'returning',
+    packAnimalId: journey.packAnimalId,
   }
   state.travel = points.live
     ? { destination: { ...points.homeTarget }, lastPosition: { ...points.origin }, purpose }

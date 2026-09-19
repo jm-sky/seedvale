@@ -180,25 +180,25 @@ Generated from exported TypeScript symbols.
 
 ## `ai/NpcAgent.ts`
 
-- `classifyPendingActivity` — function — line 749
-- `configureNpcPlayerReactionAudio` — function — line 997
-- `CurrentActivity` — type — line 550
-- `CurrentActivityKind` — type — line 543
-- `HUNT_RESUPPLY_ARROW_TARGET` — const — line 866
-- `NPC_HEIGHT` — const — line 483
-- `NPC_SHADOW_DISTANCE` — const — line 488
-- `NpcAgent` — class — line 1143
+- `classifyPendingActivity` — function — line 750
+- `configureNpcPlayerReactionAudio` — function — line 998
+- `CurrentActivity` — type — line 551
+- `CurrentActivityKind` — type — line 544
+- `HUNT_RESUPPLY_ARROW_TARGET` — const — line 867
+- `NPC_HEIGHT` — const — line 484
+- `NPC_SHADOW_DISTANCE` — const — line 489
+- `NpcAgent` — class — line 1146
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcAgentDeps` — type — line 1014
-- `NpcInspectionSnapshot` — type — line 565
-- `NpcWhy` — type — line 724
-- `projectNpcWhy` — function — line 791
-- `promoteChainKind` — function — line 741
+- `NpcAgentDeps` — type — line 1015
+- `NpcInspectionSnapshot` — type — line 566
+- `NpcWhy` — type — line 725
+- `projectNpcWhy` — function — line 792
+- `promoteChainKind` — function — line 742
 
 ## `ai/npcAnimalThreat.ts`
 
@@ -567,12 +567,12 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcProfessionWork.ts`
 
-- `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 98
-- `findWeaponNeedingMaintenance` — function — line 114
-- `HERBAL_CANDIDATE_LIMIT` — const — line 1142
-- `NpcWorkContext` — type — line 134
-- `planProfessionWork` — function — line 1237
-- `selectTraderCollectionGoods` — function — line 473
+- `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 100
+- `findWeaponNeedingMaintenance` — function — line 116
+- `HERBAL_CANDIDATE_LIMIT` — const — line 1171
+- `NpcWorkContext` — type — line 136
+- `planProfessionWork` — function — line 1266
+- `selectTraderCollectionGoods` — function — line 482
 
 ## `ai/npcSocialTitle.ts`
 

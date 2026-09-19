@@ -41,10 +41,10 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/createSettlement.ts`
 
-- `createSettlement` — function — line 487
-- `CreateSettlementDeps` — type — line 300
-- `Settlement` — type — line 159
-- `settlementSpawnPoint` — function — line 288
+- `createSettlement` — function — line 505
+- `CreateSettlementDeps` — type — line 306
+- `Settlement` — type — line 165
+- `settlementSpawnPoint` — function — line 294
 
 ## `settlement/decorProps.ts`
 
@@ -364,29 +364,36 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/livestock.ts`
 
-- `createLivestockRegistry` — function — line 329
-- `disposeLivestock` — function — line 930
-- `fillShepherdFlockKinds` — function — line 48
-- `isPlayerOwnedLivestockRecord` — function — line 105
-- `LIVESTOCK_KINDS` — const — line 81
-- `LIVESTOCK_URLS` — const — line 65
-- `LivestockPersistence` — type — line 157
-- `livestockRecordMatchesHouseholdSlot` — function — line 122
-- `LivestockRegistry` — type — line 179
-- `LivestockSaveRecord` — type — line 95
-- `livestockStrayCandidateFromAgent` — function — line 135
-- `PersistentLivestockContext` — type — line 840
-- `resolveLivePersistentAnimal` — function — line 848
-- `restoreDetachedPlayerOwnedLivestock` — function — line 912
-- `setOwnedAnimalControl` — function — line 900
-- `shouldSpawnDeterministicLivestockSlot` — function — line 114
+- `createLivestockRegistry` — function — line 338
+- `detachMerchantPackAnimal` — function — line 996
+  - domain: settlements-npcs
+- `disposeLivestock` — function — line 1067
+- `fillShepherdFlockKinds` — function — line 49
+- `isPlayerOwnedLivestockRecord` — function — line 106
+- `LIVESTOCK_KINDS` — const — line 82
+- `LIVESTOCK_URLS` — const — line 66
+- `LivestockPersistence` — type — line 165
+- `livestockRecordMatchesHouseholdSlot` — function — line 130
+- `LivestockRegistry` — type — line 187
+- `LivestockSaveRecord` — type — line 96
+- `livestockStrayCandidateFromAgent` — function — line 143
+- `PackAnimalCandidate` — type — line 928
+- `PackAnimalJourneyHooks` — type — line 934
+- `PersistentLivestockContext` — type — line 858
+- `resolveLivePersistentAnimal` — function — line 866
+- `resolveMerchantPackAnimalCandidate` — function — line 951
+  - domain: settlements-npcs
+- `restoreDetachedMerchantPackAnimals` — function — line 1047
+- `restoreDetachedPlayerOwnedLivestock` — function — line 1022
+- `setOwnedAnimalControl` — function — line 1010
+- `shouldSpawnDeterministicLivestockSlot` — function — line 115
   - domain: fauna
   - role: Household rolls and merchant-horse slots skip tombstones and player-owned records restored on the detached path (fauna-020 / fauna-030).
-- `spawnAnimalFromRecord` — function — line 224
-- `SpawnAnimalFromRecordDeps` — type — line 212
-- `spawnLivestock` — function — line 605
-- `tickSettlementLivestock` — function — line 947
-- `transferAnimalOwnership` — function — line 875
+- `spawnAnimalFromRecord` — function — line 232
+- `SpawnAnimalFromRecordDeps` — type — line 220
+- `spawnLivestock` — function — line 614
+- `tickSettlementLivestock` — function — line 1084
+- `transferAnimalOwnership` — function — line 906
 
 ## `settlement/lodging.ts`
 
@@ -480,19 +487,19 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/merchantJourney.ts`
 
-- `advanceMerchantJourneyToVisiting` — function — line 65
+- `advanceMerchantJourneyToVisiting` — function — line 71
   - domain: settlements-npcs
-- `cloneMerchantJourney` — function — line 33
-- `isNpcAwayOnMerchantJourney` — function — line 53
-- `MerchantJourneyHost` — type — line 43
+- `cloneMerchantJourney` — function — line 39
+- `isNpcAwayOnMerchantJourney` — function — line 59
+- `MerchantJourneyHost` — type — line 49
 - `MerchantJourneyPhase` — type — line 16
   - domain: settlements-npcs
 - `MerchantJourneyState` — type — line 18
-- `MerchantReturnPoints` — type — line 85
-- `resolveMerchantReturnArrival` — function — line 134
+- `MerchantReturnPoints` — type — line 92
+- `resolveMerchantReturnArrival` — function — line 142
   - domain: settlements-npcs
-- `TRAVELLING_MERCHANT_VISIT_DAYS` — const — line 31
-- `tryBeginMerchantReturn` — function — line 100
+- `TRAVELLING_MERCHANT_VISIT_DAYS` — const — line 37
+- `tryBeginMerchantReturn` — function — line 107
   - domain: settlements-npcs
 
 ## `settlement/merchantTrade.ts`
@@ -1112,13 +1119,13 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/SettlementsManager.ts`
 
-- `createSettlementsManager` — function — line 369
+- `createSettlementsManager` — function — line 374
   - domain: settlements
   - system: settlements-manager
   - role: Owns settlement generation, streaming and per-settlement economy/household/NPC-state registries.
   - owns: SettlementEconomy, Household
   - lifecycle: streaming
-- `SettlementsManager` — type — line 146
+- `SettlementsManager` — type — line 151
 
 ## `settlement/settlementStructures.ts`
 
