@@ -185,7 +185,7 @@ Status vocabulary:
 | 18 | Items, inventory & world items | item identity, stacks, pickup/drop, containers, transfers, tools and resource collection | ⬜ not reviewed | - | - |
 | 19 | Player systems | needs, stamina/HP, equipment, skills, mounting, respawn/new-game continuity | ⬜ not reviewed | - | - |
 | 20 | Interaction & input routing | target acquisition/cycling, prompts, priority, action dispatch, stale/invalid targets | ⬜ not reviewed | - | - |
-| 21 | Quests, opportunities, reputation & badges | trigger/lifecycle state, idempotency, rewards, consequences and world-state coupling | ⬜ not reviewed | - | - |
+| 21 | Quests, opportunities, reputation & badges | trigger/lifecycle state, idempotency, rewards, consequences and world-state coupling | ✅ reviewed | [review](../reviews/codebase-domain-audit/2026-09-19--21--quests-opportunities-reputation-and-badges.md) | [quests-progression-071](./quests-progression-071-generated-opportunity-retention-semantics.md), [quests-progression-072](./quests-progression-072-invalidated-quest-restore-metadata-continuity.md) |
 | 22 | Audio | loading, lifecycle, spatial/environment state, cave transitions and shared loader behaviour | ⬜ not reviewed | - | - |
 | 23 | UI ↔ simulation contracts | Vue/DOM projections, state synchronization, action boundaries, rebuild/stale references | ⬜ not reviewed | - | - |
 | 24 | Performance & workers | recurring work, complexity, allocations, cache ownership, workers and off-screen scaling | ⬜ not reviewed | - | - |
