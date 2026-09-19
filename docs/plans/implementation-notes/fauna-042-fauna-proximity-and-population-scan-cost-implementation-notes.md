@@ -63,3 +63,99 @@ Existing nearest-scan candidate counts remain the comparison for target discover
 - Herd-leader / mother scans over `currentOthers`.
 - NPC `destinationThreatHooks` fauna scans.
 - Browser/FPS verification.
+
+## Post-implementation hardening review
+
+Before treating `fauna-042` as fully verified, review the implementation against these additional checks. These are correctness/performance guardrails, not a request to redesign the architecture.
+
+### 1. Cell covering cost
+
+`faunaProximity.ts::coveringCellRange()` currently expands every query by one full cell:
+
+```ts
+const cover = radius + FAUNA_PROXIMITY_CELL_SIZE
+```
+
+With `FAUNA_PROXIMITY_CELL_SIZE = 16`, this is intentionally conservative but can substantially increase the number of buckets visited for common 10–20 m queries.
+
+Verify with diagnostics whether the extra-cell margin materially weakens candidate reduction. If so, prefer the smallest safe covering rule:
+- exact cells intersecting `x/z ± radius`; or
+- only a bounded movement margin justified by maximum same-pass displacement.
+
+A one-tick difference in which otherwise-equivalent animal is discovered first is acceptable. Do not add sorting or stable-order reconstruction solely to preserve old equal-distance ordering.
+
+### 2. Brute-force equivalence test
+
+Add a deterministic property-style test for `FaunaProximityIndex`:
+
+- generate a few hundred deterministic agent positions;
+- include negative coordinates and points exactly on/around cell boundaries;
+- query many centers/radii;
+- compare the exact-radius-filtered spatial result against a brute-force scan of the same wild pool.
+
+The invariant is set equivalence for candidates geometrically inside the requested radius. Result ordering is explicitly not part of the contract.
+
+This test should cover radii below, equal to, and above the 16 m cell size.
+
+### 3. Numeric cell-key safety
+
+`cellKey(cx, cz)` packs two signed coordinates into one number using `CELL_KEY_STRIDE`.
+
+Add focused tests proving no collisions for the real supported world-coordinate range, including:
+- negative X/Z;
+- cells around zero;
+- large positive/negative coordinates near the intended playable-world bound;
+- neighbouring cells differing only on one axis.
+
+If the supported world range cannot be expressed as a clear invariant, prefer an unambiguous key representation rather than relying on an undocumented numeric range assumption.
+
+### 4. Snapshot semantics
+
+The index is rebuilt once before the wild-agent update loop. Agent movement during that pass does not update bucket membership until the next fauna pass.
+
+Keep this behaviour deliberately; do not incrementally mutate the grid during each `AnimalAgent.update()` unless profiling proves it necessary.
+
+Add/retain a test or explicit invariant showing that:
+- a moved agent may be discovered from its previous bucket for the remainder of the current pass;
+- exact distance checks still reject it when no longer in range;
+- new proximity becomes visible on the next rebuild.
+
+This bounded one-pass lag is accepted for discovery and is preferable to mutation-during-iteration complexity.
+
+### 5. Spawn/death membership timing
+
+A respawn inserted after the proximity rebuild is expected to enter the proximity index on the next fauna pass. Death does not remove an agent from the current index because carcass queries need dead agents.
+
+Document/test both behaviours so future cleanup code does not accidentally remove corpses from the index or force mid-pass rebuilds.
+
+### 6. Scratch-buffer reentrancy
+
+`AnimalAgent.nearbyOthers()` uses shared scratch storage for narrowed candidate arrays.
+
+Verify every consumer of that returned array before future reuse:
+- no consumer retains it beyond the immediate synchronous operation;
+- no nested call can invoke `nearbyOthers()` and overwrite the same scratch while the outer consumer is still iterating;
+- tests should cover nested-query behaviour if such a call chain exists.
+
+If this invariant cannot be made obvious from current call sites, use caller-owned/reentrant scratch storage rather than relying on one shared mutable array.
+
+### 7. Remaining full-pool scans
+
+`currentOthers` remains intentionally available for herd/mother behaviour. Before closing verification, inventory its remaining read sites and classify them as:
+- global-membership semantics that must remain full-pool;
+- bounded proximity queries that should use the index;
+- low-frequency work intentionally left out of scope.
+
+Do not mechanically migrate `pickHerdLeader()` if leadership is defined over the whole herd rather than nearby animals.
+
+### Review success criteria
+
+The implementation is ready to remain as-is when:
+- brute-force equivalence proves no in-radius wild candidate is lost;
+- cell-key uniqueness is covered for the supported map range;
+- no scratch-buffer reentrancy hazard exists;
+- snapshot/spawn/death timing is explicit and tested;
+- diagnostics show proximity queries inspect materially fewer candidates than the full wild pool in a high-fauna scenario.
+
+Browser/performance verification remains User-owned.
+
