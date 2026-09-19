@@ -25,13 +25,13 @@ See [implementation notes](./implementation-notes/fauna-042-fauna-proximity-and-
 
 ## Goal
 
-Remove avoidable whole-population repeated scans and recurring allocations from fauna sensing/population bookkeeping while preserving the single `AnimalAgent.update()` simulation path and exact current targeting semantics.
+Remove avoidable whole-population repeated scans and recurring allocations from fauna sensing/population bookkeeping while preserving the single `AnimalAgent.update()` simulation path and gameplay-relevant targeting semantics.
 
 This is a bounded hot-path optimization, not an ecosystem redesign.
 
-## Confirmed current cost
+## Pre-implementation baseline
 
-`createFauna()` passes the complete wild `agents` array as `others` to every agent.
+Before commit `d44328b`, `createFauna()` passed the complete wild `agents` array as `others` to every agent.
 
 Full-rate sensing/targeting can linearly scan that collection for:
 
@@ -42,7 +42,7 @@ Full-rate sensing/targeting can linearly scan that collection for:
 
 The total shape remains O(N²) as the wild population grows. fauna-028 intentionally left sensing/targeting full-rate, while fauna-033 optimizes movement/water/collider cost rather than inter-animal discovery.
 
-The managed-spawner path additionally creates `filter().map()` population snapshots every update and then filters them again per spawner.
+Before commit `d44328b`, the managed-spawner path additionally created `filter().map()` population snapshots every update and then filtered them again per spawner.
 
 ## Scope
 
@@ -65,7 +65,7 @@ Existing consumers must retain:
 - role filters;
 - detect/flee/search radii;
 - committed-target validation;
-- stable tie behavior where currently defined;
+- nearest-target correctness and existing eligibility/range rules; exact ordering among otherwise-equivalent/equal-distance candidates is not a gameplay contract;
 - explicit `huntableLivestock` composition separate from the wild pool;
 - carcass claim/revalidation rules.
 
@@ -133,7 +133,7 @@ Add tests proving candidate narrowing preserves:
 10. rebuild → movement without rebuild cannot make a moved-away target pass the live radius predicate;
 11. snapshot lifecycle ordering is covered: all wild-agent updates run before removal, and spawner respawns occur only after the sensing pass;
 12. **mandatory correctness gate:** deterministic brute-force equivalence of static spatial queries vs. a full scan across cell boundaries, negative coordinates, query centers near cell edges/corners, and radii below/equal/above cell size; this must pass before tightening `coveringCellRange()` is accepted;
-13. spatial cell keys are collision-free throughout the documented supported world-coordinate range.
+13. spatial cell keys are collision-free across the documented supported cell/world-coordinate range, including negative coordinates, zero crossings, neighbouring cells on either axis and representative large in-range coordinates; the test should validate the arithmetic-packing assumption rather than force a string-key rewrite.
 
 ## Performance verification
 
