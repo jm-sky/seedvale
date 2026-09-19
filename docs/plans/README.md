@@ -113,6 +113,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `settlements-npcs-053-active-transport-order-registry-lifecycle.md`         | 🟡 | S      | ~~settlements-npcs-018~~, ~~settlements-npcs-019~~, ~~settlements-npcs-020~~                                                                                                                                                                                                               | -                                         |
 | ◼️ `npc-059-need-action-result-revalidation-and-atomic-relief.md`              | 🔴 | S      | -                                                                                                                                                                                                                                                                                          | -                                         |
 | 💡 `items-player-048-handheld-torch-retention-across-combat-weapon-draw.md`    | 🟡 | S      | ~~ui-input-018~~                                                                                                                                                                                                                                                                           | -                                         |
+| ◼️ `npc-060-social-pairing-cadence-and-allocation.md`                          | 🟡 | S      | -                                                                                                                                                                                                                                                                                          | -                                         |
 
 ---
 
@@ -239,7 +240,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - ai: `005`
 - fauna: `041`
 - items-player: `049`
-- npc: `060`
+- npc: `061`
 - persistence: `006`
 - quests-progression: `071`
 - settlements: `023`
