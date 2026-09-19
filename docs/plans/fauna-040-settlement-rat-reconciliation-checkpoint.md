@@ -1,7 +1,8 @@
 # Plan: Settlement rat reconciliation checkpoint
 
 **Created:** 2026-09-19
-**Status:** `planned` 📋
+**Status:** `done` ✅
+**Implemented at:** 2026-09-19
 **Priority:** high · **Effort:** S
 **Model:** Sonnet, Composer
 **Depends on:** none

@@ -24,6 +24,14 @@ describe('rat persistence registry (plan quests-progression-006)', () => {
     expect(serialized.entries[0]).toMatchObject({ settlementId: 'home', animalId: 'rat-home-0', x: 1, z: 2 })
   })
 
+  it('persists reconciliation buckets across serialize/hydrate (plan fauna-040)', () => {
+    const registry = createRatRegistry()
+    registry.markReconcileBucketProcessed('home', 12)
+    const roundTrip = createRatRegistry(registry.serialize())
+    expect(roundTrip.getLastReconcileBucket('home')).toBe(12)
+    expect(roundTrip.getLastReconcileBucket('other')).toBeUndefined()
+  })
+
   it('tombstones removed rats so they are not restored', () => {
     const registry = createRatRegistry({
       entries: [{

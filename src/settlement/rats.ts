@@ -124,6 +124,21 @@ export function shouldInfestationReplenish(args: {
  *  never despawns. Nest-gated infestation replenishment is the only path
  *  toward the damaged-storage target; destroyed nest still allows ordinary
  *  food-driven recovery up to the normal target. */
+/** Integer reconciliation bucket for `nowDays` (plan fauna-040). */
+export function ratReconcileBucket(nowDays: number): number {
+  return Math.floor(nowDays / RAT_RECONCILE_INTERVAL_DAYS)
+}
+
+/** Whether this settlement should run reconcile/eat side effects this tick. */
+export function shouldProcessRatReconciliation(
+  lastProcessedBucket: number | undefined,
+  nowDays: number,
+): { process: boolean, bucket: number } {
+  const bucket = ratReconcileBucket(nowDays)
+  if (lastProcessedBucket === bucket) return { process: false, bucket }
+  return { process: true, bucket }
+}
+
 export function ratReconcileAction(args: {
   alive: number
   normalTarget: number
@@ -261,7 +276,6 @@ export async function createSettlementRats(deps: SettlementRatsDeps): Promise<Se
   const saved = deps.ratPersistence?.getSaved(deps.settlementId)
   const removed = deps.ratPersistence?.getRemoved(deps.settlementId)
   let nextRatIndex = nextRatIndexFromSaved(saved)
-  let lastReconcileDay = -Infinity
   const random = createSeededRandom(deps.settlementSeed ^ 0x2a7d)
 
   function spawnOne(x: number, z: number, animalId: string, hydrate?: import('../fauna/AnimalAgent').AnimalSaveState): void {
@@ -375,10 +389,12 @@ export async function createSettlementRats(deps: SettlementRatsDeps): Promise<Se
         }
         agents = kept
       }
-      if (ctx.nowDays - lastReconcileDay >= RAT_RECONCILE_INTERVAL_DAYS) {
-        lastReconcileDay = ctx.nowDays
+      const lastBucket = deps.ratPersistence?.getLastReconcileBucket(deps.settlementId)
+      const reconciliation = shouldProcessRatReconciliation(lastBucket, ctx.nowDays)
+      if (reconciliation.process) {
         reconcile(ctx.dogCount, ctx.nowDays)
         maybeEatFood(ctx.nowDays)
+        deps.ratPersistence?.markReconcileBucketProcessed(deps.settlementId, reconciliation.bucket)
       }
     },
     getAgents: () => agents,

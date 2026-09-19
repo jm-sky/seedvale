@@ -330,6 +330,9 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
       removedLivestockIds: livestockSnapshot.removedIds,
       rats: ratSnapshot.entries,
       removedRatIds: ratSnapshot.removedIds,
+      ratReconcileBuckets: Object.keys(ratSnapshot.reconcileBuckets).length > 0
+        ? ratSnapshot.reconcileBuckets
+        : undefined,
       persistentHabitatOccupants: persistentOccupants.entries,
       removedPersistentOccupantSlots: persistentOccupants.removedSlots,
       storageInfestation: bundle.settlementsManager.snapshotStorageInfestation(),

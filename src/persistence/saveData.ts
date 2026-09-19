@@ -890,6 +890,8 @@ export type SaveData = {
   rats?: RatSaveRecord[]
   /** `${settlementId}:${animalId}` tombstones for settlement rats. */
   removedRatIds?: string[]
+  /** Last processed rat reconciliation bucket per settlement (plan fauna-040). */
+  ratReconcileBuckets?: Record<string, number>
   /** Sparse persistent habitat occupants (plan fauna-018) — fauna-owned,
    *  not settlement-owned. Ordinary wild fauna is still not persisted. */
   persistentHabitatOccupants?: PersistentOccupantSaveRecord[]
@@ -2455,6 +2457,11 @@ function isRemovedRatIdsField(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((id) => typeof id === 'string')
 }
 
+function isRatReconcileBucketsField(value: unknown): value is Record<string, number> {
+  if (!value || typeof value !== 'object') return false
+  return Object.entries(value).every(([k, v]) => typeof k === 'string' && typeof v === 'number' && Number.isFinite(v))
+}
+
 function isOptionalHorseTrainingField(value: unknown): boolean {
   if (value === undefined) return true
   if (!value || typeof value !== 'object') return false
@@ -2784,6 +2791,7 @@ export function isSaveData(value: unknown): value is SaveData {
   if (v.removedLivestockIds !== undefined && !isRemovedLivestockIdsField(v.removedLivestockIds)) return false
   if (v.rats !== undefined && !isRatsField(v.rats)) return false
   if (v.removedRatIds !== undefined && !isRemovedRatIdsField(v.removedRatIds)) return false
+  if (v.ratReconcileBuckets !== undefined && !isRatReconcileBucketsField(v.ratReconcileBuckets)) return false
   if (v.persistentHabitatOccupants !== undefined && !isPersistentHabitatOccupantsField(v.persistentHabitatOccupants)) return false
   if (v.removedPersistentOccupantSlots !== undefined && !isRemovedPersistentOccupantSlotsField(v.removedPersistentOccupantSlots)) return false
   if (v.storageInfestation !== undefined && !isStorageInfestationField(v.storageInfestation)) return false

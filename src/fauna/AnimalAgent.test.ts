@@ -1929,6 +1929,10 @@ describe('AnimalAgent interruptible carcass feeding (plan fauna-036)', () => {
     others: AnimalAgent[],
     observerPos: THREE.Vector3,
     dt: number,
+    extra: {
+      villages?: readonly { x: number, z: number, radius: number }[]
+      nearbyNpcs?: readonly { id: string, x: number, z: number }[]
+    } = {},
   ): void {
     predator.update({
       dt,
@@ -1937,6 +1941,7 @@ describe('AnimalAgent interruptible carcass feeding (plan fauna-036)', () => {
       dayFactor: 1,
       forestFactor: 0,
       litFires: [],
+      ...extra,
     })
   }
 
@@ -2077,6 +2082,34 @@ describe('AnimalAgent interruptible carcass feeding (plan fauna-036)', () => {
       }
     }
     throw new Error('predator never reclaimed carcass after interrupt')
+  })
+
+  it('releases a carcass claim when frenzy-beeline takes over (plan fauna-043)', () => {
+    const village = { x: 200, z: 200, radius: 30 }
+    const { predator, corpse } = startCarcassFeed({ def: ANIMAL_DEFS.wolf, animalId: 'wolf-frenzy-beeline' })
+    predator.setFrenzied(village)
+    tickPredator(predator, [predator, corpse], farObserver(), 0.25, { villages: [village] })
+    expect(predator.getDebugInfo().aiBranch).toBe('frenzy-beeline')
+    expect(corpse.foodClaimedBy == null).toBe(true)
+    expect(predator.getDebugInfo().foodTarget).toBeNull()
+
+    const scavenger = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.wolf, animalId: 'wolf-scavenger', x: 2, z: 0 }))
+    scavenger.life.hunger = 0.9
+    tickPredator(scavenger, [scavenger, corpse], farObserver(), 1)
+    expect(corpse.claimAsFood({})).toBe(false)
+    expect(corpse.foodClaimedBy).toBe(scavenger)
+  })
+
+  it('releases a carcass claim when npc-attack-frenzied takes over (plan fauna-043)', () => {
+    const village = { x: 200, z: 200, radius: 30 }
+    const { predator, corpse } = startCarcassFeed({ def: ANIMAL_DEFS.wolf, animalId: 'wolf-frenzy-npc' })
+    predator.setFrenzied(village)
+    tickPredator(predator, [predator, corpse], farObserver(), 0.25, {
+      villages: [village],
+      nearbyNpcs: [{ id: 'npc-guard', x: 1, z: 0 }],
+    })
+    expect(predator.getDebugInfo().aiBranch).toBe('npc-attack-frenzied')
+    expect(corpse.foodClaimedBy == null).toBe(true)
   })
 })
 

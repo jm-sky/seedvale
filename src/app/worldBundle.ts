@@ -602,6 +602,7 @@ function buildSettlementsManager(
   initialRemovedLivestockIds?: readonly string[],
   initialRats?: readonly import('../settlement/ratPersistence').RatSaveRecord[],
   initialRemovedRatIds?: readonly string[],
+  initialRatReconcileBuckets?: Record<string, number>,
   initialStorageInfestation?: Record<string, import('../settlement/ratInfestation').RatInfestationState>,
   seedHomeStorageInfestation?: boolean,
   /** Forwarded into every `createSettlement` call → every `NpcAgent` the
@@ -691,6 +692,7 @@ function buildSettlementsManager(
     initialRemovedLivestockIds,
     initialRats,
     initialRemovedRatIds,
+    initialRatReconcileBuckets,
     initialStorageInfestation,
     seedHomeStorageInfestation,
     workContracts,
@@ -1103,6 +1105,7 @@ type WorldSystemsSeed = {
   removedLivestockIds?: readonly string[]
   rats?: readonly import('../settlement/ratPersistence').RatSaveRecord[]
   removedRatIds?: readonly string[]
+  ratReconcileBuckets?: Record<string, number>
   storageInfestation?: Record<string, import('../settlement/ratInfestation').RatInfestationState>
   /** Authored V1 trigger for home storage infestation on a fresh world. */
   seedHomeStorageInfestation?: boolean
@@ -1271,6 +1274,7 @@ async function buildWorldSystems(
     removedLivestockIds: initialRemovedLivestockIds,
     rats: initialRats,
     removedRatIds: initialRemovedRatIds,
+    ratReconcileBuckets: initialRatReconcileBuckets,
     storageInfestation: initialStorageInfestation,
     seedHomeStorageInfestation,
     structureStates: initialStructureStates,
@@ -1605,7 +1609,7 @@ async function buildWorldSystems(
   // background, not awaited here (world-003 §3) — see
   // `SettlementsManager.homeReady`.
   bootMark('buildSettlementsManager')
-  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, herbalGather, hunting, destinationThreat, initialHouseholds, initialNpcStates, helperDelivery, initialNpcRelationships, initialLivestock, initialRemovedLivestockIds, initialRats, initialRemovedRatIds, initialStorageInfestation, seedHomeStorageInfestation, workContracts, transportOrders, resourceSiteInventories, resolveResourceSitePosition, playerWells, droppedItems, grassForage, playerTroughs, terrainPreparations, palisades, standingTorches, residentialBuildings, npcGraves, initialStructureStates, getWorldDays, onSettlementAvailable, npcWorldMovement, onAnimalDeathSound, initialFoundedSettlements)
+  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, herbalGather, hunting, destinationThreat, initialHouseholds, initialNpcStates, helperDelivery, initialNpcRelationships, initialLivestock, initialRemovedLivestockIds, initialRats, initialRemovedRatIds, initialRatReconcileBuckets, initialStorageInfestation, seedHomeStorageInfestation, workContracts, transportOrders, resourceSiteInventories, resolveResourceSitePosition, playerWells, droppedItems, grassForage, playerTroughs, terrainPreparations, palisades, standingTorches, residentialBuildings, npcGraves, initialStructureStates, getWorldDays, onSettlementAvailable, npcWorldMovement, onAnimalDeathSound, initialFoundedSettlements)
   bootMarkEnd('buildSettlementsManager')
   const homeDef = settlementsManager.getHomeDef()
   const riverWaterQuality = createRiverWaterQualityResolver(chunkManager.riverWaterContext, settlementsManager.peekDef)
@@ -2346,6 +2350,7 @@ export async function createWorldBundle(
   initialRemovedLivestockIds?: readonly string[],
   initialRats?: readonly import('../settlement/ratPersistence').RatSaveRecord[],
   initialRemovedRatIds?: readonly string[],
+  initialRatReconcileBuckets?: Record<string, number>,
   initialStorageInfestation?: Record<string, import('../settlement/ratInfestation').RatInfestationState>,
   seedHomeStorageInfestation: boolean = false,
   /** Plan settlements-007 — sparse settlement-structure condition/repair
@@ -2435,6 +2440,7 @@ export async function createWorldBundle(
     removedLivestockIds: initialRemovedLivestockIds,
     rats: initialRats,
     removedRatIds: initialRemovedRatIds,
+    ratReconcileBuckets: initialRatReconcileBuckets,
     storageInfestation: initialStorageInfestation,
     seedHomeStorageInfestation,
     structureStates: initialStructureStates,
@@ -2682,6 +2688,7 @@ export async function rebuildWorldBundle(
     removedLivestockIds: carriedLivestock?.removedIds,
     rats: carriedRats?.entries,
     removedRatIds: carriedRats?.removedIds,
+    ratReconcileBuckets: carriedRats?.reconcileBuckets,
     storageInfestation: carriedStorageInfestation,
     seedHomeStorageInfestation: false,
     structureStates: carriedStructureStates,

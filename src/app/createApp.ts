@@ -783,6 +783,7 @@ export async function createApp(
     initialSave?.removedLivestockIds,
     initialSave?.rats,
     initialSave?.removedRatIds,
+    initialSave?.ratReconcileBuckets,
     initialSave?.storageInfestation,
     initialSave === undefined,
     initialSave?.structureStates,

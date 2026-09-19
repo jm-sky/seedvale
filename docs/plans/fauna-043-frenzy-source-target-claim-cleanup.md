@@ -1,7 +1,8 @@
 # Plan: Frenzy source-target claim cleanup
 
 **Created:** 2026-09-19
-**Status:** `planned` 📋
+**Status:** `done` ✅
+**Implemented at:** 2026-09-19
 **Priority:** medium · **Effort:** S
 **Model:** Composer, Sonnet
 **Depends on:** ~~fauna-036~~, ~~fauna-017~~

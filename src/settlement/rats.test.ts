@@ -6,12 +6,15 @@ import {
   RAT_INFESTATION_PRESSURE_BONUS,
   RAT_MIN_REPRODUCTION_MULTIPLIER,
   RAT_POPULATION_CAP,
+  RAT_RECONCILE_INTERVAL_DAYS,
   RAT_URL,
   ratDogReproductionMultiplier,
   ratNormalPopulationTarget,
   ratPopulationTarget,
   ratReconcileAction,
+  ratReconcileBucket,
   shouldInfestationReplenish,
+  shouldProcessRatReconciliation,
 } from './rats'
 
 describe('RAT_URL / normalizeRatClipName', () => {
@@ -112,6 +115,29 @@ describe('infestation replenishment (plan quests-progression-013 §3/§5)', () =
   it('applies the dog multiplier against the deterministic roll', () => {
     const roll = infestationReplenishmentRoll(rollArgs.settlementId, rollArgs.settlementSeed, rollArgs.dayBucket)
     expect(shouldInfestationReplenish({ ...rollArgs, dogCount: 5 })).toBe(roll < RAT_MIN_REPRODUCTION_MULTIPLIER)
+  })
+})
+
+describe('rat reconciliation bucket (plan fauna-040)', () => {
+  it('derives stable integer buckets from world days', () => {
+    const bucket = ratReconcileBucket(1.2)
+    expect(bucket).toBe(Math.floor(1.2 / RAT_RECONCILE_INTERVAL_DAYS))
+  })
+
+  it('processes exactly once per bucket', () => {
+    const nowDays = 1.0
+    const first = shouldProcessRatReconciliation(undefined, nowDays)
+    expect(first.process).toBe(true)
+    const second = shouldProcessRatReconciliation(first.bucket, nowDays)
+    expect(second.process).toBe(false)
+    expect(second.bucket).toBe(first.bucket)
+  })
+
+  it('allows one new pass when the bucket advances', () => {
+    const bucket0 = ratReconcileBucket(0.1)
+    const bucket1 = ratReconcileBucket(0.1 + RAT_RECONCILE_INTERVAL_DAYS)
+    expect(bucket1).toBeGreaterThan(bucket0)
+    expect(shouldProcessRatReconciliation(bucket0, 0.1 + RAT_RECONCILE_INTERVAL_DAYS).process).toBe(true)
   })
 })
 

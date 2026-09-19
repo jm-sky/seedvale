@@ -286,8 +286,12 @@ export type SettlementsManager = {
    *  settlement's saved state first, then serializes the whole registry (plan
    *  persistence-001) — see `LivestockRegistry.serialize`. */
   snapshotLivestock: () => { entries: LivestockSaveRecord[], removedIds: string[] }
-  /** Flat rat persistence snapshot (plan quests-progression-006). */
-  snapshotRats: () => { entries: RatSaveRecord[], removedIds: string[] }
+  /** Flat rat persistence snapshot (plan quests-progression-006 / fauna-040). */
+  snapshotRats: () => {
+    entries: RatSaveRecord[]
+    removedIds: string[]
+    reconcileBuckets: Record<string, number>
+  }
   /** Rat infestation state per settlement (plan quests-progression-013). */
   snapshotStorageInfestation: () => Record<string, RatInfestationState>
   isStorageDamaged: (settlementId: string) => boolean
@@ -463,6 +467,7 @@ export async function createSettlementsManager(
   /** Saved settlement rats + tombstones (plan quests-progression-006). */
   initialRats?: readonly RatSaveRecord[],
   initialRemovedRatIds?: readonly string[],
+  initialRatReconcileBuckets?: Record<string, number>,
   /** Persisted rat infestation per settlement (plan quests-progression-013). */
   initialStorageInfestation?: Record<string, RatInfestationState>,
   /** When true, the home settlement starts with damaged storage and an intact
@@ -777,6 +782,7 @@ export async function createSettlementsManager(
   const rats = createRatRegistry({
     entries: initialRats ?? [],
     removedIds: initialRemovedRatIds ?? [],
+    reconcileBuckets: initialRatReconcileBuckets,
   })
 
   const ratInfestation = createRatInfestationRegistry(initialStorageInfestation)

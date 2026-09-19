@@ -3592,11 +3592,8 @@ export class AnimalAgent {
             break
           }
           case 'frenzy-beeline': {
-            // No `cancelSourceTarget()` here either — same asymmetry as
-            // `npc-attack-frenzied` below, on purpose (implementation notes
-            // F2, not fixed here): a frenzied predator committed to reaching
-            // the village keeps whatever source claim it already held.
             this.resetHumanThreatState()
+            this.cancelSourceTarget()
             this.moveTowardStrategicVillage(behaviourDt)
             break
           }
@@ -3618,8 +3615,7 @@ export class AnimalAgent {
             break
           }
           case 'npc-attack-frenzied': {
-            // No `cancelSourceTarget()` here — asymmetric with the other
-            // branches on purpose (implementation notes F2, not fixed here).
+            this.cancelSourceTarget()
             if (!this.threateningHuman && isNpcCombatDebugMode()) {
               logNpcThreatBranch({
                 label: 'threat state ON',
