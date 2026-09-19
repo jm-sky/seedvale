@@ -99,6 +99,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `settlements-020-founded-settlement-bootstrap-integrity.md`                 | 🔴 | M      | -                                                                                                                                                                                                                                                                                          | quests-abandoned-gold-mine-colony         |
 | ◼️ `settlements-021-shared-settlement-resident-runtime.md`                     | 🔴 | L      | settlements-020                                                                                                                                                                                                                                                                            | quests-abandoned-gold-mine-colony         |
 | ◼️ `settlements-022-founded-settlement-live-runtime-and-streaming.md`          | 🔴 | L      | settlements-021                                                                                                                                                                                                                                                                            | quests-abandoned-gold-mine-colony         |
+| ◼️ `tools-018-codebase-domain-and-flow-audit-master.md`                        | 🔴 | XL     | -                                                                                                                                                                                                                                                                                          | -                                         |
 
 ---
 
@@ -230,7 +231,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - quests-progression: `071`
 - settlements: `023`
 - settlements-npcs: `051`
-- tools: `018`
+- tools: `019`
 - ui-input: `025`
 - world: `033`
 - world-terrain: `043`
