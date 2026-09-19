@@ -3,6 +3,7 @@
 **Created:** 2026-09-19
 **Status:** `planned` 📋
 **Priority:** high · **Effort:** S
+**Model:** Sonnet, Composer
 **Depends on:** none
 **Domain:** `fauna`
 **Type:** `fix`
@@ -74,7 +75,7 @@ This plan does **not** add detailed rat simulation while a settlement is unloade
 
 When a settlement returns after one or more unloaded buckets, process the current bucket according to the existing low-fidelity model and record it. The purpose of this plan is exactly-once side effects, not a new off-screen ecosystem engine.
 
-### 4. Legacy/new-world default
+### 4. Legacy/new-world default and save compatibility
 
 Define one explicit rule for missing checkpoint state:
 
@@ -83,14 +84,19 @@ Define one explicit rule for missing checkpoint state:
 
 Do not use `-Infinity` as a reconstructed authoritative default.
 
+Current `main` already persists rat individuals/tombstones through `RatRegistry` and `SaveData`. Add the settlement checkpoint as an **optional sparse save field** beside that existing rat payload; absence carries the legacy rule above. With that backward-compatible shape, update validation/read/write wiring but **do not bump `CURRENT_SAVE_VERSION` or add a migration**. Only revisit that if implementation makes the field required or otherwise changes compatibility semantics.
+
 ## Relevant files / symbols
 
 - `src/settlement/rats.ts::createSettlementRats`
 - `RAT_RECONCILE_INTERVAL_DAYS`
 - `reconcile` / `maybeEatFood`
 - `src/settlement/ratPersistence.ts::RatRegistry`
-- SaveData rat serialization/validation/migration call sites
-- `SettlementsManager` capture/restore/rebuild wiring
+- `src/settlement/SettlementsManager.ts::snapshotRats` and stream-out `rats.capture`
+- `src/app/worldBundle.ts` rebuild carry
+- `src/app/saveState.ts::buildSaveData`
+- `src/app/createApp.ts` save restore wiring
+- `src/persistence/saveData.ts` optional rat checkpoint field + validation
 
 `ratInfestation.ts` remains the owner of storage-damage/nest facts. Do not overload infestation state with rat-runtime cadence unless current persistence wiring proves that is materially simpler and keeps ownership clearer than extending `RatRegistry`.
 
