@@ -3,7 +3,7 @@
 **Created:** 2026-09-18
 **Status:** `draft` 📝
 **Priority:** high · **Effort:** L
-**Depends on:** settlements-npcs-048, settlements-npcs-050, fauna-039
+**Depends on:** settlements-npcs-048, settlements-npcs-050, settlements-npcs-051, fauna-039
 **Domain:** `world`
 **Type:** `feature`
 **Roadmap:** `quests-travelling-merchant-journeys.md`
@@ -51,8 +51,23 @@ Plan ma ustalić canonical transition:
 
 ```text
 active merchant journey
+→ normal detailed/off-screen threat + combat resolution
+→ party assistance/defend/flee has had a chance to resolve
+→ real terminal condition
 → terminal journey failure
 ```
+
+`settlements-npcs-051` jest ownerem detailed road-party execution i bounded party threat cooperation. Ten plan obserwuje wynik; nie skraca encounteru do Merchant-specific `failJourney()`.
+
+Guardrail:
+
+```text
+predator attacks Merchant
++ living capable escort is locally present
+!= immediate terminal journey failure
+```
+
+Terminal failure musi wynikać z realnego death/blocked/irrecoverable journey state po normalnych combat/threat semantics.
 
 bez:
 
