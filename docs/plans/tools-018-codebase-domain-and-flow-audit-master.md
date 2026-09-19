@@ -40,6 +40,8 @@ The recent water mirror defect where a predicate effectively always evaluated to
 8. Do not infer browser/gameplay correctness from static inspection or automated tests.
 9. Each audit session updates this master plan and writes one dedicated review artifact.
 10. Confirmed implementation work should become a focused plan in the domain that owns the fix; do not turn this master plan into an implementation backlog.
+11. This audit is about code correctness, architecture, lifecycle/persistence and performance — not feature completeness or conformance to `VISION.md`.
+12. Do not report a gameplay/design/Vision mismatch as a finding unless it exposes a concrete correctness, architecture, lifecycle, persistence or performance defect in the current code.
 
 ## Required review flow
 
@@ -79,7 +81,29 @@ Every review should inspect, where applicable:
 - asymmetric player/NPC/fauna flows,
 - dead/legacy alternative implementations,
 - recurring/per-frame/per-entity work and avoidable allocation/GC,
-- documentation that materially disagrees with current code.
+- documentation discrepancies only when they reveal or can cause a concrete code correctness, architecture, lifecycle, persistence or performance defect.
+
+## Finding scope
+
+In-scope findings are concrete defects or risks evidenced in current code, especially:
+
+- incorrect predicates, guards, defaults, fallbacks or control flow,
+- duplicated/conflicting authoritative state,
+- broken ownership, cleanup, rebuild or identity lifecycle,
+- save/load/migration or off-screen/time-skip continuity defects,
+- stale references and invalid runtime projections,
+- duplicated/parallel mechanisms that can diverge,
+- expensive recurring work, poor algorithmic complexity, unnecessary allocations/GC, repeated calculations, avoidable rebuilds or over-frequent updates.
+
+Out of scope as standalone findings:
+
+- missing gameplay features,
+- differences from `VISION.md`, roadmap or intended design,
+- subjective gameplay/design quality,
+- "this system could be more realistic/deeper" observations,
+- documentation drift that has no concrete impact on code correctness, architecture, lifecycle/persistence or performance.
+
+Use `VISION.md` only when necessary to understand an existing code contract; do not use it as a compliance checklist.
 
 ## Finding classification
 
