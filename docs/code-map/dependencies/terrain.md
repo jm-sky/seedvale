@@ -1431,6 +1431,7 @@ Generated from TypeScript imports.
 - `fauna/animalHarvest.test.ts`
 - `fauna/animalVariants.test.ts`
 - `fauna/createFauna.ts`
+- `fauna/faunaProximity.test.ts`
 - `fauna/persistentOccupants.test.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`

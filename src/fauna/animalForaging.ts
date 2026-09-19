@@ -29,7 +29,7 @@ import { classifyWaterTraversal, wadeDepthFor } from './waterTraversal'
 /** Radius (world units) searched around the animal for a valid forage spot
  *  or a scavengeable carcass once hunger crosses `NEED_ELEVATED_THRESHOLD`
  *  (plan 094). */
-const FOOD_SEARCH_RADIUS = 14
+export const FOOD_SEARCH_RADIUS = 14
 /** Hunger (`AnimalLifeState.hunger`) a scavenging-capable predator must
  *  reach before a `rotting` corpse becomes a viable food candidate at all
  *  (plan fauna-005) — well above `NEED_ELEVATED_THRESHOLD` (the threshold

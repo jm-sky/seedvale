@@ -67,6 +67,7 @@ import {
   type ClosedSettlementSite,
   resolveClosedPredatorPressure,
 } from './closedPredatorPressure'
+import { createFaunaProximityIndex } from './faunaProximity'
 import {
   type HabitatPressureCacheEntry,
   type HabitatPressureSnapshot,
@@ -701,6 +702,9 @@ export async function createFauna(
 
   const random = createSeededRandom(seed ^ 0xfa11)
   let agents: AnimalAgent[] = []
+  const proximity = createFaunaProximityIndex()
+  /** Reusable fauna-041 membership counts keyed by `spawnPointId` (plan fauna-042). */
+  const boundOccupancyCounts = new Map<string, number>()
   /** `animalId`s of the wolf den's initial pack (plan 093 Etap E) — set once
    *  at placement, checked by `isWolfDenCleared()`. Empty if the den failed
    *  to find a valid site (`isWolfDenCleared()` then always reports `false`,
@@ -1380,8 +1384,11 @@ export async function createFauna(
     ) {
       const dayFactor = skyParamsFromTime(timeOfDay).dayFactor
       const agentCpu = getAgentCpuDiag()
-      agentCpu.beginFaunaAgentUpdates()
       const diagOn = agentCpu.isEnabled()
+      const proximityT0 = diagOn ? performance.now() : 0
+      proximity.rebuild(agents)
+      if (diagOn) agentCpu.addFaunaProximityRebuildMs(performance.now() - proximityT0)
+      agentCpu.beginFaunaAgentUpdates()
       for (const a of agents) {
         // `forestSampling` (fauna-cpu-diagnostics): caller-side environment
         // sampling that runs ahead of `AnimalAgent.update()` itself, but
@@ -1404,6 +1411,7 @@ export async function createFauna(
         a.update({
           dt,
           others: agents,
+          proximity,
           observerPos,
           dayFactor,
           forestFactor,
@@ -1459,12 +1467,18 @@ export async function createFauna(
       if (lastWorldDays === null) lastWorldDays = worldDays
       const dayDelta = Math.max(0, worldDays - lastWorldDays)
       lastWorldDays = worldDays
+      const spawnerT0 = diagOn ? performance.now() : 0
+      if (dayDelta > 0) {
+        boundOccupancyCounts.clear()
+        for (const a of agents) {
+          if (a.isDead() || !a.spawnPointId || occupantRegistry.hasPersistentAnimalId(a.animalId)) continue
+          boundOccupancyCounts.set(a.spawnPointId, (boundOccupancyCounts.get(a.spawnPointId) ?? 0) + 1)
+        }
+      }
       updateSpawners(
         spawners,
         dayDelta,
-        agents
-          .filter((a) => !a.isDead() && !occupantRegistry.hasPersistentAnimalId(a.animalId) && a.spawnPointId)
-          .map((a) => ({ kind: a.def.kind, spawnPointId: a.spawnPointId! })),
+        (spawner) => boundOccupancyCounts.get(spawner.id) ?? 0,
         (spawner) => {
           const pos = resolveWildFaunaSpawnPosition(
             findWalkableNear(spawner.x, spawner.z, 0, 4),
@@ -1475,10 +1489,12 @@ export async function createFauna(
           const agent = spawnAgent(spawner.kind, pos.x, pos.z, undefined, undefined, undefined, spawner.id)
           scene.add(agent.mesh)
           agents.push(agent)
+          boundOccupancyCounts.set(spawner.id, (boundOccupancyCounts.get(spawner.id) ?? 0) + 1)
           return true
         },
         reservedPersistentSlots,
       )
+      if (diagOn) agentCpu.addFaunaSpawnerBookkeepingMs(performance.now() - spawnerT0)
 
       // Recovery check (plan 125 §8) — at most once per in-game day, and
       // only for spawners actually waiting on it (`disabled`/`recovering`);

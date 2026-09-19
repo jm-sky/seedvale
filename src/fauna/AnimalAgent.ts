@@ -8,6 +8,7 @@ import type { AnimalAttractionSource } from '../world/animalAttractionSource'
 import type { CaveTraversalPoint } from '../world/caves/caveHabitat'
 import type { GrassForageService } from '../world/createGrassForagePatches'
 import type { WaterBodyKind } from '../world/WaterSource'
+import type { FaunaProximityIndex } from './faunaProximity'
 import {
   createMovementWatchdog,
   type MovementWatchdog,
@@ -115,6 +116,7 @@ import {
   findFoodTarget,
   findWaterTarget,
   FOOD_INTERACTION_RANGE,
+  FOOD_SEARCH_RADIUS,
   type ForagingContext,
   isSourceTargetValid,
   SOURCE_SEARCH_COOLDOWN_SEC,
@@ -862,6 +864,10 @@ const dogGuardPreyTargetScratch: { animalId: string, ownerHouseId?: string }[] =
 const dogPestScratch: DogPestCandidate[] = []
 const dogHowlScratch: RecentVocalizeCandidate[] = []
 const dogStrangerScratch: StrangerNpcCandidate[] = []
+/** Reused covering-cell agent list for carcass/rabid/corpse scans that still
+ *  take an array (plan fauna-042). Sequential fauna-pass processing makes a
+ *  module buffer safe the same way `preyAlertScratch` is. */
+const nearbyAgentScratch: AnimalAgent[] = []
 
 function scratchAt<T>(buf: T[], i: number, create: () => T): T {
   let item = buf[i]
@@ -1150,6 +1156,15 @@ export type AnimalUpdateContext = {
    *  Defaults to none so existing wild-fauna/test callers keep prior
    *  wild-prey-only behaviour. */
   huntableLivestock?: readonly AnimalAgent[]
+  /**
+   * Fauna-owned local candidate view (plan fauna-042) — rebuilt once per
+   * wild `Fauna.update()` from the wild `agents` pool. Sensing/targeting
+   * scans visit covering cells instead of the full array. Livestock stays
+   * on `huntableLivestock` and is never inserted into these buckets.
+   * Absent in tests and settlement livestock ticks (those pools are already
+   * small); the original `others` scan is then used unchanged.
+   */
+  proximity?: FaunaProximityIndex
   /** Narrow view of the managed spawner `spawnPointId` currently resolves
    *  to (plan fauna-034 §6/§8) — `createFauna.ts`'s own O(1)
    *  `spawnerById.get(agent.spawnPointId)`, adapted to plain data. Only
@@ -1637,6 +1652,8 @@ export class AnimalAgent {
    *  threading it through `wander()`'s call sites (same technique as
    *  `currentVillages` above, plan 118). */
   private currentOthers: AnimalAgent[] = []
+  /** This frame's optional wild proximity index (plan fauna-042). */
+  private tickProximity: FaunaProximityIndex | undefined
   /** This frame's `nowDays`/`grassForage`, cached the same way as
    *  `currentOthers` above (plan fauna-010) — `findDietTarget`/
    *  `isSourceTargetValid`/`performSourceAction` need both, but threading
@@ -3183,8 +3200,16 @@ export class AnimalAgent {
    *  simulation truth (phase/timers/proximity effect) always runs; only the
    *  FX presentation is distance-gated (plan 188 §6/§10). No-op once the
    *  corpse has left this path via `harvestMeat()`/`bury()`. */
-  private advanceCorpseDecay(dt: number, others: readonly AnimalAgent[], observerPos: THREE.Vector3): void {
-    advanceAnimalCorpse(this.corpse, this, dt, this.rabid, others, observerPos, this.tickNowDays)
+  private advanceCorpseDecay(dt: number, observerPos: THREE.Vector3): void {
+    advanceAnimalCorpse(
+      this.corpse,
+      this,
+      dt,
+      this.rabid,
+      this.nearbyOthers(8, this.currentOthers),
+      observerPos,
+      this.tickNowDays,
+    )
   }
 
   /** Lazily seeds `productionReadyAtDays` on the very first real tick — a
@@ -3299,6 +3324,7 @@ export class AnimalAgent {
       scareStimulus = null,
       huntableLivestock = [],
       habitat,
+      proximity,
     } = ctx
     this._tickPlayerControlPos = playerControlPos ?? null
     this.attractionConsumeFood = consumeAttractedFood
@@ -3307,6 +3333,8 @@ export class AnimalAgent {
     this.attractionClockSec += dt
     pruneAttractionIgnored(this.attractionIgnoreUntil, this.attractionClockSec)
     this.tickNowDays = nowDays
+    this.currentOthers = others
+    this.tickProximity = proximity
     if (!this.health.dead && this.injuryRecovery.physicalInjury > 0) {
       resolveInjuryRecovery(this.injuryRecovery, nowDays)
     }
@@ -3321,7 +3349,7 @@ export class AnimalAgent {
     }
     if (this.health.dead) {
       if (this.corpse.deathAtDays == null) this.corpse.deathAtDays = nowDays
-      this.advanceCorpseDecay(dt, others, observerPos)
+      this.advanceCorpseDecay(dt, observerPos)
       // Keep the mixer advancing only long enough for the one-shot death
       // clip to actually play (plan npc-009) — `null` when there is no clip
       // in flight, so a permanently dead animal never costs a per-frame
@@ -3402,6 +3430,7 @@ export class AnimalAgent {
     const debugPrevZ = this.mesh.position.z
     this.currentVillages = villages
     this.currentOthers = others
+    this.tickProximity = proximity
     this.tickGrassForage = grassForage
     this.tickWaterSourceProvider = waterSourceProvider
     const sensingT0 = diagOn ? performance.now() : 0
@@ -4243,16 +4272,16 @@ export class AnimalAgent {
     return false
   }
 
-  private scareHerdmatesNearby(others: AnimalAgent[]): number {
+  private scareHerdmatesNearby(_others: AnimalAgent[]): number {
     const r = AnimalAgent.SCARE_HERD_PROXIMITY_M
     let n = 0
-    for (const other of others) {
-      if (other === this || other.isDead() || other.def.kind !== this.def.kind) continue
+    this.forEachNearby(r, (other) => {
+      if (other === this || other.isDead() || other.def.kind !== this.def.kind) return
       if (Math.hypot(this.mesh.position.x - other.mesh.position.x, this.mesh.position.z - other.mesh.position.z) > r) {
-        continue
+        return
       }
       n++
-    }
+    })
     return n
   }
 
@@ -4664,7 +4693,7 @@ export class AnimalAgent {
    *  (`fleeRange: 0`) with no kind-specific branch — see
    *  `PREY_ALERT_RANGE_BONUS`'s doc. */
   private resolveAlertThreat(
-    others: readonly AnimalAgent[],
+    _others: readonly AnimalAgent[],
     nearbyPredators: readonly AnimalAgent[],
   ): { x: number, z: number } | null {
     if (this.def.fleeRange <= 0) return null
@@ -4692,17 +4721,18 @@ export class AnimalAgent {
       c.huntingLiveTarget = a.isHuntingLive
       n++
     }
-    for (const a of others) {
-      if (a === this) continue
+    const alertRange = this.def.fleeRange + PREY_ALERT_RANGE_BONUS + straySurvivalFleeRangeBonus(this._stray)
+    this.forEachNearby(alertRange, (a) => {
+      if (a === this) return
       push(a)
-    }
+    })
     for (const a of nearbyPredators) push(a)
     preyAlertScratch.length = n
     return resolvePreyAlertThreat(
       this.mesh.position.x,
       this.mesh.position.z,
       preyAlertScratch,
-      this.def.fleeRange + PREY_ALERT_RANGE_BONUS + straySurvivalFleeRangeBonus(this._stray),
+      alertRange,
     )
   }
 
@@ -4993,7 +5023,7 @@ export class AnimalAgent {
   private updateRabid(dt: number, others: readonly AnimalAgent[]): void {
     const target = isExhausted(this.life.stamina)
       ? null
-      : pickRabidTarget(this, others, RABIES_TARGET_DETECT_RANGE)
+      : pickRabidTarget(this, this.nearbyOthers(RABIES_TARGET_DETECT_RANGE, others), RABIES_TARGET_DETECT_RANGE)
     if (!target) {
       this.setIntent('wander')
       this.wander(dt)
@@ -5092,8 +5122,8 @@ export class AnimalAgent {
     }
     if (!this.sourceTarget && this.sourceSearchCooldown <= 0) {
       this.sourceTarget = thirstElevated
-        ? findWaterTarget(ctx) ?? (hungerElevated ? findFoodTarget(ctx, this, others) : null)
-        : findFoodTarget(ctx, this, others)
+        ? findWaterTarget(ctx) ?? (hungerElevated ? findFoodTarget(ctx, this, this.nearbyOthers(FOOD_SEARCH_RADIUS, others)) : null)
+        : findFoodTarget(ctx, this, this.nearbyOthers(FOOD_SEARCH_RADIUS, others))
       if (this.sourceTarget) this.sourceCaveRouteIndex = 0
       if (!this.sourceTarget) this.sourceSearchCooldown = SOURCE_SEARCH_COOLDOWN_SEC
     }
@@ -5698,7 +5728,7 @@ export class AnimalAgent {
   private resolvePreyTarget(others: AnimalAgent[], huntableLivestock: readonly AnimalAgent[]): AnimalAgent | null {
     if (this.preyTarget) {
       const target = this.preyTarget
-      const stillMember = others.includes(target) || huntableLivestock.includes(target)
+      const stillMember = this.isWildPoolMember(target, others) || huntableLivestock.includes(target)
       const inRange = stillMember && !target.health.dead && Math.hypot(
         target.mesh.position.x - this.mesh.position.x,
         target.mesh.position.z - this.mesh.position.z,
@@ -5713,6 +5743,41 @@ export class AnimalAgent {
     return found
   }
 
+  /**
+   * Visit covering-cell wild candidates (plan fauna-042), or the full
+   * `currentOthers` array when no proximity index was supplied this tick
+   * (tests, livestock).
+   */
+  private forEachNearby(radius: number, visit: (agent: AnimalAgent) => void): void {
+    const proximity = this.tickProximity
+    if (!proximity) {
+      for (const other of this.currentOthers) visit(other)
+      return
+    }
+    let visited = 0
+    proximity.forEachNear(this.mesh.position.x, this.mesh.position.z, radius, (agent) => {
+      visited++
+      visit(agent)
+    })
+    getAgentCpuDiag().recordFaunaProximityQuery(visited)
+  }
+
+  private nearbyOthers(radius: number, fallback: readonly AnimalAgent[]): AnimalAgent[] {
+    if (!this.tickProximity) return fallback as AnimalAgent[]
+    let n = 0
+    this.forEachNearby(radius, (agent) => {
+      if (n < nearbyAgentScratch.length) nearbyAgentScratch[n] = agent
+      else nearbyAgentScratch.push(agent)
+      n++
+    })
+    nearbyAgentScratch.length = n
+    return nearbyAgentScratch
+  }
+
+  private isWildPoolMember(agent: AnimalAgent, others: AnimalAgent[]): boolean {
+    return this.tickProximity ? this.tickProximity.has(agent) : others.includes(agent)
+  }
+
   private nearest(
     others: AnimalAgent[],
     role: AnimalRole,
@@ -5721,8 +5786,8 @@ export class AnimalAgent {
     let best: AnimalAgent | null = null
     let bestD = range
     let candidatesChecked = 0
-    for (const o of others) {
-      if (o === this || o.def.role !== role || o.health.dead) continue
+    const consider = (o: AnimalAgent): void => {
+      if (o === this || o.def.role !== role || o.health.dead) return
       candidatesChecked++
       const d = Math.hypot(
         o.mesh.position.x - this.mesh.position.x,
@@ -5732,6 +5797,10 @@ export class AnimalAgent {
         bestD = d
         best = o
       }
+    }
+    if (this.tickProximity) this.forEachNearby(range, consider)
+    else {
+      for (const o of others) consider(o)
     }
     getAgentCpuDiag().recordNearestScan(candidatesChecked)
     return best

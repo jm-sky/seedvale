@@ -11,6 +11,7 @@ import { LEAD_START_DISTANCE } from './animalLead'
 import { NEED_ELEVATED_THRESHOLD } from './AnimalLife'
 import { horseNameForAnimal } from './animalNames'
 import { type AnimalScareStimulus, scareFleeOrigin, shouldScare } from './animalScare'
+import { createFaunaProximityIndex, FAUNA_PROXIMITY_CELL_SIZE } from './faunaProximity'
 import { JUVENILE_MATURITY_SECONDS, JUVENILE_SCALE_FACTOR } from './herdCohesion'
 import { senseOwnedFlockThreat } from './shepherdFlock'
 
@@ -2197,3 +2198,138 @@ describe('animal pack (plan fauna-039)', () => {
     expect(packVisual?.parent).toBeNull()
   })
 })
+
+describe('AnimalAgent proximity candidate narrowing (plan fauna-042)', () => {
+  const farObserver = () => new THREE.Vector3(1000, 0, 1000)
+
+  function tick(
+    agents: AnimalAgent[],
+    huntableLivestock: readonly AnimalAgent[] = [],
+    dt = 1,
+  ): void {
+    const proximity = createFaunaProximityIndex()
+    proximity.rebuild(agents)
+    for (const agent of agents) {
+      agent.update({
+        dt,
+        others: agents,
+        proximity,
+        huntableLivestock,
+        observerPos: farObserver(),
+        dayFactor: 1,
+        forestFactor: 0,
+        litFires: [],
+      })
+    }
+  }
+
+  it('selects the nearest in-range wild prey and ignores a distant decoy', () => {
+    const wolf = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.wolf, animalId: 'wolf-near', x: 0, z: 0 }))
+    const near = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.deer, animalId: 'deer-near', x: 4, z: 0 }))
+    const far = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.deer, animalId: 'deer-far', x: 400, z: 0 }))
+    tick([wolf, near, far])
+    expect(wolf.huntingPrey()?.animalId).toBe('deer-near')
+  })
+
+  it('selects the nearest in-range predator threat', () => {
+    const deer = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.deer, animalId: 'deer-flee', x: 0, z: 0 }))
+    const wolf = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.wolf, animalId: 'wolf-threat', x: 5, z: 0 }))
+    const farWolf = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.wolf, animalId: 'wolf-far', x: 400, z: 0 }))
+    tick([deer, wolf, farWolf])
+    expect(deer.getDebugInfo().intent).toBe('flee')
+    expect(deer.getDebugInfo().aiBranch).toBe('prey-normal')
+  })
+
+  it('excludes dead candidates and never selects self', () => {
+    const wolf = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.wolf, animalId: 'wolf-self', x: 0, z: 0 }))
+    const dead = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.deer, animalId: 'deer-dead', x: 2, z: 0 }))
+    dead.takeDamage(9999)
+    tick([wolf, dead])
+    expect(wolf.huntingPrey()).toBeNull()
+    expect(wolf.getDebugInfo().intent).not.toBe('chase')
+  })
+
+  it('invalidates a committed prey target that leaves detectRange', () => {
+    const wolf = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.wolf, animalId: 'wolf-commit', x: 0, z: 0 }))
+    const deer = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.deer, animalId: 'deer-commit', x: 3, z: 0 }))
+    tick([wolf, deer])
+    expect(wolf.huntingPrey()?.animalId).toBe('deer-commit')
+    deer.mesh.position.x = 400
+    tick([wolf, deer])
+    expect(wolf.huntingPrey()).toBeNull()
+  })
+
+  it('selects and claims a nearby carcass, not a distant one', () => {
+    const wolf = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.wolf, animalId: 'wolf-scavenge', x: 0, z: 0 }))
+    wolf.life.hunger = 0.9
+    wolf.life.thirst = 0.2
+    const nearCorpse = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.rabbit, animalId: 'corpse-near', x: 1, z: 0 }))
+    nearCorpse.takeDamage(9999)
+    const farCorpse = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.rabbit, animalId: 'corpse-far', x: 400, z: 0 }))
+    farCorpse.takeDamage(9999)
+    tick([wolf, nearCorpse, farCorpse])
+    expect(nearCorpse.claimAsFood({})).toBe(false)
+    expect(farCorpse.claimAsFood(wolf)).toBe(true)
+  })
+
+  it('keeps huntableLivestock off the wild buckets and still hunts through the encounter set', () => {
+    const wolf = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.wolf, animalId: 'wolf-livestock', x: 0, z: 0 }))
+    const sheep = new AnimalAgent(makeDeps({
+      def: ANIMAL_DEFS.sheep,
+      animalId: 'sheep-encounter',
+      x: 4,
+      z: 0,
+      ownerHouseId: 'house-1',
+    }))
+    const proximity = createFaunaProximityIndex()
+    proximity.rebuild([wolf])
+    expect(proximity.has(sheep)).toBe(false)
+    wolf.update({
+      dt: 1,
+      others: [wolf],
+      proximity,
+      huntableLivestock: [sheep],
+      observerPos: farObserver(),
+      dayFactor: 1,
+      forestFactor: 0,
+      litFires: [],
+    })
+    expect(wolf.huntingPrey()).toEqual({ animalId: 'sheep-encounter', ownerHouseId: 'house-1' })
+  })
+
+  it('still selects a prey animal sitting on a spatial-cell boundary', () => {
+    const wolf = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.wolf, animalId: 'wolf-boundary', x: 0.2, z: 0 }))
+    const deer = new AnimalAgent(makeDeps({
+      def: ANIMAL_DEFS.deer,
+      animalId: 'deer-boundary',
+      x: FAUNA_PROXIMITY_CELL_SIZE,
+      z: 0,
+    }))
+    expect(Math.hypot(deer.mesh.position.x - wolf.mesh.position.x, 0)).toBeLessThan(ANIMAL_DEFS.wolf.detectRange)
+    tick([wolf, deer])
+    expect(wolf.huntingPrey()?.animalId).toBe('deer-boundary')
+  })
+
+  it('continues lifecycle and targeting for off-screen / distant animals', () => {
+    const deer = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.deer, animalId: 'offscreen-deer', x: 0, z: 0 }))
+    const wolf = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.wolf, animalId: 'offscreen-wolf', x: 6, z: 0 }))
+    const hungerBefore = deer.life.hunger
+    tick([deer, wolf])
+    // Observer is 1 km away, so cadence stays `routine`; lifecycle and
+    // targeting still run (dt exceeds the routine interval).
+    expect(deer.getDebugInfo().updateImportance).toBe('routine')
+    expect(deer.getDebugInfo().intent).toBe('flee')
+    expect(deer.life.hunger).toBeGreaterThan(hungerBefore)
+  })
+
+  it('a rabid animal still discovers the nearest live target without scanning the far pool', () => {
+    const rabid = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.wolf, animalId: 'rabid-wolf', x: 0, z: 0 }))
+    rabid.infectWithRabies()
+    const near = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.deer, animalId: 'rabid-near', x: 3, z: 0 }))
+    const far = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.deer, animalId: 'rabid-far', x: 400, z: 0 }))
+    tick([rabid, near, far])
+    expect(rabid.getDebugInfo().aiBranch).toBe('rabid')
+    expect(rabid.getDebugInfo().intent).toBe('chase')
+  })
+})
+

@@ -113,6 +113,11 @@ export type AgentCpuDiagTotals = {
   nearestCandidatesChecked: number
   herdLeaderCalls: number
   herdLeaderCandidatesChecked: number
+  /** Runtime spatial-hash rebuild + occupancy queries (plan fauna-042). */
+  faunaProximityRebuildMs: number
+  faunaSpawnerBookkeepingMs: number
+  faunaProximityQueries: number
+  faunaProximityCandidatesVisited: number
   /** Movement hot-path (plan fauna-033) — see the `livestock*` pair above. */
   faunaWaterSampleCalls: number
   faunaWaterSampleMs: number
@@ -240,6 +245,10 @@ export type AgentCpuReport = {
     nearestCandidatesChecked: number
     herdLeaderCalls: number
     herdLeaderCandidatesChecked: number
+    proximityRebuildMsPerFrame: number
+    spawnerBookkeepingMsPerFrame: number
+    proximityQueriesPerFrame: number
+    proximityCandidatesPerFrame: number
     waterSampleCallsPerFrame: number
     waterSampleMsPerFrame: number
     waterSampleWorstMs: number
@@ -309,6 +318,9 @@ export type AgentCpuDiag = {
   recordPlayerPerceptionCheck: () => void
   recordNearestScan: (candidatesChecked: number) => void
   recordHerdLeaderScan: (candidatesChecked: number) => void
+  recordFaunaProximityQuery: (candidatesVisited: number) => void
+  addFaunaProximityRebuildMs: (ms: number) => void
+  addFaunaSpawnerBookkeepingMs: (ms: number) => void
   /** Movement hot-path (plan fauna-033) — routed to whichever channel owns
    *  the current `AnimalAgent.update()` call, same owner rule as
    *  `addFauna*Ms`. `ms` is one `sampleLocalWater()` call's own duration. */
@@ -378,6 +390,10 @@ function emptyTotals(): AgentCpuDiagTotals {
     nearestCandidatesChecked: 0,
     herdLeaderCalls: 0,
     herdLeaderCandidatesChecked: 0,
+    faunaProximityRebuildMs: 0,
+    faunaSpawnerBookkeepingMs: 0,
+    faunaProximityQueries: 0,
+    faunaProximityCandidatesVisited: 0,
     faunaWaterSampleCalls: 0,
     faunaWaterSampleMs: 0,
     faunaWaterSampleWorstMs: 0,
@@ -683,6 +699,19 @@ export function createAgentCpuDiag(): AgentCpuDiag {
       totals.herdLeaderCalls++
       totals.herdLeaderCandidatesChecked += candidatesChecked
     },
+    recordFaunaProximityQuery(candidatesVisited) {
+      if (!this.isEnabled()) return
+      totals.faunaProximityQueries++
+      totals.faunaProximityCandidatesVisited += candidatesVisited
+    },
+    addFaunaProximityRebuildMs(ms) {
+      if (!this.isEnabled()) return
+      totals.faunaProximityRebuildMs += ms
+    },
+    addFaunaSpawnerBookkeepingMs(ms) {
+      if (!this.isEnabled()) return
+      totals.faunaSpawnerBookkeepingMs += ms
+    },
     addFaunaWaterSampleMs(ms) {
       if (!this.isEnabled()) return
       if (livestockAgentDepth > 0) {
@@ -788,6 +817,9 @@ const NOOP: AgentCpuDiag = {
   recordPlayerPerceptionCheck: () => {},
   recordNearestScan: () => {},
   recordHerdLeaderScan: () => {},
+  recordFaunaProximityQuery: () => {},
+  addFaunaProximityRebuildMs: () => {},
+  addFaunaSpawnerBookkeepingMs: () => {},
   addFaunaWaterSampleMs: () => {},
   addFaunaColliderQueryMs: () => {},
   snapshot: () => emptyTotals(),
@@ -950,6 +982,10 @@ export function buildAgentCpuReport(input: {
       nearestCandidatesChecked: input.totals.nearestCandidatesChecked,
       herdLeaderCalls: input.totals.herdLeaderCalls,
       herdLeaderCandidatesChecked: input.totals.herdLeaderCandidatesChecked,
+      proximityRebuildMsPerFrame: round1(input.totals.faunaProximityRebuildMs / frames),
+      spawnerBookkeepingMsPerFrame: round1(input.totals.faunaSpawnerBookkeepingMs / frames),
+      proximityQueriesPerFrame: round1(input.totals.faunaProximityQueries / frames),
+      proximityCandidatesPerFrame: round1(input.totals.faunaProximityCandidatesVisited / frames),
       waterSampleCallsPerFrame: round1(input.totals.faunaWaterSampleCalls / frames),
       waterSampleMsPerFrame: round1(input.totals.faunaWaterSampleMs / frames),
       waterSampleWorstMs: round1(input.totals.faunaWaterSampleWorstMs),
@@ -1043,6 +1079,9 @@ export function formatAgentCpuReport(report: AgentCpuReport): string {
     `  nearest candidates checked: ${fauna.nearestCandidatesPerFrame.toFixed(1)}/frame (${fauna.nearestCandidatesChecked} total)`,
     `  herd leader scans: ${fauna.herdLeaderScansPerFrame.toFixed(1)}/frame (${fauna.herdLeaderCalls} calls)`,
     `  herd candidates checked: ${fauna.herdLeaderCandidatesPerFrame.toFixed(1)}/frame (${fauna.herdLeaderCandidatesChecked} total)`,
+    `  proximity rebuild: ${fauna.proximityRebuildMsPerFrame.toFixed(2)} ms/frame`,
+    `  spawner bookkeeping: ${fauna.spawnerBookkeepingMsPerFrame.toFixed(2)} ms/frame`,
+    `  proximity queries: ${fauna.proximityQueriesPerFrame.toFixed(1)}/frame (${fauna.proximityCandidatesPerFrame.toFixed(1)} candidates/frame)`,
     '',
     '  movement hot-path (plan fauna-033):',
     `    water samples: ${fauna.waterSampleCallsPerFrame.toFixed(1)}/frame, ${fauna.waterSampleMsPerFrame.toFixed(2)} ms/frame (worst call ${fauna.waterSampleWorstMs.toFixed(2)} ms)`,

@@ -1,13 +1,27 @@
 # Plan: Fauna proximity and population scan cost
 
 **Created:** 2026-09-19
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 (implemented 2026-09-19 — browser/performance checks are User-owned)
+
+See [implementation notes](./implementation-notes/fauna-042-fauna-proximity-and-population-scan-cost-implementation-notes.md).
 **Priority:** medium · **Effort:** M
-**Depends on:** fauna-041, ~~fauna-028~~, ~~fauna-033~~
+**Depends on:** ~~fauna-041~~, ~~fauna-028~~, ~~fauna-033~~
 **Domain:** `fauna`
 **Type:** `optimization`
 **Roadmap:** -
 **Model:** Grok, Composer
+
+## Implementation status (2026-09-19)
+
+**Implemented + technically verified.** Browser/gameplay/performance comparison is User-owned.
+
+- `src/fauna/faunaProximity.ts` — fauna-owned runtime spatial hash (16 m cells, extra neighbour covering). Rebuilt once per `Fauna.update()` from the wild `agents` array. Not a second registry, not persisted.
+- `AnimalAgent` sensing/targeting (`nearest`, prey commitment membership, rabid search, carcass search, prey-alert copy, scare-herd, rotting-corpse neighbours) visits covering cells when `AnimalUpdateContext.proximity` is supplied; tests and livestock ticks without it keep the original full-`others` scan.
+- `huntableLivestock` remains a separate encounter set and is never inserted into wild buckets.
+- `updateSpawners()` keeps fauna-041 membership occupancy (`spawnPointId`). `createFauna()` fills a reusable `Map<spawnPointId, count>` in one O(N) pass when `dayDelta > 0` — no per-frame `filter().map()`, occupancy queried only for spawners that can respawn. Recovery still uses nearby same-kind population.
+- `agentCpuDiag` records proximity rebuild ms, spawner bookkeeping ms, and proximity query/candidate counts alongside existing nearest-scan counters.
+
+**Not claimed:** a measured FPS win. Do not treat technical checks as browser verification.
 
 ## Goal
 

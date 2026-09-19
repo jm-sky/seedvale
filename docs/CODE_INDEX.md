@@ -203,6 +203,7 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [Animal update cadence](../src/fauna/animalUpdateCadence.ts) — shared stateless importance/cadence policy for the one `AnimalAgent.update()` (wild fauna and livestock alike): which sections stay full-rate and how often behaviour/presentation may run.
 - [Species defs](../src/fauna/animalDefs.ts) — taxonomy, `ANIMAL_DEFS`, diets and labels.
 - [Wild fauna runtime](../src/fauna/createFauna.ts) — spawn/lifecycle for wild animals and the `FAUNA_URLS` GLB registry.
+- [Fauna proximity](../src/fauna/faunaProximity.ts) — runtime-only coarse spatial hash for local inter-animal queries (plan fauna-042); not an authoritative registry. Managed-spawner occupancy stays fauna-041 membership via a reusable `spawnPointId` count map in `createFauna()`.
 - [Habitat pressure](../src/fauna/habitatPressure.ts) — derived, lazy habitat condition snapshot (population/mortality/predators/food) owned by `Fauna.getHabitatPressure` (plan fauna-031).
 - [Individual variants](../src/fauna/animalVariants.ts) — per-animal multipliers (`normal`/`alpha`) and wolf-den alpha slot assignment.
 - [Lead / draft helpers](../src/fauna/animalLead.ts) — leadable/draft capability queries and temporary-lead hysteresis distances.

@@ -235,6 +235,28 @@ describe('updateSpawners', () => {
     })
     expect(respawned).toBe(1)
   })
+
+  it('does not query occupancy when dayDelta is 0', () => {
+    const s = spawner({ daysSinceLastRespawn: 10 })
+    let queries = 0
+    updateSpawners([s], 0, () => { queries++; return 0 }, () => false)
+    expect(queries).toBe(0)
+    expect(s.daysSinceLastRespawn).toBe(10)
+  })
+
+  it('does not query occupancy for depleted or Infinity-interval spawners', () => {
+    let queries = 0
+    updateSpawners(
+      [
+        spawner({ state: 'depleted', daysSinceLastRespawn: 100 }),
+        spawner({ id: 'den', type: 'wolfDen', respawnIntervalDays: Infinity, daysSinceLastRespawn: 100 }),
+      ],
+      10,
+      () => { queries++; return 0 },
+      () => false,
+    )
+    expect(queries).toBe(0)
+  })
 })
 
 describe('tickSpawnPointRecovery', () => {

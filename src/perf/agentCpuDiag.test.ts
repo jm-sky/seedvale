@@ -43,6 +43,9 @@ describe('agentCpuDiag', () => {
     diag.recordNearestScan(8)
     diag.recordNearestScan(4)
     diag.recordHerdLeaderScan(20)
+    diag.addFaunaProximityRebuildMs(1.5)
+    diag.addFaunaSpawnerBookkeepingMs(0.5)
+    diag.recordFaunaProximityQuery(12)
     diag.endFaunaAgentUpdates()
 
     const totals = diag.snapshot()
@@ -50,6 +53,10 @@ describe('agentCpuDiag', () => {
     expect(totals.nearestCandidatesChecked).toBe(12)
     expect(totals.herdLeaderCalls).toBe(1)
     expect(totals.herdLeaderCandidatesChecked).toBe(20)
+    expect(totals.faunaProximityRebuildMs).toBe(1.5)
+    expect(totals.faunaSpawnerBookkeepingMs).toBe(0.5)
+    expect(totals.faunaProximityQueries).toBe(1)
+    expect(totals.faunaProximityCandidatesVisited).toBe(12)
     setActiveMonitor(null)
   })
 

@@ -14,6 +14,7 @@ Generated from TypeScript imports.
 - `fauna/animalLead.ts`
 - `fauna/animalNames.ts`
 - `fauna/animalScare.ts`
+- `fauna/faunaProximity.ts`
 - `fauna/herdCohesion.ts`
 - `fauna/shepherdFlock.ts`
 - `terrain/waterSample.ts`
@@ -54,6 +55,7 @@ Generated from TypeScript imports.
 - `fauna/domesticFlee.ts`
 - `fauna/faunaCombat.ts`
 - `fauna/faunaDecision.ts`
+- `fauna/faunaProximity.ts`
 - `fauna/herdCohesion.ts`
 - `fauna/horseTraining.ts`
 - `fauna/livestockProduction.ts`
@@ -127,6 +129,8 @@ Generated from TypeScript imports.
 - `fauna/faunaCombat.test.ts`
 - `fauna/faunaCombat.ts`
 - `fauna/faunaDecision.ts`
+- `fauna/faunaProximity.test.ts`
+- `fauna/faunaProximity.ts`
 - `fauna/frenzyWolf.test.ts`
 - `fauna/harvestedRemains.ts`
 - `fauna/herdCohesion.test.ts`
@@ -404,6 +408,7 @@ Generated from TypeScript imports.
 - `fauna/destinationThreatHooks.ts`
 - `fauna/dungeonResidents.test.ts`
 - `fauna/dungeonResidents.ts`
+- `fauna/faunaProximity.test.ts`
 - `fauna/foodWaterTargeting.test.ts`
 - `fauna/habitatPressure.test.ts`
 - `fauna/habitatPressure.ts`
@@ -881,6 +886,7 @@ Generated from TypeScript imports.
 - `fauna/animalRoaming.ts`
 - `fauna/animalVariants.ts`
 - `fauna/closedPredatorPressure.ts`
+- `fauna/faunaProximity.ts`
 - `fauna/habitatPressure.ts`
 - `fauna/herdCohesion.ts`
 - `fauna/persistentOccupants.ts`
@@ -1050,6 +1056,28 @@ Generated from TypeScript imports.
 
 - `fauna/AnimalAgent.ts`
 - `fauna/faunaDecision.test.ts`
+
+## `fauna/faunaProximity.test.ts`
+
+**Imports**
+
+- `fauna/AnimalAgent.ts`
+- `fauna/animalDefs.ts`
+- `fauna/faunaProximity.ts`
+- `terrain/waterSample.ts`
+
+## `fauna/faunaProximity.ts`
+
+**Imports**
+
+- `fauna/AnimalAgent.ts`
+
+**Imported by**
+
+- `fauna/AnimalAgent.test.ts`
+- `fauna/AnimalAgent.ts`
+- `fauna/createFauna.ts`
+- `fauna/faunaProximity.test.ts`
 
 ## `fauna/foodWaterTargeting.test.ts`
 

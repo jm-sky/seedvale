@@ -134,6 +134,22 @@ export function respawnIntervalDaysFor(intervalDays: number, nearbyCount: number
   return nearbyCount === 0 ? intervalDays * EMPTY_HABITAT_RESPAWN_MULTIPLIER : intervalDays
 }
 
+/** Bound live count for one spawner — the occupancy predicate
+ *  `updateSpawners` uses after fauna-041. Production can answer from a
+ *  reusable membership map (plan fauna-042) without allocating a snapshot. */
+export function countBoundForSpawner(
+  spawner: PreySpawner,
+  boundLiveAnimals: readonly SpawnerBoundLiveAnimal[],
+): number {
+  let bound = 0
+  for (const animal of boundLiveAnimals) {
+    if (animal.kind === spawner.kind && animal.spawnPointId === spawner.id) bound++
+  }
+  return bound
+}
+
+export type SpawnerBoundCount = (spawner: PreySpawner) => number
+
 /**
  * Ticks respawn timers in **game-days** and calls `onRespawn` for each
  * `active` spawner that's ready (timer elapsed, below its bound live
@@ -145,19 +161,26 @@ export function respawnIntervalDaysFor(intervalDays: number, nearbyCount: number
  * intervals are skipped (plan 139). Bound count is by `spawnPointId` +
  * `kind` (plan fauna-041) so roaming/trips outside `SPAWNER_RADIUS` still
  * occupy the habitat slot. Ring spawns without `spawnPointId` are excluded.
- * Persistent occupants must be excluded from `boundLiveAnimals` by the
- * caller; reserved slots still occupy capacity while the resident is away,
- * a corpse, or tombstoned. `onRespawn` returns whether materialization
+ * Persistent occupants must be excluded from occupancy by the caller;
+ * reserved slots still occupy capacity while the resident is away, a
+ * corpse, or tombstoned. `onRespawn` returns whether materialization
  * succeeded; a failed attempt ends this spawner's fill pass for the frame.
+ *
+ * Occupancy is queried only for spawners that can actually respawn this
+ * pass (plan fauna-042). Pass either a reusable membership snapshot or a
+ * count callback.
  */
 export function updateSpawners(
   spawners: PreySpawner[],
   dayDelta: number,
-  boundLiveAnimals: SpawnerBoundLiveAnimal[],
+  boundLiveAnimalsOrCount: readonly SpawnerBoundLiveAnimal[] | SpawnerBoundCount,
   onRespawn: (spawner: PreySpawner) => boolean,
   reservedPersistentSlots?: ReadonlyMap<string, number>,
 ): void {
   if (dayDelta <= 0) return
+  const getBoundCount: SpawnerBoundCount = typeof boundLiveAnimalsOrCount === 'function'
+    ? boundLiveAnimalsOrCount
+    : (spawner) => countBoundForSpawner(spawner, boundLiveAnimalsOrCount)
   for (const spawner of spawners) {
     if (spawner.state !== 'active') continue
     const respawnIntervalDays = effectiveRespawnIntervalDays(spawner)
@@ -168,9 +191,7 @@ export function updateSpawners(
       effectiveMaxPreyCount(spawner),
       reservedPersistentSlots?.get(spawner.id) ?? 0,
     )
-    let bound = boundLiveAnimals.filter(
-      (p) => p.kind === spawner.kind && p.spawnPointId === spawner.id,
-    ).length
+    let bound = getBoundCount(spawner)
     if (bound >= cap) {
       spawner.daysSinceLastRespawn = 0
       continue
