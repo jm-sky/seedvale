@@ -149,7 +149,7 @@ Status vocabulary:
 | 06 | Rendering & graphics runtime | renderer/scene/post-processing, visibility, LOD, shadows/reflections, GPU resource lifecycle | ⬜ not reviewed | - | - |
 | 07 | World locations & caves | locations, landmarks, caves, spatial authority, occupancy, streaming, interaction | ⬜ not reviewed | - | - |
 | 08 | Navigation & movement surface | navigation, routes, roads/bridges/fords, shared movement-ground queries, recovery | ⬜ not reviewed | - | - |
-| 09 | Settlements — identity & world state | generation, IDs, names, bootstrap, lifecycle, founded settlements | ⬜ not reviewed | - | - |
+| 09 | Settlements — identity & world state | generation, IDs, names, bootstrap, lifecycle, founded settlements | ⚠️ reviewed with unresolved high/critical findings | [review](../reviews/codebase-domain-audit/2026-09-19--09--settlements-identity-and-world-state.md) | [settlements-017](./settlements-017-deterministically-unique-settlement-names.md), [settlements-020](./settlements-020-founded-settlement-bootstrap-integrity.md), [settlements-021](./settlements-021-shared-settlement-resident-runtime.md), [settlements-022](./settlements-022-founded-settlement-live-runtime-and-streaming.md) |
 | 10 | Settlements — buildings/resources/infrastructure | buildings, wells, gardens, storage, resource sites, placement and ownership | ⬜ not reviewed | - | - |
 | 11 | Economy, trade & logistics | pricing, inventory flows, production/consumption, merchants, transport, atomic transfers | ⬜ not reviewed | - | - |
 | 12 | NPC cognition | needs, problems, pressures, goals, decisions, strategies and action selection | ⬜ not reviewed | - | - |
