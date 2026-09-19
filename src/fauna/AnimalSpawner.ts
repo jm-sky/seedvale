@@ -72,13 +72,13 @@ export type PreySpawner = {
   /** Game-days between respawns while `active` and below `maxPreyCount`
    *  (plan 139). `Infinity` opts out (`wolfDen`). */
   respawnIntervalDays: number
-  /** Configured population cap for this spawn point — both the live-nearby
-   *  respawn gate (unchanged) and the `>50%` depletion reference population
-   *  (plan 125). */
+  /** Configured population cap for this spawn point — bound live occupancy
+   *  for replenishment (plan fauna-041) and the `>50%` depletion reference
+   *  population (plan 125). */
   maxPreyCount: number
   /** Accumulated game-days since the last respawn (or since a slot opened).
-   *  Held at 0 while the live-nearby count is at cap so a vacancy starts a
-   *  full interval instead of firing on the next frame. */
+   *  Held at 0 while bound live count is at cap so a vacancy starts a full
+   *  interval instead of firing on the next frame. */
   daysSinceLastRespawn: number
   state: SpawnPointState
   /** Animals bound to this spawn point (`AnimalAgent.spawnPointId`) that
@@ -103,9 +103,16 @@ export type PreySpawner = {
   lastSettlementTripOpportunityDay: number | null
 }
 
-/** Animals of the spawner's `kind` within this radius count toward its
- *  `maxPreyCount` cap (respawn) and the recovery population check. */
+/** Animals of the spawner's `kind` within this radius count toward the
+ *  recovery population check (`tickSpawnPointRecovery`). Managed respawn
+ *  cap occupancy uses `spawnPointId` binding instead (plan fauna-041). */
 export const SPAWNER_RADIUS = 12
+
+/** Live managed animal counted toward one spawner's ordinary replenishment cap. */
+export type SpawnerBoundLiveAnimal = {
+  kind: AnimalKind
+  spawnPointId: string
+}
 
 /** `>50%` of `maxPreyCount` deaths this cycle, expressed as an integer death
  *  count: for `limit = 3` that's 2 deaths, for `limit = 6` that's 4 — the
@@ -129,22 +136,25 @@ export function respawnIntervalDaysFor(intervalDays: number, nearbyCount: number
 
 /**
  * Ticks respawn timers in **game-days** and calls `onRespawn` for each
- * `active` spawner that's ready (timer elapsed, below its live same-kind
- * cap). A large `dayDelta` (time-skip) may spawn more than once, always
- * capped at ordinary capacity (`maxPreyCount` minus reserved persistent
- * slots — plan fauna-018). Pure timer/count bookkeeping — actual agent
- * creation is the caller's job. `depleted`/`disabled`/`recovering` spawners
- * never respawn (plan 125 §2/§3); `Infinity` intervals are skipped (plan
- * 139). Nearby count is by `kind` (prey *or* predator) so a wolf cave is
- * capped by living wolves, not an empty prey filter. Persistent occupants
- * must be excluded from `animalPositions` by the caller; reserved slots
- * still occupy capacity while the resident is away, a corpse, or tombstoned.
+ * `active` spawner that's ready (timer elapsed, below its bound live
+ * same-kind cap). A large `dayDelta` (time-skip) may spawn more than once,
+ * always capped at ordinary capacity (`maxPreyCount` minus reserved
+ * persistent slots — plan fauna-018). Pure timer/count bookkeeping —
+ * actual agent creation is the caller's job. `depleted`/`disabled`/
+ * `recovering` spawners never respawn (plan 125 §2/§3); `Infinity`
+ * intervals are skipped (plan 139). Bound count is by `spawnPointId` +
+ * `kind` (plan fauna-041) so roaming/trips outside `SPAWNER_RADIUS` still
+ * occupy the habitat slot. Ring spawns without `spawnPointId` are excluded.
+ * Persistent occupants must be excluded from `boundLiveAnimals` by the
+ * caller; reserved slots still occupy capacity while the resident is away,
+ * a corpse, or tombstoned. `onRespawn` returns whether materialization
+ * succeeded; a failed attempt ends this spawner's fill pass for the frame.
  */
 export function updateSpawners(
   spawners: PreySpawner[],
   dayDelta: number,
-  animalPositions: { kind: AnimalKind; x: number; z: number }[],
-  onRespawn: (spawner: PreySpawner) => void,
+  boundLiveAnimals: SpawnerBoundLiveAnimal[],
+  onRespawn: (spawner: PreySpawner) => boolean,
   reservedPersistentSlots?: ReadonlyMap<string, number>,
 ): void {
   if (dayDelta <= 0) return
@@ -158,24 +168,22 @@ export function updateSpawners(
       effectiveMaxPreyCount(spawner),
       reservedPersistentSlots?.get(spawner.id) ?? 0,
     )
-    let nearby = animalPositions.filter(
-      (p) =>
-        p.kind === spawner.kind &&
-        Math.hypot(p.x - spawner.x, p.z - spawner.z) < SPAWNER_RADIUS,
+    let bound = boundLiveAnimals.filter(
+      (p) => p.kind === spawner.kind && p.spawnPointId === spawner.id,
     ).length
-    if (nearby >= cap) {
+    if (bound >= cap) {
       spawner.daysSinceLastRespawn = 0
       continue
     }
 
-    while (nearby < cap) {
-      const interval = respawnIntervalDaysFor(respawnIntervalDays, nearby)
+    while (bound < cap) {
+      const interval = respawnIntervalDaysFor(respawnIntervalDays, bound)
       if (spawner.daysSinceLastRespawn < interval) break
       spawner.daysSinceLastRespawn -= interval
-      onRespawn(spawner)
-      nearby++
+      if (!onRespawn(spawner)) break
+      bound++
     }
-    if (nearby >= cap) spawner.daysSinceLastRespawn = 0
+    if (bound >= cap) spawner.daysSinceLastRespawn = 0
   }
 }
 

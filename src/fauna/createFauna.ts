@@ -1463,18 +1463,19 @@ export async function createFauna(
         spawners,
         dayDelta,
         agents
-          .filter((a) => !a.isDead() && !occupantRegistry.hasPersistentAnimalId(a.animalId))
-          .map((a) => ({ kind: a.def.kind, x: a.mesh.position.x, z: a.mesh.position.z })),
+          .filter((a) => !a.isDead() && !occupantRegistry.hasPersistentAnimalId(a.animalId) && a.spawnPointId)
+          .map((a) => ({ kind: a.def.kind, spawnPointId: a.spawnPointId! })),
         (spawner) => {
           const pos = resolveWildFaunaSpawnPosition(
             findWalkableNear(spawner.x, spawner.z, 0, 4),
             spawner,
             drySpawnSite(spawner.x, spawner.z, SPAWN_RIVER_CLEARANCE),
           )
-          if (!pos) return
+          if (!pos) return false
           const agent = spawnAgent(spawner.kind, pos.x, pos.z, undefined, undefined, undefined, spawner.id)
           scene.add(agent.mesh)
           agents.push(agent)
+          return true
         },
         reservedPersistentSlots,
       )

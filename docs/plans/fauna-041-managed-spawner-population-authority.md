@@ -1,7 +1,7 @@
 # Plan: Managed spawner population authority
 
 **Created:** 2026-09-19
-**Status:** `planned` 📋
+**Status:** `done` ✅
 **Priority:** high · **Effort:** S
 **Depends on:** ~~fauna-018~~
 **Domain:** `fauna`

@@ -353,24 +353,25 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/AnimalSpawner.ts`
 
-- `defaultSpawnPointScenarioFields` — function — line 256
-- `depletionThreshold` — function — line 114
+- `defaultSpawnPointScenarioFields` — function — line 264
+- `depletionThreshold` — function — line 121
 - `DESTROY_SPAWNER_DURATION_SEC` — const — line 56
 - `EMPTY_HABITAT_RESPAWN_MULTIPLIER` — const — line 60
 - `MIN_RECOVERY_POPULATION` — const — line 50
 - `PreySpawner` — type — line 62
 - `RECOVERY_DAYS` — const — line 47
-- `respawnIntervalDaysFor` — function — line 126
-- `restoreSpawnPointState` — function — line 242
-- `SavedSpawnPointState` — type — line 215
-- `shouldDeplete` — function — line 120
-- `snapshotSpawnPointState` — function — line 226
+- `respawnIntervalDaysFor` — function — line 133
+- `restoreSpawnPointState` — function — line 250
+- `SavedSpawnPointState` — type — line 223
+- `shouldDeplete` — function — line 127
+- `snapshotSpawnPointState` — function — line 234
 - `SPAWNER_DESTROY_BRANCH_COST` — const — line 54
-- `SPAWNER_RADIUS` — const — line 108
+- `SPAWNER_RADIUS` — const — line 109
+- `SpawnerBoundLiveAnimal` — type — line 112
 - `SpawnerType` — type — line 20
 - `SpawnPointState` — type — line 42
-- `tickSpawnPointRecovery` — function — line 193
-- `updateSpawners` — function — line 143
+- `tickSpawnPointRecovery` — function — line 201
+- `updateSpawners` — function — line 153
 - `WOLF_DEN_ID` — const — line 26
 
 ## `fauna/animalStray.ts`

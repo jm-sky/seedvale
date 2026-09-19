@@ -36,14 +36,14 @@
 
 1. `settlements-npcs-052` — **Persistent economic work cargo and local-transfer conservation**  
    🔴 `M` · ✅ ready · unlocks 0/0 · type: fix
-2. `fauna-041` — **Managed spawner population authority**  
-   🔴 `S` · ✅ ready · unlocks 1/1 · type: bug
-3. `settlements-020` — **Founded settlement bootstrap integrity**  
+2. `settlements-020` — **Founded settlement bootstrap integrity**  
    🔴 `M` · ✅ ready · unlocks 1/2 · type: fix
-4. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
+3. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
    🔴 `M` · ✅ ready · unlocks 0/0 · type: fix
-5. `world-terrain-044` — **Runtime ground query authority and missing-chunk fallbacks**  
+4. `world-terrain-044` — **Runtime ground query authority and missing-chunk fallbacks**  
    🔴 `M` · ✅ ready · unlocks 0/0 · type: bug
+5. `fauna-040` — **Settlement rat reconciliation checkpoint**  
+   🔴 `S` · ✅ ready · unlocks 0/0 · type: fix
 
 ---
 
@@ -53,6 +53,8 @@
    🔴 `L` · 🔒 blocked · unlocks 0/0
 2. `quests-progression-069` — **Quest offer pacing and conservative settlement gating**  
    🔴 `M` · ✅ ready · unlocks 0/0
+3. `fauna-044` — **Higher stag antler drop chance with light Survival influence**  
+   🟡 `XS` · ✅ ready · unlocks 0/0
 
 ---
 
@@ -161,132 +163,132 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `L` · **Score:**  56  
    → **unlocks:** 1/1
 
-20. `fauna-041` — **Managed spawner population authority**  
-  🔴 `S` · **Score:**  51  
-   → **unlocks:** 1/1
-
-21. `items-player-049` — **Poisoned meat predator bait**  
+20. `items-player-049` — **Poisoned meat predator bait**  
   🟡 `S` · **Score:**  51  
    → **unlocks:** 0/0
 
-22. `quests-progression-069` — **Quest offer pacing and conservative settlement gating**  
+21. `quests-progression-069` — **Quest offer pacing and conservative settlement gating**  
   🔴 `M` · **Score:**  51  
    → **unlocks:** 0/0
 
-23. `settlements-020` — **Founded settlement bootstrap integrity**  
+22. `settlements-020` — **Founded settlement bootstrap integrity**  
   🔴 `M` · **Score:**  51  
    → **unlocks:** 1/2
 
-24. `quests-progression-063` — **Healer — Injured Resident**  
+23. `quests-progression-063` — **Healer — Injured Resident**  
   🟡 `M` · **Score:**  49  
    → **unlocks:** 1/1
 
-25. `quests-progression-060` — **Builder — Finish the Local Well**  
+24. `quests-progression-060` — **Builder — Finish the Local Well**  
   🔴 `M` · **Score:**  47  
    → **unlocks:** 0/0
 
-26. `quests-progression-054` — **Hunters Brotherhood — exceptional animal finale**  
+25. `quests-progression-054` — **Hunters Brotherhood — exceptional animal finale**  
   🟡 `L` · **Score:**  44  
    → **unlocks:** 0/0
 
-27. `settlements-021` — **Shared settlement resident runtime**  
+26. `settlements-021` — **Shared settlement resident runtime**  
   🔴 `L` · **Score:**  40  
    → **unlocks:** 1/1
 
-28. `settlements-npcs-044` — **Authored Outpost Occupants & Construction Lifecycle**  
+27. `settlements-npcs-044` — **Authored Outpost Occupants & Construction Lifecycle**  
   🔴 `L` · **Score:**  40  
    → **unlocks:** 1/1
 
-29. `quests-progression-058` — **Injured dog discovery thread**  
+28. `quests-progression-058` — **Injured dog discovery thread**  
   🟡 `M` · **Score:**  37  
    → **unlocks:** 0/0
 
-30. `tools-017` — **Custom UBC NPC model source and build pipeline**  
+29. `tools-017` — **Custom UBC NPC model source and build pipeline**  
   🔴 `M` · **Score:**  37  
    → **unlocks:** 0/0
 
-31. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
+30. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
   🔴 `M` · **Score:**  35  
    → **unlocks:** 0/0
 
-32. `npc-055` — **Semantic profession and activity animation coverage**  
+31. `npc-055` — **Semantic profession and activity animation coverage**  
   🔴 `L` · **Score:**  32  
    → **unlocks:** 0/0
 
-33. `world-terrain-042` — **Medicinal herb meadow patches**  
+32. `world-terrain-042` — **Medicinal herb meadow patches**  
   🟡 `M` · **Score:**  31  
    → **unlocks:** 1/1
 
-34. `world-terrain-044` — **Runtime ground query authority and missing-chunk fallbacks**  
+33. `world-terrain-044` — **Runtime ground query authority and missing-chunk fallbacks**  
   🔴 `M` · **Score:**  31  
    → **unlocks:** 0/0
 
-35. `npc-054` — **NPC desired gifts, gift acceptance and relationship rewards**  
+34. `npc-054` — **NPC desired gifts, gift acceptance and relationship rewards**  
   🔴 `L` · **Score:**  30  
    → **unlocks:** 0/0
 
-36. `fauna-040` — **Settlement rat reconciliation checkpoint**  
+35. `fauna-040` — **Settlement rat reconciliation checkpoint**  
   🔴 `S` · **Score:**  29  
    → **unlocks:** 0/0
 
-37. `npc-059` — **NPC need action result revalidation and atomic relief**  
+36. `npc-059` — **NPC need action result revalidation and atomic relief**  
   🔴 `S` · **Score:**  29  
    → **unlocks:** 0/0
 
-38. `world-terrain-043` — **System terrain modification rebuild idempotency**  
+37. `world-terrain-043` — **System terrain modification rebuild idempotency**  
   🔴 `S` · **Score:**  29  
    → **unlocks:** 0/0
 
-39. `settlements-022` — **Founded settlement live runtime and streaming**  
+38. `settlements-022` — **Founded settlement live runtime and streaming**  
   🔴 `L` · **Score:**  28  
    → **unlocks:** 0/0
 
-40. `fauna-042` — **Fauna proximity and population scan cost**  
+39. `fauna-042` — **Fauna proximity and population scan cost**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-41. `items-player-014` — **Rope-pullable resource transport**  
+40. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-42. `npc-058` — **NPC time-skip resource and interrupt parity**  
+41. `npc-058` — **NPC time-skip resource and interrupt parity**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-43. `tools-005` — **Seedvale Character Preparation Panel**  
+42. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-44. `world-033` — **WorldBundle rebuild transaction and lifecycle safety**  
+43. `world-033` — **WorldBundle rebuild transaction and lifecycle safety**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-45. `world-034` — **Time-skip clock exactness and catch-up coverage**  
+44. `world-034` — **Time-skip clock exactness and catch-up coverage**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-46. `world-terrain-039` — **N8AO / post-process cost budget**  
+45. `world-terrain-039` — **N8AO / post-process cost budget**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-47. `ui-input-025` — **Road travel autopilot for player and mounts**  
+46. `ui-input-025` — **Road travel autopilot for player and mounts**  
   🔴 `L` · **Score:**  26  
    → **unlocks:** 0/0
 
-48. `items-player-044` — **Shoulder and forearm equipment slots**  
+47. `items-player-044` — **Shoulder and forearm equipment slots**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-49. `quests-progression-071` — **Generated opportunity retention semantics**  
+48. `quests-progression-071` — **Generated opportunity retention semantics**  
   🟡 `S` · **Score:**  25  
    → **unlocks:** 0/0
 
-50. `world-terrain-041` — **Agent presentation render LOD**  
+49. `world-terrain-041` — **Agent presentation render LOD**  
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-51. `fauna-043` — **Frenzy source-target claim cleanup**  
+50. `fauna-043` — **Frenzy source-target claim cleanup**  
   🟡 `S` · **Score:**  23  
+   → **unlocks:** 0/0
+
+51. `fauna-044` — **Higher stag antler drop chance with light Survival influence**  
+  🟡 `XS` · **Score:**  20  
    → **unlocks:** 0/0
 
 52. `quests-progression-072` — **Invalidated quest restore metadata continuity**  
@@ -309,9 +311,6 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
 
 ## Initially Blocked
 
-- [`fauna-042-fauna-proximity-and-population-scan-cost.md`](fauna-042-fauna-proximity-and-population-scan-cost.md)  
-  is blocked by:
-  - [`fauna-041-managed-spawner-population-authority.md`](fauna-041-managed-spawner-population-authority.md)
 - [`items-player-032-npc-player-storage-resource-and-context-rules.md`](items-player-032-npc-player-storage-resource-and-context-rules.md)  
   is blocked by:
   - [`items-player-028-npc-player-storage-access-policies.md`](items-player-028-npc-player-storage-access-policies.md)
@@ -463,6 +462,7 @@ graph TD
   fauna_041["fauna-041 — Managed spawner population authority"]
   fauna_042["fauna-042 — Fauna proximity and population scan cost"]
   fauna_043["fauna-043 — Frenzy source-target claim cleanup"]
+  fauna_044["fauna-044 — Higher stag antler drop chance with light Survival influence"]
   items_player_001["items-player-001 — Containers, Waterskins & Copper Items"]
   items_player_002["items-player-002 — Food provenance, freshness and storage"]
   items_player_003["items-player-003 — Player Physical Effort — Stamina & Vigor"]

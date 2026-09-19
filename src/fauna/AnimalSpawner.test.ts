@@ -34,6 +34,23 @@ function spawner(overrides: Partial<PreySpawner> = {}): PreySpawner {
   }
 }
 
+function bound(kind: PreySpawner['kind'], spawnPointId: string) {
+  return { kind, spawnPointId }
+}
+
+function respawnCounter() {
+  let respawned = 0
+  return {
+    tick: () => {
+      respawned++
+      return true
+    },
+    get count() {
+      return respawned
+    },
+  }
+}
+
 describe('depletionThreshold / shouldDeplete', () => {
   it('is the smallest integer strictly greater than half the limit', () => {
     expect(depletionThreshold(2)).toBe(2)
@@ -60,100 +77,162 @@ describe('respawnIntervalDaysFor', () => {
 describe('updateSpawners', () => {
   it('does not spawn on a zero dayDelta (load / first frame)', () => {
     const s = spawner({ daysSinceLastRespawn: 10 })
-    let respawned = 0
-    updateSpawners([s], 0, [], () => { respawned++ })
-    expect(respawned).toBe(0)
+    const counter = respawnCounter()
+    updateSpawners([s], 0, [], counter.tick)
+    expect(counter.count).toBe(0)
     expect(s.daysSinceLastRespawn).toBe(10)
   })
 
   it('waits the empty-habitat interval before the first animal', () => {
     const s = spawner()
-    let respawned = 0
-    updateSpawners([s], 1, [], () => { respawned++ })
-    expect(respawned).toBe(0)
-    updateSpawners([s], 1, [], () => { respawned++ })
-    expect(respawned).toBe(1)
+    const counter = respawnCounter()
+    updateSpawners([s], 1, [], counter.tick)
+    expect(counter.count).toBe(0)
+    updateSpawners([s], 1, [], counter.tick)
+    expect(counter.count).toBe(1)
   })
 
   it('replaces a loss after one interval when the habitat is not empty', () => {
     const s = spawner()
-    let respawned = 0
-    updateSpawners([s], 1, [{ kind: 'deer', x: 1, z: 1 }], () => { respawned++ })
-    expect(respawned).toBe(1)
+    const counter = respawnCounter()
+    updateSpawners([s], 1, [bound('deer', s.id)], counter.tick)
+    expect(counter.count).toBe(1)
   })
 
   it('catch-up on a large dayDelta fills up to the cap, not beyond', () => {
     const s = spawner({ maxPreyCount: 3 })
-    let respawned = 0
+    const counter = respawnCounter()
     // empty: 2 + 1 + 1 = 4 days for 3 animals; 5 days still caps at 3
-    updateSpawners([s], 5, [], () => { respawned++ })
-    expect(respawned).toBe(3)
+    updateSpawners([s], 5, [], counter.tick)
+    expect(counter.count).toBe(3)
     expect(s.daysSinceLastRespawn).toBe(0)
   })
 
-  it('does not bank time while at the live-nearby cap', () => {
+  it('does not bank time while at the bound live cap', () => {
     const s = spawner({ maxPreyCount: 1 })
-    let respawned = 0
-    updateSpawners([s], 10, [{ kind: 'deer', x: 1, z: 1 }], () => { respawned++ })
-    expect(respawned).toBe(0)
+    const counter = respawnCounter()
+    updateSpawners([s], 10, [bound('deer', s.id)], counter.tick)
+    expect(counter.count).toBe(0)
     expect(s.daysSinceLastRespawn).toBe(0)
   })
 
   it('never respawns a depleted/disabled/recovering spawner', () => {
     for (const state of ['depleted', 'disabled', 'recovering'] as const) {
       const s = spawner({ state, daysSinceLastRespawn: 100 })
-      let respawned = 0
-      updateSpawners([s], 10, [], () => { respawned++ })
-      expect(respawned).toBe(0)
+      const counter = respawnCounter()
+      updateSpawners([s], 10, [], counter.tick)
+      expect(counter.count).toBe(0)
     }
   })
 
   it('skips Infinity intervals (wolfDen)', () => {
     const s = spawner({ respawnIntervalDays: Infinity, daysSinceLastRespawn: 100 })
-    let respawned = 0
-    updateSpawners([s], 10, [], () => { respawned++ })
-    expect(respawned).toBe(0)
+    const counter = respawnCounter()
+    updateSpawners([s], 10, [], counter.tick)
+    expect(counter.count).toBe(0)
   })
 
   it('caps by same-kind animals regardless of prey/predator role', () => {
     const s = spawner({ kind: 'wolf', maxPreyCount: 1 })
-    let respawned = 0
-    updateSpawners([s], 10, [{ kind: 'wolf', x: 1, z: 1 }], () => { respawned++ })
-    expect(respawned).toBe(0)
+    const counter = respawnCounter()
+    updateSpawners([s], 10, [bound('wolf', s.id)], counter.tick)
+    expect(counter.count).toBe(0)
     expect(s.daysSinceLastRespawn).toBe(0)
   })
 
   it('ignores other kinds when counting the live cap', () => {
     const s = spawner({ kind: 'wolf', maxPreyCount: 1 })
-    let respawned = 0
-    updateSpawners([s], 2, [{ kind: 'deer', x: 1, z: 1 }], () => { respawned++ })
-    expect(respawned).toBe(1)
+    const counter = respawnCounter()
+    updateSpawners([s], 2, [bound('deer', s.id)], counter.tick)
+    expect(counter.count).toBe(1)
   })
 
   it('reduces ordinary capacity by reserved persistent slots (plan fauna-018)', () => {
     const s = spawner({ maxPreyCount: 3 })
     const reserved = new Map([[s.id, 1]])
-    let respawned = 0
+    const counter = respawnCounter()
     // empty: 2 + 1 = 3 days for 2 ordinary animals; 5 days still caps at 2
-    updateSpawners([s], 5, [], () => { respawned++ }, reserved)
-    expect(respawned).toBe(2)
+    updateSpawners([s], 5, [], counter.tick, reserved)
+    expect(counter.count).toBe(2)
     expect(s.daysSinceLastRespawn).toBe(0)
   })
 
   it('does not treat an away/corpse/tombstone persistent slot as a vacancy', () => {
     const s = spawner({ maxPreyCount: 1 })
     const reserved = new Map([[s.id, 1]])
-    let respawned = 0
-    updateSpawners([s], 10, [], () => { respawned++ }, reserved)
-    expect(respawned).toBe(0)
+    const counter = respawnCounter()
+    updateSpawners([s], 10, [], counter.tick, reserved)
+    expect(counter.count).toBe(0)
     expect(s.daysSinceLastRespawn).toBe(0)
   })
 
   it('still replenishes remaining ordinary slots', () => {
     const s = spawner({ maxPreyCount: 3 })
     const reserved = new Map([[s.id, 1]])
+    const counter = respawnCounter()
+    updateSpawners([s], 1, [bound('deer', s.id)], counter.tick, reserved)
+    expect(counter.count).toBe(1)
+  })
+
+  it('counts bound animals regardless of distance from the spawner (plan fauna-041)', () => {
+    const s = spawner({ maxPreyCount: 1 })
+    const counter = respawnCounter()
+    updateSpawners([s], 10, [bound('deer', s.id)], counter.tick)
+    expect(counter.count).toBe(0)
+    expect(s.daysSinceLastRespawn).toBe(0)
+  })
+
+  it('isolates occupancy per spawner for same-kind habitats (plan fauna-041)', () => {
+    const a = spawner({ id: 'settlement-a:thicket', maxPreyCount: 1 })
+    const b = spawner({ id: 'settlement-b:thicket', maxPreyCount: 1 })
+    const counter = respawnCounter()
+    updateSpawners([a, b], 2, [bound('deer', a.id), bound('deer', b.id)], counter.tick)
+    expect(counter.count).toBe(0)
+  })
+
+  it('opens one ordinary slot when a bound member is removed (plan fauna-041)', () => {
+    const s = spawner({ maxPreyCount: 2 })
+    const counter = respawnCounter()
+    updateSpawners([s], 1, [bound('deer', s.id)], counter.tick)
+    expect(counter.count).toBe(1)
+  })
+
+  it('does not double-count persistent reservation plus bound ordinary (plan fauna-041)', () => {
+    const s = spawner({ maxPreyCount: 2 })
+    const reserved = new Map([[s.id, 1]])
+    const counter = respawnCounter()
+    updateSpawners([s], 2, [bound('deer', s.id)], counter.tick, reserved)
+    expect(counter.count).toBe(0)
+  })
+
+  it('does not treat a failed onRespawn as occupancy or burn catch-up (plan fauna-041)', () => {
+    const s = spawner({ maxPreyCount: 3, daysSinceLastRespawn: 10 })
+    let attempts = 0
+    updateSpawners([s], 10, [], () => {
+      attempts++
+      return false
+    })
+    expect(attempts).toBe(1)
+    expect(s.daysSinceLastRespawn).toBe(18)
+  })
+
+  it('retries a failed spawn on a later eligible pass (plan fauna-041)', () => {
+    const s = spawner({ maxPreyCount: 1, daysSinceLastRespawn: 10 })
+    let failOnce = true
     let respawned = 0
-    updateSpawners([s], 1, [{ kind: 'deer', x: 1, z: 1 }], () => { respawned++ }, reserved)
+    updateSpawners([s], 10, [], () => {
+      if (failOnce) {
+        failOnce = false
+        return false
+      }
+      respawned++
+      return true
+    })
+    expect(respawned).toBe(0)
+    updateSpawners([s], 2, [], () => {
+      respawned++
+      return true
+    })
     expect(respawned).toBe(1)
   })
 })
@@ -193,6 +272,14 @@ describe('tickSpawnPointRecovery', () => {
     const depleted = spawner({ state: 'depleted', deathsThisCycle: 2 })
     tickSpawnPointRecovery(depleted, 1_000_000, 99)
     expect(depleted.state).toBe('depleted')
+  })
+
+  it('still requires nearby same-kind population, not spawnPointId binding (plan fauna-041)', () => {
+    const s = spawner({ state: 'recovering', disabledAtDay: 0 })
+    tickSpawnPointRecovery(s, RECOVERY_DAYS, MIN_RECOVERY_POPULATION - 1)
+    expect(s.state).toBe('recovering')
+    tickSpawnPointRecovery(s, RECOVERY_DAYS, MIN_RECOVERY_POPULATION)
+    expect(s.state).toBe('active')
   })
 })
 
