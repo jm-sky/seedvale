@@ -123,18 +123,28 @@ function makeParticipant(
   id: string,
   view: SocialCandidateView | null,
   gender: NpcGender = 'male',
-): MockParticipant {
+  options?: { attemptDue?: boolean },
+): MockParticipant & { socialCandidateCalls: number } {
   const beginConversationCalls: MockParticipant['beginConversationCalls'] = []
+  let socialCandidateCalls = 0
+  const attemptDue = options?.attemptDue ?? view != null
   return {
     id,
     gender,
     personality: NEUTRAL_PERSONALITY,
-    socialCandidate: () => view,
+    socialAttemptDue: () => attemptDue,
+    socialCandidate: () => {
+      socialCandidateCalls += 1
+      return view
+    },
     beginConversation: (partnerId, durationSec, applyOutcomeOnce, onEarlyExit, voiceCue) => {
       beginConversationCalls.push({ partnerId, durationSec, applyOutcomeOnce, onEarlyExit, voiceCue })
     },
     releaseConversationPartner: vi.fn(),
     beginConversationCalls,
+    get socialCandidateCalls() {
+      return socialCandidateCalls
+    },
     get releaseCalls() {
       return (this.releaseConversationPartner as ReturnType<typeof vi.fn>).mock.calls.length
     },
@@ -142,6 +152,42 @@ function makeParticipant(
 }
 
 describe('advanceSocialPairing', () => {
+  it('returns immediately without calling socialCandidate when no participant is attempt-due', () => {
+    const a = makeParticipant('a', { id: 'a', placeId: 'campfire:1' }, 'male', { attemptDue: false })
+    const b = makeParticipant('b', { id: 'b', placeId: 'campfire:1' }, 'male', { attemptDue: false })
+    const relations = makeRelations()
+
+    advanceSocialPairing([a, b], relations, 480)
+
+    expect(a.socialCandidateCalls).toBe(0)
+    expect(b.socialCandidateCalls).toBe(0)
+    expect(a.beginConversationCalls).toHaveLength(0)
+  })
+
+  it('still runs authoritative socialCandidate when at least one participant is attempt-due', () => {
+    const a = makeParticipant('a', { id: 'a', placeId: 'campfire:1' }, 'male', { attemptDue: true })
+    const b = makeParticipant('b', null, 'male', { attemptDue: false })
+    const relations = makeRelations()
+
+    advanceSocialPairing([a, b], relations, 480)
+
+    expect(a.socialCandidateCalls).toBe(1)
+    expect(b.socialCandidateCalls).toBe(1)
+    expect(a.beginConversationCalls).toHaveLength(0)
+  })
+
+  it('does not pair when attempt-due but socialCandidate rejects eligibility', () => {
+    const a = makeParticipant('a', null, 'male', { attemptDue: true })
+    const b = makeParticipant('b', null, 'male', { attemptDue: true })
+    const relations = makeRelations()
+
+    advanceSocialPairing([a, b], relations, 480)
+
+    expect(a.socialCandidateCalls).toBe(1)
+    expect(b.socialCandidateCalls).toBe(1)
+    expect(a.beginConversationCalls).toHaveLength(0)
+  })
+
   it('pairs two available NPCs at the same Social Place with one shared duration', () => {
     const a = makeParticipant('a', { id: 'a', placeId: 'campfire:1' })
     const b = makeParticipant('b', { id: 'b', placeId: 'campfire:1' })

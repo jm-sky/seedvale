@@ -1,7 +1,7 @@
 # Plan: NPC social pairing cadence and allocation
 
 **Created:** 2026-09-19
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — implemented 2026-09-19 (`vitest` socialBehaviour). Browser/gameplay verification by user.
 **Type:** optimization
 **Priority:** medium · **Effort:** S
 **Depends on:** none

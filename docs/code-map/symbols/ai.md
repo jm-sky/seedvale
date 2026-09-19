@@ -752,14 +752,14 @@ Generated from exported TypeScript symbols.
 
 ## `ai/socialBehaviour.ts`
 
-- `advanceSocialPairing` — function — line 163
-- `conversationAttemptCooldownSec` — function — line 97
-- `conversationDurationSec` — function — line 115
-- `conversationOutcome` — function — line 140
-- `ConversationOutcome` — type — line 121
+- `advanceSocialPairing` — function — line 167
+- `conversationAttemptCooldownSec` — function — line 101
+- `conversationDurationSec` — function — line 119
+- `conversationOutcome` — function — line 144
+- `ConversationOutcome` — type — line 125
 - `ConversationVoiceCue` — type — line 10
-- `findConversationPartner` — function — line 74
-- `SocialCandidateView` — type — line 62
+- `findConversationPartner` — function — line 78
+- `SocialCandidateView` — type — line 66
 - `SocialParticipant` — type — line 34
 
 ## `ai/voluntaryExpeditionJoin.ts`

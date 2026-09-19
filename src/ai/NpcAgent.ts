@@ -6593,18 +6593,26 @@ export class NpcAgent {
   }
 
   /**
-   * Plan 151 — the one entry point `advanceSocialPairing` (`socialBehaviour
-   * .ts`) uses to discover this NPC as a conversation candidate. Non-null
-   * only when this NPC is actually settled at its own Social Place (not
-   * still walking there), unreserved, alive, and its extraversion-scaled
+   * Side-effect-free projection for settlement pairing's idle fast path
+   * (plan npc-060): whether this NPC's retry cooldown has elapsed. Does
+   * not inspect social-place, reservation, or wander eligibility.
+   *
+   * @domain npc
+   */
+  socialAttemptDue(): boolean {
+    return this.simClock >= this.nextSocialAttemptSim
+  }
+
+  /**
+   * Plan 151 — authoritative eligibility gate `advanceSocialPairing`
+   * (`socialBehaviour.ts`) uses to discover this NPC as a conversation
+   * candidate. Non-null only when this NPC is settled at its own Social
+   * Place, unreserved, alive, in social wander, and its extraversion-scaled
    * retry cooldown has elapsed.
    *
-   * Calling this *is* the throttle: any call — whether or not it returns
-   * non-null — reschedules `nextSocialAttemptSim`, so the settlement-wide
-   * pairing pass can call it every frame for every settled NPC without
-   * re-running the same candidate's check every frame (implementation notes
-   * §3/§9). `extraversion` only ever changes this cooldown's length, never
-   * which candidate `findConversationPartner` picks.
+   * Reschedules `nextSocialAttemptSim` only when all checks pass and a
+   * candidate view is returned. `extraversion` only changes cooldown length,
+   * never partner selection.
    */
   socialCandidate(): { id: string, placeId: string } | null {
     if (!this.socialPlace) return null

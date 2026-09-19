@@ -35,12 +35,16 @@ export type SocialParticipant = {
   readonly id: string
   readonly gender: NpcGender
   readonly personality: BigFivePersonality
+  /** Side-effect-free read of whether this participant's per-NPC retry
+   *  cooldown has elapsed at the current simulation clock. Used by
+   *  `advanceSocialPairing` for an idle fast path only — authoritative
+   *  eligibility remains `socialCandidate()`. @domain npc */
+  socialAttemptDue: () => boolean
   /** `null` unless this participant is currently settled at its own Social
-   *  Place, unreserved, and its extraversion-scaled retry cooldown has
-   *  elapsed. Calling it *is* the throttle: a truthy return reschedules the
-   *  next allowed attempt, so `advanceSocialPairing` can call this every
-   *  frame without re-checking the same NPC every frame (implementation
-   *  notes §3/§9). */
+   *  Place, unreserved, alive, in social wander, and its extraversion-scaled
+   *  retry cooldown has elapsed. A truthy return reschedules the next
+   *  allowed attempt; calls while still on cooldown or otherwise ineligible
+   *  do not advance the cooldown. */
   socialCandidate: () => SocialCandidateView | null
   /** Starts the shared `conversation` action on this participant alone —
    *  `advanceSocialPairing` calls it once per side of a pair. Optional
@@ -166,6 +170,15 @@ export function advanceSocialPairing(
   dayLengthSec: number,
   rng: () => number = Math.random,
 ): void {
+  let anyAttemptDue = false
+  for (const participant of participants) {
+    if (participant.socialAttemptDue()) {
+      anyAttemptDue = true
+      break
+    }
+  }
+  if (!anyAttemptDue) return
+
   const entries: { participant: SocialParticipant, view: SocialCandidateView }[] = []
   for (const participant of participants) {
     const view = participant.socialCandidate()
@@ -175,10 +188,13 @@ export function advanceSocialPairing(
   const taken = new Set<string>()
   for (const entry of entries) {
     if (taken.has(entry.view.id)) continue
-    const remaining = entries.filter((other) => other !== entry && !taken.has(other.view.id))
-    const partnerId = findConversationPartner(entry.view, remaining.map((other) => other.view))
-    if (!partnerId) continue
-    const partnerEntry = remaining.find((other) => other.view.id === partnerId)
+    let partnerEntry: (typeof entries)[number] | null = null
+    for (const other of entries) {
+      if (other === entry) continue
+      if (taken.has(other.view.id)) continue
+      if (other.view.placeId !== entry.view.placeId) continue
+      if (!partnerEntry || other.view.id < partnerEntry.view.id) partnerEntry = other
+    }
     if (!partnerEntry) continue
 
     taken.add(entry.view.id)

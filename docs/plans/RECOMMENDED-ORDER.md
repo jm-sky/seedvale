@@ -297,15 +297,11 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `XL` · **Score:**  20  
    → **unlocks:** 0/0
 
-54. `npc-060` — **NPC social pairing cadence and allocation**  
-  🟡 `S` · **Score:**  19  
-   → **unlocks:** 0/0
-
-55. `quests-progression-061` — **Builder — Complete an Unfinished Palisade Segment**  
+54. `quests-progression-061` — **Builder — Complete an Unfinished Palisade Segment**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-56. `quests-progression-070` — **Boar at the medicinal meadow — systemic settlement problem**  
+55. `quests-progression-070` — **Boar at the medicinal meadow — systemic settlement problem**  
   🟡 `L` · **Score:**  16  
    → **unlocks:** 0/0
 
