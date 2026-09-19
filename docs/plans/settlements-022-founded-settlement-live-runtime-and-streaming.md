@@ -9,6 +9,7 @@
 **Subdomains:** `population` `development` `economy`
 **Tags:** `colony` `streaming` `runtime` `performance` `authored-site`
 **Roadmap:** `quests-abandoned-gold-mine-colony.md`
+**Model:** Opus, Sonnet
 
 ## Goal
 
