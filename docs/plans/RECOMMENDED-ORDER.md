@@ -239,71 +239,67 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `L` · **Score:**  28  
    → **unlocks:** 0/0
 
-39. `fauna-042` — **Fauna proximity and population scan cost**  
+39. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-40. `items-player-014` — **Rope-pullable resource transport**  
-  🟡 `M` · **Score:**  27  
-   → **unlocks:** 0/0
-
-41. `npc-058` — **NPC time-skip resource and interrupt parity**  
+40. `npc-058` — **NPC time-skip resource and interrupt parity**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-42. `tools-005` — **Seedvale Character Preparation Panel**  
+41. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-43. `world-033` — **WorldBundle rebuild transaction and lifecycle safety**  
+42. `world-033` — **WorldBundle rebuild transaction and lifecycle safety**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-44. `world-034` — **Time-skip clock exactness and catch-up coverage**  
+43. `world-034` — **Time-skip clock exactness and catch-up coverage**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-45. `world-terrain-039` — **N8AO / post-process cost budget**  
+44. `world-terrain-039` — **N8AO / post-process cost budget**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-46. `ui-input-025` — **Road travel autopilot for player and mounts**  
+45. `ui-input-025` — **Road travel autopilot for player and mounts**  
   🔴 `L` · **Score:**  26  
    → **unlocks:** 0/0
 
-47. `items-player-044` — **Shoulder and forearm equipment slots**  
+46. `items-player-044` — **Shoulder and forearm equipment slots**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-48. `quests-progression-071` — **Generated opportunity retention semantics**  
+47. `quests-progression-071` — **Generated opportunity retention semantics**  
   🟡 `S` · **Score:**  25  
    → **unlocks:** 0/0
 
-49. `world-terrain-041` — **Agent presentation render LOD**  
+48. `world-terrain-041` — **Agent presentation render LOD**  
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-50. `fauna-043` — **Frenzy source-target claim cleanup**  
+49. `fauna-043` — **Frenzy source-target claim cleanup**  
   🟡 `S` · **Score:**  23  
    → **unlocks:** 0/0
 
-51. `fauna-044` — **Higher stag antler drop chance with light Survival influence**  
+50. `fauna-044` — **Higher stag antler drop chance with light Survival influence**  
   🟡 `XS` · **Score:**  20  
    → **unlocks:** 0/0
 
-52. `quests-progression-072` — **Invalidated quest restore metadata continuity**  
+51. `quests-progression-072` — **Invalidated quest restore metadata continuity**  
   🟡 `XS` · **Score:**  20  
    → **unlocks:** 0/0
 
-53. `tools-018` — **Codebase domain and flow audit master**  
+52. `tools-018` — **Codebase domain and flow audit master**  
   🔴 `XL` · **Score:**  20  
    → **unlocks:** 0/0
 
-54. `quests-progression-061` — **Builder — Complete an Unfinished Palisade Segment**  
+53. `quests-progression-061` — **Builder — Complete an Unfinished Palisade Segment**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-55. `quests-progression-070` — **Boar at the medicinal meadow — systemic settlement problem**  
+54. `quests-progression-070` — **Boar at the medicinal meadow — systemic settlement problem**  
   🟡 `L` · **Score:**  16  
    → **unlocks:** 0/0
 
