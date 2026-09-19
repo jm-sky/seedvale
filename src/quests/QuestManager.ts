@@ -34,6 +34,7 @@ import {
   type QuestConsequences,
   type QuestDef,
   type QuestDialogueCooldown,
+  type QuestHabitatPressureObservation,
   type QuestJournalEvent,
   type QuestObjective,
   type QuestOfferRankSignal,
@@ -234,6 +235,8 @@ type QuestRuntimeProgress = {
   worldKnowledge?: Record<string, QuestWorldKnowledgeProgress>
   /** Quest-topic dialogue cooldown (plan quests-progression-050). */
   dialogueCooldowns?: Record<NpcId, QuestDialogueCooldown>
+  /** One quest-local field-inspection observation (plan quests-progression-049). */
+  observation?: QuestHabitatPressureObservation
 }
 
 /** Player-only harvest report (plan quests-progression-020). */
@@ -426,6 +429,15 @@ export type QuestLifecycleHooks = {
    * presentation and plays it through the shared spatial NPC voice seam.
    */
   playQuestVoice?: (npcId: NpcId, intent: QuestVoiceIntent) => void
+  /**
+   * Fired when an active quest's `interact_spawner` slot matches
+   * `ref.spawnerId`, just before that slot is marked complete (plan
+   * quests-progression-049). Lets the composition root capture live
+   * domain state (e.g. fauna habitat pressure) into a quest-local
+   * observation via `QuestManager.recordObservation` — `QuestManager`
+   * itself never imports the domain it's read from.
+   */
+  onInteractSpawnerMatched?: (questId: string, spawnerId: string) => void
 }
 
 /**
@@ -698,15 +710,14 @@ export class QuestManager {
   reset(): void {
     this.knowledgeEpoch += 1
     this.knowledgeLaunching.clear()
+    // Bypasses `setQuestState`'s merge (its whole point is to preserve
+    // journal/worldKnowledge/dialogueCooldowns/observation across ordinary
+    // transitions) — a fresh-start reset needs the opposite: every field
+    // dropped, not merged forward from the previous playthrough.
     for (const def of this.defs) {
-      this.setQuestState(def.id, {
-        state: 'not_offered',
-        stageIndex: 0,
-        journal: [],
-        worldKnowledge: {},
-        dialogueCooldowns: {},
-      })
+      this.states.set(def.id, { state: 'not_offered', stageIndex: 0 })
     }
+    this.dirty = true
     this.relations.clear()
     this.animalTargets.clear()
     this.feedContributionIds.clear()
@@ -736,6 +747,13 @@ export class QuestManager {
     } else if (value.dialogueCooldowns !== undefined && Object.keys(value.dialogueCooldowns).length === 0) {
       const { dialogueCooldowns: _cleared, ...rest } = next
       next = rest
+    }
+    // No explicit-clear branch: unlike the collections above, a captured
+    // observation is never intentionally wiped mid-playthrough — only
+    // `reset()` clears it, and that bypasses this merge entirely (see
+    // `reset()`'s own comment).
+    if (value.observation === undefined && prev?.observation) {
+      next = { ...next, observation: prev.observation }
     }
     this.states.set(id, next)
     this.dirty = true
@@ -2009,7 +2027,12 @@ export class QuestManager {
     const outcome = uniqueOutcomeForState(def, 'complete')
     if (!outcome) return null
     if (!this.applyOutcome(def, outcome.id)) return null
-    return def.reportLine
+    // Unlike `resultText` (journal/log presentation only — see
+    // `resultPresentation`), `resolveResultText` also overrides the live
+    // spoken line here so a report reflects a captured observation
+    // (plan quests-progression-049) without changing turn-in text for
+    // every pre-existing quest, which never sets it.
+    return outcome.resolveResultText?.(this.stateOf(def.id).observation) ?? def.reportLine
   }
 
   private resolveFailedFind(def: QuestDef, stage: QuestStage | undefined): string | null {
@@ -2969,6 +2992,9 @@ export class QuestManager {
           break
         }
         if (!objectiveMatchesRef(slot.objective, ref, boundAnimalId, boundLandmarkId)) continue
+        if (ref.type === 'interact_spawner') {
+          this.lifecycleHooks.onInteractSpawnerMatched?.(def.id, ref.spawnerId)
+        }
         this.completeObjectiveSlot(def, this.stateOf(def.id), slot)
         if (presentation === null) {
           presentation = { line: this.expandQuestText(def, this.stateOf(def.id), stage.progressLine ?? stage.description) ?? stage.description }
@@ -3073,6 +3099,20 @@ export class QuestManager {
     return null
   }
 
+  /**
+   * Records `questId`'s one field-inspection observation, exactly once —
+   * a later call for the same quest is a no-op, and reporting always
+   * reads back the first-captured value rather than recomputing it (plan
+   * quests-progression-049). Ignored while the quest isn't `active`.
+   *
+   * @domain quests-progression
+   */
+  recordObservation(questId: string, observation: QuestHabitatPressureObservation): void {
+    const current = this.stateOf(questId)
+    if (current.state !== 'active' || current.observation) return
+    this.setQuestState(questId, { ...current, observation })
+  }
+
   exportProgress(): QuestProgressEntry[] {
     return this.defs.map((def) => {
       const s = this.stateOf(def.id)
@@ -3101,6 +3141,7 @@ export class QuestManager {
       if (s.dialogueCooldowns && Object.keys(s.dialogueCooldowns).length > 0) {
         entry.dialogueCooldowns = s.dialogueCooldowns
       }
+      if (s.observation) entry.observation = s.observation
       return entry
     })
   }
@@ -3127,6 +3168,7 @@ function runtimeProgress(entry: QuestProgressEntry): QuestRuntimeProgress {
   if (entry.dialogueCooldowns && Object.keys(entry.dialogueCooldowns).length > 0) {
     progress.dialogueCooldowns = entry.dialogueCooldowns
   }
+  if (entry.observation) progress.observation = entry.observation
   return progress
 }
 
@@ -3203,6 +3245,7 @@ function normalizeRestoredProgress(def: QuestDef, entry: QuestProgressEntry): Qu
     ...(migrated.dialogueCooldowns && Object.keys(migrated.dialogueCooldowns).length > 0
       ? { dialogueCooldowns: migrated.dialogueCooldowns }
       : {}),
+    ...(migrated.observation ? { observation: migrated.observation } : {}),
   }
   if (migrated.state !== 'complete' && migrated.state !== 'failed') return base
   if (migrated.resolvedOutcomeId) {
@@ -3224,6 +3267,7 @@ function resultPresentation(
   outcome: QuestOutcome | undefined,
   stage: QuestStage | undefined,
 ): string | undefined {
+  if (outcome?.resolveResultText) return outcome.resolveResultText(progress.observation)
   if (outcome?.resultText) return outcome.resultText
   if (progress.state === 'complete') return def.reportLine
   if (progress.state === 'failed') return stage?.failLine

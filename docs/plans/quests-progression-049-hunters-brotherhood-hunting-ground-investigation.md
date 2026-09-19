@@ -1,15 +1,19 @@
 # Plan: Hunters Brotherhood — hunting-ground investigation
 
 **Created:** 2026-09-16
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Model:** Opus, Sonnet
-**Depends on:** quests-progression-048, fauna-031
+**Depends on:** ~~quests-progression-048~~, ~~fauna-031~~
 **Domain:** `quests-progression`
 **Subdomains:** `quests` `progression` `relationships`
 **Tags:** `hunters-brotherhood` `fauna` `investigation`
 **Roadmap:** `quests-hunters-brotherhood.md`
+
+## Implementation status
+
+Implemented 2026-09-19. Dedicated module `src/quests/huntersBrotherhoodInvestigation.ts` reuses the exact `quests-progression-048` Brotherhood binding/cast; candidate selection is bounded to the two bound settlements' deer `thicket` `PreySpawner`s, ranked deterministically (condition severity, then max component pressure, then stable `spawnerId`) purely from `Fauna.getHabitatPressure()` snapshots, with no candidate materialized when none is currently unhealthy. The chosen `spawnerId` is baked into the quest id itself, so accepted-quest continuity never depends on rerunning selection. The single stage reuses the existing `interact_spawner` objective/ingress; a new narrow `QuestLifecycleHooks.onInteractSpawnerMatched` hook (fired from `QuestManager.onInteractObjective`, wired in `createApp.ts`) captures one `getHabitatPressure()` read into a compact, quest-local `QuestHabitatPressureObservation` via the new `QuestManager.recordObservation()` — captured once, preserved verbatim across stage/outcome transitions and save/load (`QuestProgressEntry.observation`, validated in `saveData.ts`), and never recomputed at report time. Report dialogue reads that persisted observation through a new generic `QuestOutcome.resolveResultText` seam (mirrors `resolveOfferLine`); a recovered/healthy observation reports truthfully rather than preserving the original problem. Diagnosis reuses `fauna-031`'s own `HABITAT_PRESSURE_STRAINED_AT` threshold/tie order for both `primary` and secondary `observedPressures` — no second threshold, no cause attribution for mortality/predators/food. One terminal outcome (`brotherhood_investigation_complete`) regardless of diagnosis. `QuestManager` still never imports `Fauna`; `resolveInteraction.ts` is unchanged/story-agnostic. Focused tests cover candidate bounding/ranking, diagnosis derivation (including mortality-only and multi-pressure cases), eligibility gating on `hunters_brotherhood_joined`, capture-once semantics, recovered-habitat truthful reporting, and save/load round-trip of the persisted observation. `npx tsc --noEmit`, `eslint`, and the full `src/quests`/`src/persistence`/`src/app` test suites pass. Browser/gameplay verification is user-owned.
 
 ## Goal
 

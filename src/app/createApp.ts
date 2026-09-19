@@ -130,7 +130,14 @@ import {
   type GuardWorldProgress,
   migrateLegacyGuardSwordGift,
 } from '../quests/guardPersistence'
-import { buildHuntersBrotherhoodIntroductionQuest } from '../quests/huntersBrotherhoodIntroduction'
+import {
+  buildHuntersBrotherhoodIntroductionQuest,
+  resolveHuntersBrotherhoodBinding,
+} from '../quests/huntersBrotherhoodIntroduction'
+import {
+  buildHuntersBrotherhoodInvestigationQuest,
+  habitatPressureObservationFromSnapshot,
+} from '../quests/huntersBrotherhoodInvestigation'
 import {
   buildLostHunterNaturalCaveQuest,
   isLostHunterPackLooted,
@@ -1432,6 +1439,10 @@ export async function createApp(
   }
   const persistedQuestIds = initialSave?.quests.progress.map((entry) => entry.id)
   const opportunityQuestDefs: ReturnType<typeof buildWorldDrivenSettlementQuests> = []
+  // Set once, alongside the Brotherhood introduction quest below — read by
+  // `onInteractSpawnerMatched` to know which single quest/habitat pair the
+  // field-inspection capture hook applies to (plan quests-progression-049).
+  let huntersBrotherhoodInvestigationTarget: { questId: string, spawnerId: string } | undefined
   for (const def of opportunitySettlements) {
     const landmarks: RpgLandmarkRef[] = []
     for (const kind of OLD_PLACE_LANDMARK_KINDS) {
@@ -1489,17 +1500,41 @@ export async function createApp(
       })
 
       if (hasHunterIII) {
-        const huntersBrotherhoodQuest = buildHuntersBrotherhoodIntroductionQuest({
+        const huntersBrotherhoodCastInput = {
           home: { id: def.id, name: def.name, npcs },
           neighbors: neighborDefs.map((neighbor) => ({
             id: neighbor.id,
             name: neighbor.name,
             npcs: npcsBySettlement.get(neighbor.id) ?? [],
           })),
-        })
+        }
+        const huntersBrotherhoodQuest = buildHuntersBrotherhoodIntroductionQuest(huntersBrotherhoodCastInput)
 
         if (huntersBrotherhoodQuest) {
           opportunityQuestDefs.push(huntersBrotherhoodQuest)
+
+          // Reuses the same cast/binding as the introduction quest above
+          // (plan quests-progression-049) — never a second settlement/cast
+          // selection.
+          const huntersBrotherhoodBinding = resolveHuntersBrotherhoodBinding(huntersBrotherhoodCastInput)
+          if (huntersBrotherhoodBinding) {
+            const huntersBrotherhoodInvestigationQuest = buildHuntersBrotherhoodInvestigationQuest({
+              binding: huntersBrotherhoodBinding,
+              spawners: bundle.fauna.getSpawners(),
+              getHabitatPressure: bundle.fauna.getHabitatPressure,
+              nowDays: getWorldDays(),
+            })
+            if (huntersBrotherhoodInvestigationQuest) {
+              opportunityQuestDefs.push(huntersBrotherhoodInvestigationQuest)
+              const stage = huntersBrotherhoodInvestigationQuest.stages[0]?.objective
+              if (stage?.type === 'interact_spawner' && stage.spawnerId) {
+                huntersBrotherhoodInvestigationTarget = {
+                  questId: huntersBrotherhoodInvestigationQuest.id,
+                  spawnerId: stage.spawnerId,
+                }
+              }
+            }
+          }
         }
       }
 
@@ -1861,6 +1896,21 @@ export async function createApp(
         playNpcVoiceAt(npc.mesh.position, resolveNpcVoiceLine(npc, intent))
         return
       }
+    },
+    // Field-inspection capture for the Brotherhood hunting-ground
+    // investigation only (plan quests-progression-049) — reads the current
+    // `fauna-031` pressure snapshot for the bound habitat exactly once;
+    // `QuestManager.recordObservation` itself guards against a later
+    // re-interaction overwriting it.
+    onInteractSpawnerMatched: (questId: string, spawnerId: string) => {
+      if (
+        !huntersBrotherhoodInvestigationTarget
+        || questId !== huntersBrotherhoodInvestigationTarget.questId
+        || spawnerId !== huntersBrotherhoodInvestigationTarget.spawnerId
+      ) return
+      const snapshot = bundle.fauna.getHabitatPressure(spawnerId, dayNight.elapsedDays)
+      if (!snapshot) return
+      questManager.recordObservation(questId, habitatPressureObservationFromSnapshot(snapshot))
     },
   }
 

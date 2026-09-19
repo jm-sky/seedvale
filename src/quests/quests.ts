@@ -1,5 +1,6 @@
 import type { AnimalKind } from '../fauna/AnimalAgent'
 import type { SpawnerType } from '../fauna/AnimalSpawner'
+import type { HabitatPressureCondition, HabitatPressureKind } from '../fauna/habitatPressure'
 import type { ItemKind } from '../items/items'
 import type { ReputationDimension } from '../reputation/ReputationManager'
 import type { NpcId } from '../settlement/npcState'
@@ -787,11 +788,38 @@ export type QuestOutcome = {
   id: QuestOutcomeId
   state: 'complete' | 'failed'
   resultText?: string
+  /**
+   * Live result text derived from the quest's persisted `observation`
+   * (plan quests-progression-049) — takes priority over the static
+   * `resultText` when present. The result is never persisted; mirrors
+   * `QuestDef.resolveOfferLine`'s pattern for offer text.
+   *
+   * @domain quests-progression
+   */
+  resolveResultText?: (observation: QuestHabitatPressureObservation | undefined) => string
   reward?: QuestReward
   consequences?: QuestConsequences
   /** World mutations applied exactly once with this terminal outcome
    *  (plan quests-progression-029). `reward` / `consequences` stay sugar. */
   effects?: readonly QuestStageEffect[]
+}
+
+/**
+ * Quest-local observation captured from a live `fauna-031`
+ * `HabitatPressureSnapshot` at the moment of field inspection (plan
+ * quests-progression-049) — narrative-facing diagnosis data, not a second
+ * ecosystem state. `QuestManager` treats this as an opaque persisted fact;
+ * only the authoring quest module (`huntersBrotherhoodInvestigation.ts`)
+ * derives it from fauna state and turns it back into dialogue text.
+ *
+ * @domain quests-progression
+ */
+export type QuestHabitatPressureObservation = {
+  type: 'habitat_pressure'
+  habitatId: string
+  condition: HabitatPressureCondition
+  primary: HabitatPressureKind | null
+  observedPressures: readonly HabitatPressureKind[]
 }
 
 /** Stage-local progress for one objective slot (plan quests-progression-032).
@@ -926,6 +954,13 @@ export type QuestProgressEntry = {
    * `QuestWorldTimeLookup.getElapsedDays()`. Absent on older saves = none.
    */
   dialogueCooldowns?: Record<NpcId, QuestDialogueCooldown>
+  /**
+   * One quest-local field-inspection observation (plan
+   * quests-progression-049) — set once, at most one per quest, never
+   * recomputed on report. Absent on older saves and on quests that never
+   * capture one.
+   */
+  observation?: QuestHabitatPressureObservation
 }
 
 /**

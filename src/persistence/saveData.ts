@@ -39,6 +39,7 @@ import type { WellWaterKind } from '../world/wellGroundwater'
 import type { SaveWorldGeneratedContainer } from '../world/worldGeneratedContainers'
 import { isEconomicKind } from '../economy/kinds'
 import { isAnimalStraySave } from '../fauna/animalStray'
+import { HABITAT_PRESSURE_TIE_ORDER } from '../fauna/habitatPressure'
 import { EQUIPMENT_SLOTS, isEquipmentSlot, type SavePlayerEquipment } from '../items/equipment'
 import { type FoodSourceSpecies, isFoodSourceSpecies } from '../items/foodFreshness'
 import { isToolKind } from '../items/HeldTool'
@@ -2663,7 +2664,22 @@ function isQuestProgressEntry(value: unknown): value is QuestProgressEntry {
       }
     }
   }
+  if (e.observation !== undefined && !isQuestHabitatPressureObservation(e.observation)) return false
   return true
+}
+
+const HABITAT_PRESSURE_KIND_SET: ReadonlySet<string> = new Set(HABITAT_PRESSURE_TIE_ORDER)
+const HABITAT_PRESSURE_CONDITION_SET: ReadonlySet<string> = new Set(['critical', 'healthy', 'strained'])
+
+function isQuestHabitatPressureObservation(value: unknown): boolean {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const o = value as Record<string, unknown>
+  if (o.type !== 'habitat_pressure') return false
+  if (typeof o.habitatId !== 'string' || o.habitatId.length === 0) return false
+  if (typeof o.condition !== 'string' || !HABITAT_PRESSURE_CONDITION_SET.has(o.condition)) return false
+  if (o.primary !== null && (typeof o.primary !== 'string' || !HABITAT_PRESSURE_KIND_SET.has(o.primary))) return false
+  if (!Array.isArray(o.observedPressures)) return false
+  return o.observedPressures.every((kind) => typeof kind === 'string' && HABITAT_PRESSURE_KIND_SET.has(kind))
 }
 
 function isQuestWorldKnowledgeRef(value: unknown): boolean {
